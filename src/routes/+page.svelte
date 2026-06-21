@@ -2,8 +2,8 @@
   import { onMount } from "svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import * as fileService from "$lib/services/fileService.js";
-  import { appStore } from "$lib/stores/appStore.js";
-  import { documentStore } from "$lib/stores/documentStore.js";
+  import { appStore } from "$lib/stores/appStore.svelte.js";
+  import { documentStore } from "$lib/stores/documentStore.svelte.js";
   import "$lib/styles/app.css";
   import AppHeader from "$lib/components/AppHeader.svelte";
   import LayerMenu from "$lib/components/LayerMenu.svelte";
@@ -70,7 +70,7 @@
   }
 
   function shrinkApp() {
-    getCurrentWindow().hide();
+    getCurrentWindow().minimize();
   }
 
   function closeApp() {
