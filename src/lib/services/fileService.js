@@ -5,16 +5,16 @@ export async function getDefaultPath() {
 }
 
 /** @param {string} path */
-export async function readTodo(path) {
-  return await invoke("read_todo", { path });
+export async function readFile(path) {
+  return await invoke("read_file", { path });
 }
 
 /**
  * @param {string} path
  * @param {string} content
  */
-export async function writeTodo(path, content) {
-  return await invoke("write_todo", { path, content });
+export async function writeFile(path, content) {
+  return await invoke("write_file", { path, content });
 }
 
 /** @param {string} path */
@@ -26,11 +26,11 @@ export async function getFileModifiedTime(path) {
  * @param {string} path
  * @param {string} entryJson
  */
-export async function logDeletedTask(path, entryJson) {
-  return await invoke("log_deleted_task", { path, entryJson });
+export async function logHistory(path, entryJson) {
+  return await invoke("log_history_entry", { path, entryJson });
 }
 
 /** @param {string} path */
-export async function popDeletedTask(path) {
-  return await invoke("pop_deleted_task", { path });
+export async function popHistory(path) {
+  return await invoke("pop_history_entry", { path });
 }

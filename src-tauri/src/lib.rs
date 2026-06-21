@@ -3,16 +3,28 @@ use std::time::UNIX_EPOCH;
 use tauri::Manager;
 
 #[tauri::command]
-fn read_todo(path: String) -> Result<String, String> {
-    if !std::path::Path::new(&path).exists() {
-        let default_content = "- [ ] Welcome to your desktop to-do widget!\n- [ ] Double-click to edit this task.\n  - [ ] Use Tab to indent.\n  - [ ] Use Shift+Tab to outdent.\n";
+fn read_file(path: String) -> Result<String, String> {
+    let path_buf = std::path::Path::new(&path);
+    if !path_buf.exists() {
+        let default_content = if path.ends_with("todo.md") {
+            "- [ ] Welcome to your desktop to-do widget!\n- [ ] Double-click to edit this task.\n  - [ ] Use Tab to indent.\n  - [ ] Use Shift+Tab to outdent.\n"
+        } else {
+            ""
+        };
+        if let Some(parent) = path_buf.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
         fs::write(&path, default_content).map_err(|e| e.to_string())?;
     }
     fs::read_to_string(&path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn write_todo(path: String, content: String) -> Result<(), String> {
+fn write_file(path: String, content: String) -> Result<(), String> {
+    let path_buf = std::path::Path::new(&path);
+    if let Some(parent) = path_buf.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
     fs::write(&path, content).map_err(|e| e.to_string())
 }
 
@@ -45,9 +57,14 @@ fn set_always_on_top(window: tauri::Window, on_top: bool) -> Result<(), String> 
 
 
 #[tauri::command]
-fn log_deleted_task(path: String, entry_json: String) -> Result<(), String> {
+fn log_history_entry(path: String, entry_json: String) -> Result<(), String> {
     use std::fs::OpenOptions;
     use std::io::Write;
+    
+    let path_buf = std::path::Path::new(&path);
+    if let Some(parent) = path_buf.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
     
     let mut file = OpenOptions::new()
         .create(true)
@@ -59,7 +76,7 @@ fn log_deleted_task(path: String, entry_json: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn pop_deleted_task(path: String) -> Result<String, String> {
+fn pop_history_entry(path: String) -> Result<String, String> {
     if !std::path::Path::new(&path).exists() {
         return Err("No history".to_string());
     }
@@ -388,13 +405,13 @@ pub fn run() {
         })
 
         .invoke_handler(tauri::generate_handler![
-            read_todo,
-            write_todo,
+            read_file,
+            write_file,
             get_default_path,
             get_file_modified_time,
             set_always_on_top,
-            log_deleted_task,
-            pop_deleted_task,
+            log_history_entry,
+            pop_history_entry,
             set_desktop_parent,
             read_config,
             write_config

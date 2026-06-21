@@ -20,9 +20,11 @@
   // Create a single offscreen canvas to measure text widths efficiently
   const canvas = typeof document !== 'undefined' ? document.createElement("canvas") : null;
 
+  /** @param {string} text */
   function measureTextWidth(text) {
     if (!canvas) return 150;
     const ctx = canvas.getContext("2d");
+    if (!ctx) return 150;
     ctx.font = "13px 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif";
     return ctx.measureText(text || "").width;
   }
