@@ -3,7 +3,7 @@ import { getLogPath } from "$lib/utils/paths.js";
 import { createTask } from "$lib/utils/tasks.js";
 import { applyAction } from "$lib/utils/actions.js";
 import * as fileService from "$lib/services/fileService.js";
-import { appStore } from "$lib/stores/appStore.js";
+import { appStore } from "$lib/stores/appStore.svelte.js";
 
 class DocumentStore {
   /** @type {any[]} */

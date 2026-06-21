@@ -1,6 +1,6 @@
 <script>
   import { tick } from "svelte";
-  import { documentStore } from "$lib/stores/documentStore.js";
+  import { documentStore } from "$lib/stores/documentStore.svelte.js";
   import TaskList from "../TaskList.svelte";
 
   let focusedTaskId = $state("");
