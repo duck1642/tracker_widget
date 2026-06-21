@@ -1,5 +1,5 @@
 @echo off
-title Desktop To-Do Widget Launcher
+title Tracker Widget Launcher
 cd /d "%~dp0"
-echo Starting Desktop To-Do Widget...
+echo Starting Tracker Widget...
 npm run tauri dev
