@@ -43,14 +43,27 @@ describe("window controls", () => {
     const onShrinkApp = vi.fn();
     const onCloseApp = vi.fn();
     render(AppHeader, {
-      dragEnabled: true, layerMode: "normal", statusMessage: "", title: "Tasks",
-      onToggleSidebar: vi.fn(), onToggleModeMenu: vi.fn(), onToggleSettings: vi.fn(),
+      dragEnabled: true, layerMode: "normal", statusMessage: "", title: "Tasks", showModeMenu: false,
+      onToggleSidebar: vi.fn(), onToggleModeMenu: vi.fn(), onSelectMode: vi.fn(), onToggleSettings: vi.fn(),
       onShrinkApp, onCloseApp
     });
     await fireEvent.click(screen.getByTitle("Minimize"));
     await fireEvent.click(screen.getByTitle("Close"));
     expect(onShrinkApp).toHaveBeenCalledOnce();
     expect(onCloseApp).toHaveBeenCalledOnce();
+  });
+
+  it("renders an anchored mode menu and emits selection", async () => {
+    const onSelectMode = vi.fn();
+    render(AppHeader, {
+      dragEnabled: true, layerMode: "normal", statusMessage: "", title: "Tasks", showModeMenu: true,
+      onToggleSidebar: vi.fn(), onToggleModeMenu: vi.fn(), onSelectMode, onToggleSettings: vi.fn(),
+      onShrinkApp: vi.fn(), onCloseApp: vi.fn()
+    });
+    expect(screen.getByRole("menu", { name: "Window mode" })).toBeTruthy();
+    expect(screen.getByRole("menuitemradio", { name: /Normal Window/ }).getAttribute("aria-checked")).toBe("true");
+    await fireEvent.click(screen.getByRole("menuitemradio", { name: /Always on Top/ }));
+    expect(onSelectMode).toHaveBeenCalledWith("top");
   });
 });
 

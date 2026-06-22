@@ -12,7 +12,6 @@
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
   import AppHeader from "./AppHeader.svelte";
-  import LayerMenu from "./LayerMenu.svelte";
   import SettingsPanel from "./SettingsPanel.svelte";
   import MainTabs from "./MainTabs.svelte";
   import AppSidebar from "./AppSidebar.svelte";
@@ -117,8 +116,7 @@
 </script>
 
 <main class="app-container" class:desktop-mode={appStore.layerMode === "desktop"}>
-  <AppHeader title={appStore.currentView === "tasks" ? "Tasks" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onCloseApp={closeApp} />
-  {#if showModeMenu}<LayerMenu layerMode={appStore.layerMode} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} />{/if}
+  <AppHeader title={appStore.currentView === "tasks" ? "Tasks" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} {showModeMenu} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onCloseApp={closeApp} />
   <div class="workspace-shell">
     {#if workspaceStore.sidebarOpen}<div class="sidebar-wrap"><AppSidebar {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} /></div>{/if}
     <section class="main-workspace">

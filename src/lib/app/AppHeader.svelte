@@ -1,13 +1,16 @@
 <script>
-  import { Settings, Layers, X, Minus, PanelLeft } from "@lucide/svelte";
+  import { Settings, Layers, X, Minus, PanelLeft, ChevronDown } from "@lucide/svelte";
+  import LayerMenu from "./LayerMenu.svelte";
 
   let { 
     dragEnabled, 
     layerMode, 
     statusMessage, 
     title = "Tracker",
+    showModeMenu,
     onToggleSidebar,
     onToggleModeMenu, 
+    onSelectMode,
     onToggleSettings, 
     onShrinkApp,
     onCloseApp 
@@ -27,10 +30,14 @@
   </span>
   <div class="header-controls">
     <button class="icon-btn-header" onclick={onToggleSidebar} title="Toggle file tree"><PanelLeft size={13} /></button>
-    <button class="icon-btn-header" onclick={onToggleModeMenu} title={layerMode === "desktop" ? "Window mode: Desktop (tray only)" : "Window layer mode"}>
-      <Layers size={13} />
-      <span class="btn-text">{getModeLabel(layerMode)}</span>
-    </button>
+    <div class="mode-selector">
+      <button class="icon-btn-header mode-trigger" onclick={onToggleModeMenu} title={layerMode === "desktop" ? "Window mode: Desktop (tray only)" : "Window layer mode"} aria-haspopup="menu" aria-expanded={showModeMenu}>
+        <Layers size={13} />
+        <span class="btn-text">{getModeLabel(layerMode)}</span>
+        <ChevronDown size={10} />
+      </button>
+      {#if showModeMenu}<LayerMenu {layerMode} {onSelectMode} />{/if}
+    </div>
     <button class="icon-btn-header" onclick={onToggleSettings} title="Settings">
       <Settings size={13} />
     </button>
@@ -42,3 +49,8 @@
     </button>
   </div>
 </header>
+
+<style>
+  .mode-selector { position: relative; display: flex; align-items: center; }
+  .mode-trigger { gap: 3px; }
+</style>
