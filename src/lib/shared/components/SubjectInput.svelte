@@ -134,12 +134,9 @@
     border: 1px solid #2d2d2d;
     border-radius: 4px;
     padding: 0 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     font-size: 11px;
     font-weight: 600;
-    line-height: 1;
+    line-height: 26px;
     box-sizing: border-box;
     outline: none;
     transition: all 0.15s ease;
