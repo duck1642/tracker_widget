@@ -68,6 +68,21 @@ describe("window controls", () => {
     await fireEvent.click(screen.getByRole("menuitemradio", { name: /Always on Top/ }));
     expect(onSelectMode).toHaveBeenCalledWith("top");
   });
+
+  it("dismisses the mode menu outside and with Escape", async () => {
+    const onDismissModeMenu = vi.fn();
+    render(AppHeader, {
+      dragEnabled: true, layerMode: "normal", statusMessage: "", title: "Tasks", showModeMenu: true,
+      onToggleSidebar: vi.fn(), onToggleModeMenu: vi.fn(), onDismissModeMenu, onSelectMode: vi.fn(), onToggleSettings: vi.fn(),
+      onShrinkApp: vi.fn(), onMaximizeApp: vi.fn(), onCloseApp: vi.fn()
+    });
+    const trigger = screen.getByTitle("Window layer mode");
+    await fireEvent.pointerDown(document.body);
+    expect(onDismissModeMenu).toHaveBeenCalledOnce();
+    await fireEvent.keyDown(window, { key: "Escape" });
+    expect(onDismissModeMenu).toHaveBeenCalledTimes(2);
+    expect(document.activeElement).toBe(trigger);
+  });
 });
 
 describe("logger editing", () => {
@@ -150,4 +165,25 @@ describe("sidebar sorting", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Toggle week sorting" }));
     expect(labels()).toEqual(["2025w52", "2026w25"]);
   });
+
+  it("retains sorting and expansion state while hidden", async () => {
+    const props = { open: true, selectedPath: "", onSelectWeek: vi.fn(), onSelectDay: vi.fn() };
+    workspaceStore.weeks = [
+      { path: "new", name: "2026w25", indexPath: null, days: [] },
+      { path: "old", name: "2025w52", indexPath: null, days: [] }
+    ];
+    const view = render(AppSidebar, props);
+    const labels = () => screen.getAllByRole("button", { name: /20\d\dw\d\d/ }).map((button) => button.textContent.trim());
+    await fireEvent.click(screen.getByRole("button", { name: "Toggle week sorting" }));
+    await fireEvent.click(screen.getByRole("button", { name: "2025w52" }));
+    expect(labels()).toEqual(["2025w52", "2026w25"]);
+    expect(screen.getByRole("button", { name: "2025w52" }).getAttribute("aria-expanded")).toBe("false");
+
+    await view.rerender({ ...props, open: false });
+    await view.rerender({ ...props, open: true });
+
+    expect(labels()).toEqual(["2025w52", "2026w25"]);
+    expect(screen.getByRole("button", { name: "2025w52" }).getAttribute("aria-expanded")).toBe("false");
+  });
+
 });

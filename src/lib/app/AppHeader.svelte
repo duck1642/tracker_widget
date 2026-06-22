@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from "svelte";
   import { Settings, Layers, X, Minus, PanelLeft, ChevronDown } from "@lucide/svelte";
   import LayerMenu from "./LayerMenu.svelte";
 
@@ -11,12 +12,40 @@
     isMaximized = false,
     onToggleSidebar,
     onToggleModeMenu, 
+    onDismissModeMenu,
     onSelectMode,
     onToggleSettings, 
     onShrinkApp,
     onMaximizeApp,
     onCloseApp 
   } = $props();
+
+  /** @type {HTMLDivElement | undefined} */
+  let modeSelector;
+  /** @type {HTMLButtonElement | undefined} */
+  let modeTrigger;
+
+  onMount(() => {
+    /** @param {PointerEvent} event */
+    function handlePointerDown(event) {
+      if (showModeMenu && event.target instanceof Node && !modeSelector?.contains(event.target)) onDismissModeMenu?.();
+    }
+
+    /** @param {KeyboardEvent} event */
+    function handleKeyDown(event) {
+      if (!showModeMenu || event.key !== "Escape") return;
+      event.preventDefault();
+      onDismissModeMenu?.();
+      modeTrigger?.focus();
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  });
 
   /** @param {string} mode */
   function getModeLabel(mode) {
@@ -32,8 +61,8 @@
   </span>
   <div class="header-controls">
     <button class="icon-btn-header" onclick={onToggleSidebar} title="Toggle file tree"><PanelLeft size={13} /></button>
-    <div class="mode-selector">
-      <button class="icon-btn-header mode-trigger" onclick={onToggleModeMenu} title={layerMode === "desktop" ? "Window mode: Desktop (tray only)" : "Window layer mode"} aria-haspopup="menu" aria-expanded={showModeMenu}>
+    <div class="mode-selector" bind:this={modeSelector}>
+      <button class="icon-btn-header mode-trigger" bind:this={modeTrigger} onclick={onToggleModeMenu} title={layerMode === "desktop" ? "Window mode: Desktop (tray only)" : "Window layer mode"} aria-haspopup="menu" aria-expanded={showModeMenu}>
         <Layers size={13} />
         <span class="btn-text">{getModeLabel(layerMode)}</span>
         <ChevronDown size={10} />

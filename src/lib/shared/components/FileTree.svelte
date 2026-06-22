@@ -32,7 +32,8 @@
 </nav>
 
 <style>
-  .file-tree { display: grid; align-content: start; gap: 2px; padding: 5px 7px 8px; overflow: auto; }
+  .file-tree { display: grid; align-content: start; gap: 2px; padding: 5px 7px 8px; overflow: auto; scrollbar-width: none; }
+  .file-tree::-webkit-scrollbar { width: 0; height: 0; }
   section { display: grid; gap: 1px; }
   button { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 28px; border: 0; border-radius: 5px; background: transparent; color: var(--text-muted); text-align: left; cursor: pointer; }
   button:hover { background: var(--surface-hover); color: var(--text-color); }
