@@ -47,7 +47,7 @@
     border: 1px solid #3d3d3d;
     border-radius: 4px;
     padding: 0 8px;
-    height: 22px;
+    height: 26px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -68,7 +68,7 @@
     border: 1px solid #3d3d3d;
     border-radius: 4px;
     padding: 0 8px;
-    height: 22px;
+    height: 26px;
     display: inline-flex;
     align-items: center;
     justify-content: center;

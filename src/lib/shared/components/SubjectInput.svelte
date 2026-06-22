@@ -30,14 +30,16 @@
         use:focus
       />
     {:else}
-      <button type="button" class="subject-badges" onclick={() => isEditing = true} aria-label="Edit subjects">
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
+      <div class="subject-badges" onclick={() => isEditing = true} role="button" tabindex="0" aria-label="Edit subjects">
         {#each subjects as subject}
-          <span class="subject-badge">{subject}</span>
+          <div class="subject-badge">{subject}</div>
         {/each}
         {#if subjects.length === 0}
-          <span class="subject-badge placeholder">Add subject...</span>
+          <div class="subject-badge placeholder">Add subject...</div>
         {/if}
-      </button>
+      </div>
     {/if}
     {#if invalid}<small class="badge-error">Invalid format</small>{/if}
   </div>
@@ -68,6 +70,7 @@
     cursor: pointer;
     text-align: left;
     align-items: center;
+    outline: none;
   }
   .subject-badge {
     background: #121212;
@@ -75,8 +78,8 @@
     border: 1px solid #2d2d2d;
     border-radius: 4px;
     padding: 0 8px;
-    height: 22px;
-    display: inline-flex;
+    height: 26px;
+    display: flex;
     align-items: center;
     justify-content: center;
     font-size: 11px;
@@ -100,7 +103,7 @@
     border: 1px solid #2d2d2d;
     border-radius: 4px;
     padding: 0 8px;
-    height: 22px;
+    height: 26px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
