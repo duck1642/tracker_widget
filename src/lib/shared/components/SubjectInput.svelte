@@ -67,6 +67,7 @@
     padding: 0;
     cursor: pointer;
     text-align: left;
+    align-items: center;
   }
   .subject-badge {
     background: #121212;
@@ -77,8 +78,10 @@
     height: 22px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     font-size: 11px;
     font-weight: 600;
+    line-height: 1;
     box-sizing: border-box;
     transition: all 0.15s ease;
   }
@@ -100,8 +103,10 @@
     height: 22px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     font-size: 11px;
     font-weight: 600;
+    line-height: 1;
     width: 140px;
     box-sizing: border-box;
     outline: none;
