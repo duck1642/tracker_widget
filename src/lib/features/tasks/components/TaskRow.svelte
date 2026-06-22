@@ -64,16 +64,17 @@
     onblur={() => onBlur(task.id, task.text)}
     oninput={(e) => onUpdateText(task.id, e.currentTarget.value)}
     onkeydown={(e) => onKeyDown(e, index, task)}
+    spellcheck={false}
     placeholder="New Task..."
   />
   <div class="row-actions">
-    <button class="row-btn" onclick={() => onMoveTaskUp(index)} title="Move Up">
+    <button type="button" class="row-btn" onpointerdown={(event) => event.preventDefault()} onclick={() => onMoveTaskUp(index)} aria-label="Move task up" title="Move Up">
       <ChevronUp size={13} />
     </button>
-    <button class="row-btn" onclick={() => onMoveTaskDown(index)} title="Move Down">
+    <button type="button" class="row-btn" onpointerdown={(event) => event.preventDefault()} onclick={() => onMoveTaskDown(index)} aria-label="Move task down" title="Move Down">
       <ChevronDown size={13} />
     </button>
-    <button class="row-btn del" onclick={() => onDeleteTask(index)} title="Delete">
+    <button type="button" class="row-btn del" onpointerdown={(event) => event.preventDefault()} onclick={() => onDeleteTask(index)} aria-label="Delete task" title="Delete">
       <Trash2 size={13} />
     </button>
   </div>

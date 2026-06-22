@@ -8,7 +8,7 @@ import { appStore as defaultAppStore } from "$lib/app/appStore.svelte.js";
 import { persistenceRegistry } from "$lib/app/persistenceRegistry.js";
 
 function cloneAction(action) {
-  return typeof structuredClone === "function" ? structuredClone(action) : JSON.parse(JSON.stringify(action));
+  return JSON.parse(JSON.stringify(action));
 }
 
 export class TodoStore {

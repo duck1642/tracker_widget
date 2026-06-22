@@ -18,7 +18,29 @@
    * @param {any} task
    */
   async function handleKeyDown(event, index, task) {
-    if (event.key === "Tab") {
+    if (event.key === "Backspace" && task.text === "") {
+      event.preventDefault();
+      let nextFocusId = "";
+      for (let i = index - 1; i >= 0; i--) {
+        if (todoStore.tasks[i].isTask) {
+          nextFocusId = todoStore.tasks[i].id;
+          break;
+        }
+      }
+      if (!nextFocusId) {
+        for (let i = index + 1; i < todoStore.tasks.length; i++) {
+          if (todoStore.tasks[i].isTask) {
+            nextFocusId = todoStore.tasks[i].id;
+            break;
+          }
+        }
+      }
+      delete originalTexts[task.id];
+      todoStore.deleteTask(index);
+      await tick();
+      focusedTaskId = nextFocusId;
+      inputElements[nextFocusId]?.focus();
+    } else if (event.key === "Tab") {
       event.preventDefault();
       if (event.shiftKey) {
         todoStore.outdentTask(task.id);
