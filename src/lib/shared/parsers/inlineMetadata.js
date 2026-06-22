@@ -32,20 +32,9 @@ export function serializeActivityLine(activity) {
 
 export function parseObjectiveLine(line) {
   const parts = splitLine(line);
-  if (!parts) {
-    const legacyMatch = line.match(/^-\s+\[([ xX])\]\s+\{subjects:\s*\(([^)]*)\),\s*goal:\s*"([\s\S]*?)"\}\s*$/u);
-    if (legacyMatch) {
-      return {
-        subjects: legacyMatch[2].split(",").map((item) => item.trim().normalize("NFC")).filter(Boolean),
-        origin: "planned",
-        status: legacyMatch[1].toLowerCase() === "x" ? "done" : "open",
-        description: legacyMatch[3].normalize("NFC")
-      };
-    }
-    return null;
-  }
+  if (!parts) return null;
   const subjects = parseSubjects(parts.metadata);
-  const origin = parts.metadata.match(/(?:^|,\s*)origin:\s*([\p{L}-]+)(?:$|,)/u)?.[1] || "planned";
+  const origin = parts.metadata.match(/(?:^|,\s*)origin:\s*([\p{L}-]+)(?:$|,)/u)?.[1];
   const status = parts.metadata.match(/(?:^|,\s*)status:\s*([\p{L}-]+)(?:$|,)/u)?.[1];
   if (!subjects || !ORIGINS.has(origin) || !STATUSES.has(status)) return null;
   return { subjects, origin, status, description: parts.description };

@@ -16,4 +16,9 @@ describe("inline metadata", () => {
     expect(parseObjectiveLine("- {subjects: (altyapı), origin: unplanned, status: partial} Beklenmeyen iş."))
       .toEqual({ subjects: ["altyapı"], origin: "unplanned", status: "partial", description: "Beklenmeyen iş." });
   });
+
+  it("requires canonical objective origin metadata", () => {
+    expect(parseObjectiveLine("- {subjects: (rust), status: open} Missing origin.")).toBeNull();
+    expect(parseObjectiveLine('- [ ] {subjects: (rust), goal: "Legacy"}')).toBeNull();
+  });
 });

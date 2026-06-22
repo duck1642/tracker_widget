@@ -25,6 +25,16 @@ describe("weekly index parser", () => {
     expect(serialized).toContain("Intro copy.");
     expect(serialized).toContain("## Reference\n\nDo not remove this.");
   });
+
+  it("preserves malformed objective lines without reclassifying them", () => {
+    const malformed = weekly.replace(
+      "- {subjects: (rust), origin: planned, status: open} Build parser.",
+      "- {subjects: (rust), orgin: unplanned, status: open} Keep this exact line."
+    );
+    const document = parseWeeklyIndex(malformed, { year: 2026, week: 26 });
+    expect(document.objectives).toHaveLength(0);
+    expect(serializeWeeklyIndex(document)).toContain("orgin: unplanned, status: open");
+  });
 });
 
 describe("weekly actual aggregation", () => {

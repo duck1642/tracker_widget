@@ -42,7 +42,7 @@ export class WeekStore {
   }
 
   document() {
-    return { frontmatterRaw: this.frontmatterRaw || "", preambleRaw: this.preambleRaw || "", unknownSectionsRaw: this.unknownSectionsRaw || [], isoWeek: this.descriptor, objectives: this.objectives, plan: this.plan, actual: this.actual, notesRaw: this.notesRaw };
+    return { frontmatterRaw: this.frontmatterRaw || "", preambleRaw: this.preambleRaw || "", unknownSectionsRaw: this.unknownSectionsRaw || [], isoWeek: this.descriptor, objectives: this.objectives, objectiveRawLines: this.objectiveRawLines || [], plan: this.plan, actual: this.actual, notesRaw: this.notesRaw };
   }
 
   async loadPath(path, descriptor, days = []) {
@@ -53,6 +53,7 @@ export class WeekStore {
       this.path = path;
       this.descriptor = descriptor;
       this.objectives = parsed.objectives;
+      this.objectiveRawLines = parsed.objectiveRawLines;
       this.plan = parsed.plan;
       this.actual = parsed.actual;
       this.notesRaw = parsed.notesRaw;
@@ -153,6 +154,7 @@ export class WeekStore {
   applyExternal(content) {
     const parsed = parseWeeklyIndex(content, this.descriptor);
     this.objectives = parsed.objectives;
+    this.objectiveRawLines = parsed.objectiveRawLines;
     this.plan = parsed.plan;
     this.actual = parsed.actual;
     this.notesRaw = parsed.notesRaw;

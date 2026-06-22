@@ -26,8 +26,3 @@ export async function getFileModifiedTime(path) {
 export async function pathExists(path) {
   return await invoke("path_exists", { path });
 }
-
-/** @param {string} rootPath @param {{path: string, content: string}[]} changes */
-export async function applyLogMigration(rootPath, changes) {
-  return await invoke("apply_log_migration", { rootPath, changes });
-}

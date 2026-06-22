@@ -1,8 +1,7 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 const DAILY_TEMPLATE: &str = include_str!("../../../templates/daily-log.md");
 const WEEKLY_TEMPLATE: &str = include_str!("../../../templates/weekly-index.md");
@@ -22,13 +21,6 @@ pub struct LogWeekEntry {
     path: String,
     index_path: Option<String>,
     days: Vec<LogDayEntry>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MigrationChange {
-    path: String,
-    content: String,
 }
 
 fn is_week_name(name: &str) -> bool {
@@ -202,58 +194,10 @@ pub fn create_log_week(
     Ok(created)
 }
 
-#[tauri::command]
-pub fn apply_log_migration(
-    root_path: String,
-    changes: Vec<MigrationChange>,
-) -> Result<String, String> {
-    let root = fs::canonicalize(&root_path).map_err(|error| error.to_string())?;
-    let validated = changes
-        .into_iter()
-        .map(|change| {
-            let path = fs::canonicalize(&change.path).map_err(|error| error.to_string())?;
-            if !path.starts_with(&root)
-                || path.extension().and_then(|value| value.to_str()) != Some("md")
-            {
-                return Err("Migration path is outside the logs folder".to_string());
-            }
-            Ok((path, change.content))
-        })
-        .collect::<Result<Vec<_>, String>>()?;
-    let stamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|error| error.to_string())?
-        .as_millis();
-    let backup_root = root.join("_tracker_backups").join(stamp.to_string());
-    for (path, _) in &validated {
-        let relative = path
-            .strip_prefix(&root)
-            .map_err(|error| error.to_string())?;
-        let backup = backup_root.join(relative);
-        if let Some(parent) = backup.parent() {
-            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
-        }
-        fs::copy(path, backup).map_err(|error| error.to_string())?;
-    }
-    let mut written: Vec<PathBuf> = Vec::new();
-    for (path, content) in &validated {
-        if let Err(error) = fs::write(path, content) {
-            for completed in written {
-                let relative = completed
-                    .strip_prefix(&root)
-                    .map_err(|inner| inner.to_string())?;
-                let _ = fs::copy(backup_root.join(relative), completed);
-            }
-            return Err(error.to_string());
-        }
-        written.push(path.clone());
-    }
-    Ok(display_path(&backup_root))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn temp_directory(label: &str) -> PathBuf {
         let stamp = SystemTime::now()
@@ -349,64 +293,6 @@ mod tests {
             false,
         );
         assert!(result.is_err());
-        fs::remove_dir_all(root).unwrap();
-    }
-
-    #[test]
-    fn backup_failure_aborts_before_any_source_write() {
-        let root = temp_directory("backup-failure");
-        let first = root.join("first.md");
-        let invalid = root.join("directory.md");
-        fs::write(&first, "original").unwrap();
-        fs::create_dir(&invalid).unwrap();
-        let result = apply_log_migration(
-            display_path(&root),
-            vec![
-                MigrationChange {
-                    path: display_path(&first),
-                    content: "changed".into(),
-                },
-                MigrationChange {
-                    path: display_path(&invalid),
-                    content: "invalid".into(),
-                },
-            ],
-        );
-        assert!(result.is_err());
-        assert_eq!(fs::read_to_string(&first).unwrap(), "original");
-        fs::remove_dir_all(root).unwrap();
-    }
-
-    #[test]
-    fn write_failure_restores_completed_sources() {
-        let root = temp_directory("rollback");
-        let first = root.join("first.md");
-        let locked = root.join("locked.md");
-        fs::write(&first, "first original").unwrap();
-        fs::write(&locked, "locked original").unwrap();
-        let mut permissions = fs::metadata(&locked).unwrap().permissions();
-        permissions.set_readonly(true);
-        fs::set_permissions(&locked, permissions).unwrap();
-
-        let result = apply_log_migration(
-            display_path(&root),
-            vec![
-                MigrationChange {
-                    path: display_path(&first),
-                    content: "first changed".into(),
-                },
-                MigrationChange {
-                    path: display_path(&locked),
-                    content: "locked changed".into(),
-                },
-            ],
-        );
-
-        assert!(result.is_err());
-        assert_eq!(fs::read_to_string(&first).unwrap(), "first original");
-        let mut permissions = fs::metadata(&locked).unwrap().permissions();
-        permissions.set_readonly(false);
-        fs::set_permissions(&locked, permissions).unwrap();
         fs::remove_dir_all(root).unwrap();
     }
 }

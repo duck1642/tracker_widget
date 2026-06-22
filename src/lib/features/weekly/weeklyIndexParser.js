@@ -35,10 +35,17 @@ function tableRows(content, type) {
 export function parseWeeklyIndex(markdown, isoWeek) {
   const { frontmatterRaw, body } = splitFrontmatter(markdown);
   const preserved = preservedMarkdown(body);
-  const objectives = section(body, "Objectives").split("\n").map(parseObjectiveLine).filter(Boolean).map((objective, index) => ({ id: createId("objective", index), ...objective }));
-  const plan = tableRows(section(body, "Weekly Plan") || section(body, "Plan"), "plan");
+  const objectives = [];
+  const objectiveRawLines = [];
+  for (const line of section(body, "Objectives").split("\n")) {
+    if (!line.trim()) continue;
+    const objective = parseObjectiveLine(line);
+    if (objective) objectives.push({ id: createId("objective", objectives.length), ...objective });
+    else objectiveRawLines.push(line);
+  }
+  const plan = tableRows(section(body, "Weekly Plan"), "plan");
   const actualBlock = body.match(/<!-- tracker:actual:start -->([\s\S]*?)<!-- tracker:actual:end -->/)?.[1] || "";
-  return { frontmatterRaw, ...preserved, isoWeek, objectives, plan, actual: tableRows(actualBlock, "actual"), notesRaw: section(body, "Notes") };
+  return { frontmatterRaw, ...preserved, isoWeek, objectives, objectiveRawLines, plan, actual: tableRows(actualBlock, "actual"), notesRaw: section(body, "Notes") };
 }
 
 function planTable(plan) {
@@ -56,7 +63,8 @@ export function serializeWeeklyIndex(document) {
   blocks.push(`# ${year} - Week ${week} - ${rangeLabel}`.trim());
   if (document.preambleRaw) blocks.push(document.preambleRaw);
   blocks.push(...(document.unknownSectionsRaw || []));
-  blocks.push(`## Objectives\n\n${document.objectives.map(serializeObjectiveLine).join("\n")}`);
+  const objectiveContent = [...document.objectives.map(serializeObjectiveLine), ...(document.objectiveRawLines || [])].join("\n");
+  blocks.push(`## Objectives\n\n${objectiveContent}`);
   blocks.push(`## Weekly Plan\n\n${planTable(document.plan)}`);
   blocks.push(`## Weekly Actual\n\n<!-- tracker:actual:start -->\n${actualTable(document.actual)}\n<!-- tracker:actual:end -->`);
   blocks.push(`## Notes\n\n${document.notesRaw || ""}`);

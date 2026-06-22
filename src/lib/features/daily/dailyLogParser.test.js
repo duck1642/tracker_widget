@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseDailyLog, parseLegacySessionActivities, serializeDailyLog } from "./dailyLogParser.js";
+import { parseDailyLog, serializeDailyLog } from "./dailyLogParser.js";
 
 const source = `---\ntitle: "opaque"\ncustom: { untouched: true }\n---\n\n# 2026-06-22\n\n## Geliştirme\n\n- {subjects: (rust, programlama), time: 90m} Ayrıştırıcı yazıldı.\n- {subjects: (test), time: 30m} Testler eklendi.\n\n## Total Time\n\n999m\n\n---\n\n## Notes\n\n- **Ham** Markdown korunur.\n`;
 
@@ -27,22 +27,4 @@ describe("daily log parser", () => {
     expect(serialized).toContain("Keep this raw line.");
   });
 
-  it("displays safely convertible legacy activity lists without migration", () => {
-    const legacy = `**subjects:**\n- programming\n\n**time:**\n- 120 min\n\n**details:**\n- Readme oluşturuldu.\n- Git kontrol edildi.\n\n---`;
-    expect(parseLegacySessionActivities(legacy)).toEqual([{
-      subjects: ["programming"],
-      minutes: 120,
-      description: "Readme oluşturuldu. Git kontrol edildi."
-    }]);
-    const parsed = parseDailyLog(`# 2026-06-20\n\n## Deep 1\n\n${legacy}\n\n## Total Time\n\n2 h\n\n## Notes\n\n- not`);
-    expect(parsed.sessions[0].activities[0].minutes).toBe(120);
-    expect(parsed.totalMinutes).toBe(120);
-  });
-
-  it("leaves ambiguous legacy lists untouched", () => {
-    const legacy = `**subjects:**\n- rust\n- test\n**time:**\n- 30 min\n**details:**\n- one\n- two`;
-    const parsed = parseDailyLog(`# 2026-06-20\n\n## Work\n\n${legacy}`);
-    expect(parsed.sessions[0].activities).toHaveLength(0);
-    expect(parsed.sessions[0].rawLines.join("\n")).toContain("**subjects:**");
-  });
 });

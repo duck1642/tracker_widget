@@ -1,36 +1,8 @@
 // @ts-nocheck
 import { createId, splitFrontmatter } from "$lib/shared/parsers/markdownSections.js";
-import { isValidSubject, parseActivityLine, serializeActivityLine } from "$lib/shared/parsers/inlineMetadata.js";
+import { parseActivityLine, serializeActivityLine } from "$lib/shared/parsers/inlineMetadata.js";
 
 const RESERVED = new Set(["notes", "total time"]);
-
-function legacyMinutes(value) {
-  const hours = Number(value.match(/(\d+)\s*h/i)?.[1] || 0);
-  const minutes = Number(value.match(/(\d+)\s*(?:min|m)\b/i)?.[1] || 0);
-  return hours * 60 + minutes;
-}
-
-export function parseLegacySessionActivities(content) {
-  if (!/\*\*subjects:\*\*/i.test(content)) return null;
-  const subjectsBlock = content.match(/\*\*subjects:\*\*([\s\S]*?)(?=\*\*time:\*\*)/i)?.[1] || "";
-  const timesBlock = content.match(/\*\*time:\*\*([\s\S]*?)(?=\*\*details:\*\*)/i)?.[1] || "";
-  const detailsBlock = content.match(/\*\*details:\*\*([\s\S]*?)(?=\n---|$)/i)?.[1] || "";
-  const subjectRows = [...subjectsBlock.matchAll(/^\s*-\s+(.+)$/gm)].map((match) => match[1].trim());
-  const times = [...timesBlock.matchAll(/^\s*-\s+(.+)$/gm)].map((match) => legacyMinutes(match[1]));
-  const details = [...detailsBlock.matchAll(/^\s*-\s+(.+)$/gm)].map((match) => match[1].trim());
-  if (!subjectRows.length && !times.length && !details.length) return [];
-  if (subjectRows.length !== times.length || (details.length !== subjectRows.length && subjectRows.length !== 1)) return null;
-  const activities = subjectRows.map((row, index) => {
-    const subjects = row.split(",").map((subject) => subject.trim().normalize("NFC")).filter(Boolean);
-    if (!subjects.length || subjects.some((subject) => !isValidSubject(subject)) || times[index] <= 0) return null;
-    return {
-      subjects,
-      minutes: times[index],
-      description: subjectRows.length === 1 ? details.join(" ") : details[index]
-    };
-  });
-  return activities.some((activity) => !activity) ? null : activities;
-}
 
 export function parseDailyLog(markdown, fallbackDate = "") {
   const { frontmatterRaw, body } = splitFrontmatter(markdown);
@@ -57,13 +29,6 @@ export function parseDailyLog(markdown, fallbackDate = "") {
         const activity = parseActivityLine(line);
         if (activity) activities.push({ id: createId(`activity-${sessions.length}`, activities.length), ...activity });
         else if (line.trim()) rawLines.push(line);
-      }
-      const legacyActivities = activities.length === 0 ? parseLegacySessionActivities(content) : null;
-      if (legacyActivities) {
-        activities.push(...legacyActivities.map((activity, activityIndex) => ({ id: createId(`legacy-activity-${sessions.length}`, activityIndex), ...activity })));
-        rawLines.length = 0;
-      } else if (Array.isArray(legacyActivities) && legacyActivities.length === 0) {
-        rawLines.length = 0;
       }
       sessions.push({ id: createId("session", sessions.length), name, activities, rawLines });
     }
