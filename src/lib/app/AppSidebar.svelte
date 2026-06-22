@@ -9,9 +9,6 @@
 </script>
 
 <aside class:closed={!open}>
-  <header>
-    <div><span class="eyebrow">Workspace</span><strong>Log files</strong></div>
-  </header>
   <div class="actions">
     <button onclick={() => workspaceStore.chooseRoot()} aria-label="Select logs folder" title="Select logs folder"><FolderOpen size={15} /></button>
     <button onclick={() => workspaceStore.createCurrentWeek(false)} aria-label="Create current week" title="Create current week"><FolderPlus size={15} /></button>
@@ -26,12 +23,8 @@
 </aside>
 
 <style>
-  aside { position: relative; display: grid; grid-template-rows: auto auto 1fr; flex: 0 0 180px; width: 180px; height: 100%; border-right: 1px solid var(--border-color); background: var(--surface); overflow: hidden; }
-  header { display: flex; align-items: center; min-height: 41px; padding: 8px 12px 6px; box-sizing: border-box; }
-  header div { display: grid; gap: 2px; }
-  .eyebrow { color: var(--accent); font-size: 9px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
-  strong { font-size: var(--text-sm); }
-  .actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; padding: 0 10px 9px; }
+  aside { position: relative; display: grid; grid-template-rows: auto 1fr; flex: 0 0 180px; width: 180px; height: 100%; border-right: 1px solid var(--border-color); background: var(--surface); overflow: hidden; }
+  .actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; padding: 10px 10px 9px; }
   .actions button { display: grid; place-items: center; width: 100%; min-width: 0; height: 34px; padding: 0; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-muted); cursor: pointer; }
   .actions button:hover { color: var(--text-color); border-color: var(--border-strong); }
   .unavailable { display: grid; align-content: start; gap: 8px; margin: 8px; padding: 14px; border: 1px dashed var(--warning); border-radius: var(--radius-md); color: var(--text-muted); font-size: var(--text-sm); }
