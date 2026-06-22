@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/svelte";
 import MainTabs from "./MainTabs.svelte";
+import AppHeader from "./AppHeader.svelte";
 import AppSidebar from "./AppSidebar.svelte";
 import FileTree from "$lib/shared/components/FileTree.svelte";
 import ActivityRow from "$lib/features/daily/components/ActivityRow.svelte";
@@ -34,6 +35,22 @@ describe("application navigation", () => {
     await fireEvent.click(screen.getByRole("button", { name: /2026-06-22/ }));
     expect(onSelectWeek).toHaveBeenCalledWith(week);
     expect(onSelectDay).toHaveBeenCalledWith(week.days[0], week);
+  });
+});
+
+describe("window controls", () => {
+  it("emits minimize and close actions from the title bar", async () => {
+    const onShrinkApp = vi.fn();
+    const onCloseApp = vi.fn();
+    render(AppHeader, {
+      dragEnabled: true, layerMode: "normal", statusMessage: "", title: "Tasks",
+      onToggleSidebar: vi.fn(), onToggleModeMenu: vi.fn(), onToggleSettings: vi.fn(),
+      onShrinkApp, onCloseApp
+    });
+    await fireEvent.click(screen.getByTitle("Minimize"));
+    await fireEvent.click(screen.getByTitle("Close"));
+    expect(onShrinkApp).toHaveBeenCalledOnce();
+    expect(onCloseApp).toHaveBeenCalledOnce();
   });
 });
 

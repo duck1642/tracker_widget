@@ -34,7 +34,7 @@
     <button class="icon-btn-header" onclick={onToggleSettings} title="Settings">
       <Settings size={13} />
     </button>
-    <button class="icon-btn-header" onclick={onShrinkApp} title="Shrink to Tray">
+    <button class="icon-btn-header" onclick={onShrinkApp} title={layerMode === "desktop" ? "Hide to tray" : "Minimize"}>
       <Minus size={13} />
     </button>
     <button class="icon-btn-header close" onclick={onCloseApp} title="Close">

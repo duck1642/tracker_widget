@@ -98,13 +98,26 @@
 
   async function closeApp() {
     if (!(await persistenceRegistry.flushAll())) return appStore.showStatus("Resolve file conflicts before closing");
-    closingAfterFlush = true;
-    await getCurrentWindow().close();
+    try {
+      await invoke("exit_app");
+    } catch (error) {
+      appStore.showStatus("Close failed: " + error);
+    }
+  }
+
+  async function minimizeApp() {
+    try {
+      const appWindow = getCurrentWindow();
+      if (appStore.layerMode === "desktop") await appWindow.hide();
+      else await appWindow.minimize();
+    } catch (error) {
+      appStore.showStatus("Minimize failed: " + error);
+    }
   }
 </script>
 
 <main class="app-container" class:desktop-mode={appStore.layerMode === "desktop"}>
-  <AppHeader title={appStore.currentView === "tasks" ? "Tasks" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={() => getCurrentWindow().minimize()} onCloseApp={closeApp} />
+  <AppHeader title={appStore.currentView === "tasks" ? "Tasks" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onCloseApp={closeApp} />
   {#if showModeMenu}<LayerMenu layerMode={appStore.layerMode} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} />{/if}
   <div class="workspace-shell">
     {#if workspaceStore.sidebarOpen}<div class="sidebar-wrap"><AppSidebar {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} /></div>{/if}

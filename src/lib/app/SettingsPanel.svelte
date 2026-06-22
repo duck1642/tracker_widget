@@ -39,7 +39,8 @@
   section { display: grid; align-content: start; gap: 8px; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--surface); }
   label, p { color: var(--text-muted); font-size: var(--text-sm); }
   .path-display { display: flex; gap: 8px; align-items: center; } .path-display code { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
-  button { display: flex; align-items: center; justify-content: center; gap: 6px; }
+  button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-color); cursor: pointer; }
+  button:hover { border-color: var(--border-strong); background: var(--surface-hover); }
   .toggle-row { justify-content: flex-start; border: 0; background: transparent; }
   .checkbox { display: grid; place-items: center; width: 16px; height: 16px; border: 1px solid var(--border-strong); border-radius: 4px; } .checkbox.checked { background: var(--accent); color: var(--accent-ink); }
   .migration-actions { display: flex; gap: 8px; }
