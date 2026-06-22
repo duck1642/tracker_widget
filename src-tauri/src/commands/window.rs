@@ -5,6 +5,10 @@ pub fn set_always_on_top(window: tauri::Window, on_top: bool) -> Result<(), Stri
 
 #[tauri::command]
 pub fn exit_app(app: tauri::AppHandle) {
+    use tauri::Manager;
+    for window in app.webview_windows().values() {
+        let _ = window.destroy();
+    }
     app.exit(0);
 }
 
