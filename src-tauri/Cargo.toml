@@ -27,4 +27,5 @@ windows-sys = { version = "0.52", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
 ] }
+tauri-plugin-dialog = "2"
 

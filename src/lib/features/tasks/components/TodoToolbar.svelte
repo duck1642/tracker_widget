@@ -1,5 +1,5 @@
 <script>
-  import { Plus, Undo2, Redo2, RotateCw, Trash2 } from "@lucide/svelte";
+  import { Plus, Undo2, Redo2, RotateCw, ListX } from "@lucide/svelte";
 
   let { 
     redoStackLength, 
@@ -25,8 +25,8 @@
     <button class="action-btn" onclick={onReload} title="Reload file">
       <RotateCw size={13} />
     </button>
-    <button class="action-btn del" onclick={onClearCompleted} title="Clear completed tasks">
-      <Trash2 size={13} />
+    <button class="action-btn del" onclick={onClearCompleted} aria-label="Clear completed tasks" title="Clear completed tasks">
+      <ListX size={13} />
     </button>
   </div>
 </footer>

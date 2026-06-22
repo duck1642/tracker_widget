@@ -1,10 +1,12 @@
 <script>
-  import { Settings, Layers, X, Minus } from "@lucide/svelte";
+  import { Settings, Layers, X, Minus, PanelLeft } from "@lucide/svelte";
 
   let { 
     dragEnabled, 
     layerMode, 
     statusMessage, 
+    title = "Tracker",
+    onToggleSidebar,
     onToggleModeMenu, 
     onToggleSettings, 
     onShrinkApp,
@@ -21,10 +23,11 @@
 
 <header class="drag-header" class:draggable={dragEnabled} data-tauri-drag-region={dragEnabled ? true : undefined}>
   <span class="title-text" data-tauri-drag-region={dragEnabled ? true : undefined}>
-    TO-DO {statusMessage ? `[${statusMessage}]` : ""}
+    {title} {statusMessage ? `· ${statusMessage}` : ""}
   </span>
   <div class="header-controls">
-    <button class="icon-btn-header" onclick={onToggleModeMenu} title="Window Layer Mode">
+    <button class="icon-btn-header" onclick={onToggleSidebar} title="Toggle file tree"><PanelLeft size={13} /></button>
+    <button class="icon-btn-header" onclick={onToggleModeMenu} title={layerMode === "desktop" ? "Window mode: Desktop (tray only)" : "Window layer mode"}>
       <Layers size={13} />
       <span class="btn-text">{getModeLabel(layerMode)}</span>
     </button>

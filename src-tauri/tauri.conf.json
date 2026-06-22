@@ -14,13 +14,13 @@
       {
         "label": "main",
         "title": "Tracker Widget",
-        "width": 360,
-        "height": 550,
+        "width": 960,
+        "height": 700,
         "transparent": true,
         "decorations": false,
         "shadow": false,
-        "minWidth": 260,
-        "minHeight": 300,
+        "minWidth": 640,
+        "minHeight": 480,
         "skipTaskbar": false
       }
     ],

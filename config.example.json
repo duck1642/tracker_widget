@@ -1,5 +1,6 @@
 {
   "file_path": "todo.md",
+  "logs_root_path": "C:\\path\\to\\daily_logs",
   "layer_mode": "normal",
   "drag_enabled": true,
   "autostart_enabled": false

@@ -10,6 +10,6 @@
     Normal Window
   </button>
   <button class="menu-item" class:active={layerMode === 'desktop'} onclick={() => onSelectMode("desktop")}>
-    Pin to Desktop
+    Pin to Desktop (tray only)
   </button>
 </div>

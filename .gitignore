@@ -39,3 +39,6 @@ config.json
 graphify-out/
 .graphifyignore
 
+# Local planning documents
+/docs/
+

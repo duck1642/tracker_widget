@@ -1,11 +1,32 @@
 :root {
   --bg-dark: #121212;
-  --bg-panel: #1a1a1a;
-  --bg-header: #222222;
-  --border-color: #2e2e2e;
-  --text-color: #e0e0e0;
-  --text-muted: #757575;
-  --accent: #afd7b9;
+  --bg-panel: #171916;
+  --bg-header: #20231f;
+  --surface: #1c1f1b;
+  --surface-2: #242822;
+  --surface-hover: #2a3028;
+  --border-color: #343a32;
+  --border-subtle: #292e28;
+  --border-strong: #4a5347;
+  --text-color: #edf0e9;
+  --text-muted: #929b8d;
+  --accent: #b8df9e;
+  --accent-soft: rgba(184, 223, 158, 0.11);
+  --accent-ink: #172112;
+  --danger: #e88f86;
+  --warning: #e3ba70;
+  --success: #92d19a;
+  --font-sans: "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  --text-xs: 10px;
+  --text-sm: 12px;
+  --text-md: 14px;
+  --text-lg: 18px;
+  --text-xl: clamp(22px, 3vw, 30px);
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --shadow-sm: 0 8px 24px rgba(0, 0, 0, .13);
+  --sidebar-width: clamp(220px, 24vw, 290px);
 }
 
 /* Reset and base styles */
@@ -19,7 +40,7 @@ html, body {
 }
 
 body {
-  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   color: var(--text-color);
   user-select: none;
   position: relative;
@@ -28,6 +49,33 @@ body {
 input, button, textarea, select {
   font-family: inherit;
 }
+
+input, textarea, select {
+  min-height: 34px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--bg-dark);
+  color: var(--text-color);
+  padding: 6px 8px;
+}
+
+button { color: var(--text-color); }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.icon-button { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 5px; background: transparent; color: var(--text-muted); cursor: pointer; }
+.icon-button:hover { background: var(--surface-hover); color: var(--text-color); }
+.icon-button.danger:hover, .danger:hover { color: var(--danger); }
+.primary-small { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; border: 0; border-radius: 5px; padding: 0 10px; background: var(--accent); color: var(--accent-ink); font-weight: 700; cursor: pointer; }
+.empty-copy { padding: 14px 0; color: var(--text-muted); }
+
+.week-section { scroll-margin-top: 100px; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-sm); }
+.week-section > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.week-section > header > div { display: flex; align-items: center; gap: 9px; }
+.week-section h2 { margin: 0; font-size: var(--text-lg); }
+.section-index { color: var(--accent); font: 700 var(--text-xs)/1 var(--font-mono); }
 
 .app-container {
   position: absolute;
@@ -116,6 +164,31 @@ input, button, textarea, select {
   flex-direction: column;
 }
 
+.conflict-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 7px 8px;
+  border: 1px solid rgba(255, 190, 80, 0.45);
+  border-radius: 4px;
+  background: rgba(120, 75, 10, 0.28);
+  color: #ffd99a;
+  font-size: 11px;
+}
+
+.conflict-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.conflict-actions .action-btn {
+  padding: 3px 5px;
+  font-size: 10px;
+}
+
 /* Settings view */
 .settings-panel {
   display: flex;
@@ -163,15 +236,18 @@ input, button, textarea, select {
 .task-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
   width: max-content;
   min-width: 100%;
+  padding: 7px 10px;
+  box-sizing: border-box;
 }
 
 .task-row {
   display: flex;
   align-items: center;
-  padding: 2px 4px;
+  min-height: 29px;
+  padding: 1px 3px;
   border-radius: 2px;
   min-width: 100%;
   width: max-content;
@@ -227,7 +303,9 @@ input, button, textarea, select {
   color: var(--text-color);
   font-size: 13px;
   outline: none;
-  padding: 2px 0;
+  min-height: 26px;
+  height: 26px;
+  padding: 0;
   min-width: 150px; /* Prevent text input from collapsing on deep indentation */
 }
 
@@ -435,10 +513,6 @@ input, button, textarea, select {
   background: transparent;
 }
 
-/* Hide focus outlines globally */
-* {
-  outline: none;
-}
-*:focus {
-  outline: none;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
 }

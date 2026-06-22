@@ -45,51 +45,10 @@ pub fn get_default_path() -> String {
 pub fn get_file_modified_time(path: String) -> Result<u64, String> {
     fs::metadata(&path)
         .and_then(|m| m.modified())
-        .map(|time| time.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs())
+        .map(|time| {
+            time.duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs()
+        })
         .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn log_history_entry(path: String, entry_json: String) -> Result<(), String> {
-    use std::fs::OpenOptions;
-    use std::io::Write;
-    
-    let path_buf = std::path::Path::new(&path);
-    if let Some(parent) = path_buf.parent() {
-        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&path)
-        .map_err(|e| e.to_string())?;
-        
-    writeln!(file, "{}", entry_json).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn pop_history_entry(path: String) -> Result<String, String> {
-    if !std::path::Path::new(&path).exists() {
-        return Err("No history".to_string());
-    }
-    
-    let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-    let mut lines: Vec<&str> = content.lines().filter(|l| !l.is_empty()).collect();
-    
-    if lines.is_empty() {
-        return Err("No history".to_string());
-    }
-    
-    let last_line = lines.pop().unwrap().to_string();
-    
-    let new_content = if lines.is_empty() {
-        "".to_string()
-    } else {
-        lines.join("\n") + "\n"
-    };
-    
-    fs::write(&path, new_content).map_err(|e| e.to_string())?;
-    
-    Ok(last_line)
 }

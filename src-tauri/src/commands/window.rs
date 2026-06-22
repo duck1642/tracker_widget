@@ -3,13 +3,20 @@ pub fn set_always_on_top(window: tauri::Window, on_top: bool) -> Result<(), Stri
     window.set_always_on_top(on_top).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub fn exit_app(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
 #[cfg(target_os = "windows")]
-static mut ORIGINAL_WNDPROC: Option<unsafe extern "system" fn(
-    windows_sys::Win32::Foundation::HWND,
-    u32,
-    windows_sys::Win32::Foundation::WPARAM,
-    windows_sys::Win32::Foundation::LPARAM,
-) -> windows_sys::Win32::Foundation::LRESULT> = None;
+static mut ORIGINAL_WNDPROC: Option<
+    unsafe extern "system" fn(
+        windows_sys::Win32::Foundation::HWND,
+        u32,
+        windows_sys::Win32::Foundation::WPARAM,
+        windows_sys::Win32::Foundation::LPARAM,
+    ) -> windows_sys::Win32::Foundation::LRESULT,
+> = None;
 
 #[cfg(target_os = "windows")]
 unsafe extern "system" fn subclass_wndproc(
@@ -38,11 +45,10 @@ pub fn set_desktop_parent(window: tauri::Window, enable: bool) -> Result<(), Str
     {
         use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM};
         use windows_sys::Win32::UI::WindowsAndMessaging::{
-            EnumWindows, FindWindowExW, FindWindowW, GetWindowLongPtrW,
-            SendMessageTimeoutW, SetParent, SetWindowLongPtrW, SetWindowPos,
-            GWL_STYLE, GWL_EXSTYLE, SMTO_NORMAL, SWP_FRAMECHANGED, SWP_NOACTIVATE,
-            SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW, WS_CHILD, WS_POPUP,
-            WS_EX_LAYERED, GWLP_WNDPROC,
+            EnumWindows, FindWindowExW, FindWindowW, GetWindowLongPtrW, SendMessageTimeoutW,
+            SetParent, SetWindowLongPtrW, SetWindowPos, GWLP_WNDPROC, GWL_EXSTYLE, GWL_STYLE,
+            SMTO_NORMAL, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW,
+            WS_CHILD, WS_EX_LAYERED, WS_POPUP,
         };
 
         fn wide(s: &str) -> Vec<u16> {
@@ -52,12 +58,7 @@ pub fn set_desktop_parent(window: tauri::Window, enable: bool) -> Result<(), Str
         unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
             let shell = wide("SHELLDLL_DefView");
 
-            let def_view = FindWindowExW(
-                hwnd,
-                0,
-                shell.as_ptr(),
-                std::ptr::null(),
-            );
+            let def_view = FindWindowExW(hwnd, 0, shell.as_ptr(), std::ptr::null());
 
             if def_view != 0 {
                 *(lparam as *mut HWND) = hwnd;
@@ -75,15 +76,7 @@ pub fn set_desktop_parent(window: tauri::Window, enable: bool) -> Result<(), Str
                 let mut result = 0usize;
 
                 // Ask Explorer to initialize WorkerW windows.
-                SendMessageTimeoutW(
-                    progman,
-                    0x052C,
-                    0,
-                    0,
-                    SMTO_NORMAL,
-                    1000,
-                    &mut result,
-                );
+                SendMessageTimeoutW(progman, 0x052C, 0, 0, SMTO_NORMAL, 1000, &mut result);
             }
 
             let mut desktop_parent: HWND = 0;
@@ -121,7 +114,11 @@ pub fn set_desktop_parent(window: tauri::Window, enable: bool) -> Result<(), Str
                     SetParent(hwnd, parent);
 
                     // Subclass the window to intercept WM_GETDLGCODE and handle Tab keys correctly.
-                    let original = SetWindowLongPtrW(hwnd, GWLP_WNDPROC, subclass_wndproc as *const () as isize);
+                    let original = SetWindowLongPtrW(
+                        hwnd,
+                        GWLP_WNDPROC,
+                        subclass_wndproc as *const () as isize,
+                    );
                     if original == 0 {
                         return Err("Failed to subclass window".to_string());
                     }
@@ -135,11 +132,7 @@ pub fn set_desktop_parent(window: tauri::Window, enable: bool) -> Result<(), Str
                     0,
                     0,
                     0,
-                    SWP_NOMOVE
-                        | SWP_NOSIZE
-                        | SWP_NOACTIVATE
-                        | SWP_SHOWWINDOW
-                        | SWP_FRAMECHANGED,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED,
                 );
             } else {
                 // Restore original window procedure before restoring styles
@@ -166,11 +159,7 @@ pub fn set_desktop_parent(window: tauri::Window, enable: bool) -> Result<(), Str
                     0,
                     0,
                     0,
-                    SWP_NOMOVE
-                        | SWP_NOSIZE
-                        | SWP_NOACTIVATE
-                        | SWP_SHOWWINDOW
-                        | SWP_FRAMECHANGED,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED,
                 );
             }
         }

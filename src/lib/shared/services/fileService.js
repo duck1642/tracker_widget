@@ -22,15 +22,12 @@ export async function getFileModifiedTime(path) {
   return await invoke("get_file_modified_time", { path });
 }
 
-/**
- * @param {string} path
- * @param {string} entryJson
- */
-export async function logHistory(path, entryJson) {
-  return await invoke("log_history_entry", { path, entryJson });
+/** @param {string} path */
+export async function pathExists(path) {
+  return await invoke("path_exists", { path });
 }
 
-/** @param {string} path */
-export async function popHistory(path) {
-  return await invoke("pop_history_entry", { path });
+/** @param {string} rootPath @param {{path: string, content: string}[]} changes */
+export async function applyLogMigration(rootPath, changes) {
+  return await invoke("apply_log_migration", { rootPath, changes });
 }

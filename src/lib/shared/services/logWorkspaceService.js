@@ -1,0 +1,83 @@
+// @ts-nocheck
+import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+export function getISOWeek(date) {
+  const current = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = current.getUTCDay() || 7;
+  current.setUTCDate(current.getUTCDate() + 4 - day);
+  const year = current.getUTCFullYear();
+  const start = new Date(Date.UTC(year, 0, 1));
+  return { year, week: Math.ceil((((current.getTime() - start.getTime()) / 86400000) + 1) / 7) };
+}
+
+export function formatDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+export function formatCompactDate(date) {
+  return formatDate(date).replaceAll("-", "");
+}
+
+function mondayFor(date) {
+  const result = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  result.setDate(result.getDate() - ((result.getDay() || 7) - 1));
+  return result;
+}
+
+function rangeLabel(start, end) {
+  if (start.getFullYear() !== end.getFullYear()) {
+    return `${MONTHS[start.getMonth()]} ${start.getDate()}, ${start.getFullYear()}–${MONTHS[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
+  }
+  if (start.getMonth() !== end.getMonth()) {
+    return `${MONTHS[start.getMonth()]} ${start.getDate()}–${MONTHS[end.getMonth()]} ${end.getDate()}`;
+  }
+  return `${MONTHS[start.getMonth()]} ${start.getDate()}–${end.getDate()}`;
+}
+
+export function getWeekDescriptor(date) {
+  const start = mondayFor(date);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const iso = getISOWeek(start);
+  return {
+    ...iso,
+    start,
+    end,
+    folderName: `${iso.year}w${String(iso.week).padStart(2, "0")}`,
+    rangeLabel: rangeLabel(start, end),
+    dates: Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(start);
+      day.setDate(day.getDate() + index);
+      return day;
+    })
+  };
+}
+
+export function dayLabel(date) {
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()];
+}
+
+export async function listLogTree(rootPath) {
+  return await invoke("list_log_tree", { rootPath });
+}
+
+export async function createWeek(rootPath, date, missingOnly = false) {
+  const descriptor = getWeekDescriptor(date);
+  return await invoke("create_log_week", {
+    rootPath,
+    year: descriptor.year,
+    week: descriptor.week,
+    startDate: formatDate(descriptor.start),
+    rangeLabel: descriptor.rangeLabel,
+    dates: descriptor.dates.map(formatDate),
+    missingOnly
+  });
+}
+
+export async function selectLogsFolder() {
+  const selected = await open({ directory: true, multiple: false, title: "Select logs folder" });
+  return typeof selected === "string" ? selected : null;
+}
