@@ -3,22 +3,158 @@
   import { Trash2 } from "@lucide/svelte";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
   let { objective, onUpdate, onDelete } = $props();
+
+  let isEditingDesc = $state(false);
+
+  function toggleOrigin() {
+    onUpdate({ origin: objective.origin === "planned" ? "unplanned" : "planned" });
+  }
+
+  function focus(node) {
+    node.focus();
+  }
 </script>
 
-<article>
-  <label class="description"><span>Objective</span><input value={objective.description} oninput={(event) => onUpdate({ description: event.currentTarget.value.replace(/[\r\n]/g, " ") })} placeholder="Objective description" /></label>
-  <SubjectInput subjects={objective.subjects} onChange={(subjects) => onUpdate({ subjects })} />
-  <label><span>Origin</span><select value={objective.origin} onchange={(event) => onUpdate({ origin: event.currentTarget.value })}><option value="planned">Planned</option><option value="unplanned">Unplanned</option></select></label>
-  <label><span>Status</span><select class={`status ${objective.status}`} value={objective.status} onchange={(event) => onUpdate({ status: event.currentTarget.value })}><option value="open">Open</option><option value="done">Done</option><option value="partial">Partial</option><option value="cancelled">Cancelled</option></select></label>
-  <button class="icon-button danger" onclick={onDelete} aria-label="Delete objective"><Trash2 size={15} /></button>
+<article class="objective-card">
+  <div class="row-top">
+    {#if isEditingDesc}
+      <input
+        class="desc-input"
+        value={objective.description}
+        oninput={(event) => onUpdate({ description: event.currentTarget.value.replace(/[\r\n]/g, " ") })}
+        onblur={() => isEditingDesc = false}
+        onkeydown={(e) => { if (e.key === "Enter") isEditingDesc = false; }}
+        placeholder="Objective description"
+        use:focus
+      />
+    {:else}
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <span class="desc-text" onclick={() => isEditingDesc = true}>
+        {objective.description || "Add objective description..."}
+      </span>
+    {/if}
+    <button class="row-btn del" onclick={onDelete} aria-label="Delete objective" title="Delete">
+      <Trash2 size={13} />
+    </button>
+  </div>
+  <div class="row-bottom">
+    <SubjectInput subjects={objective.subjects} onChange={(subjects) => onUpdate({ subjects })} variant="badge" />
+    
+    <button type="button" class="origin-badge" onclick={toggleOrigin}>
+      {objective.origin === "planned" ? "Planned" : "Unplanned"}
+    </button>
+    
+    <div class="status-select-container">
+      <select aria-label="Status" class={`status-select ${objective.status}`} value={objective.status} onchange={(event) => onUpdate({ status: event.currentTarget.value })}>
+        <option value="open">Open</option>
+        <option value="done">Done</option>
+        <option value="partial">Partial</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+  </div>
 </article>
 
 <style>
-  article { display: grid; grid-template-columns: minmax(220px, 1.4fr) minmax(140px, .8fr) 115px 115px 32px; align-items: end; gap: 9px; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); }
-  label { display: grid; gap: 4px; min-width: 0; }
-  span { color: var(--text-muted); font-size: var(--text-xs); }
-  input, select { width: 100%; box-sizing: border-box; }
-  .done { color: var(--success); } .partial { color: var(--warning); } .cancelled { color: var(--danger); }
-  @media (max-width: 820px) { article { grid-template-columns: 1fr 1fr 1fr 32px; } .description { grid-column: 1 / -1; grid-row: 1; } }
+  .objective-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .desc-text {
+    flex: 1;
+    font-size: var(--text-sm);
+    color: var(--text-color);
+    cursor: pointer;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+  }
+  .desc-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--border-strong);
+    color: var(--text-color);
+    font-size: var(--text-sm);
+    outline: none;
+    padding: 2px 0;
+  }
+  .row-bottom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* Origin badge */
+  .origin-badge {
+    background: transparent;
+    color: #888888;
+    border: 1px solid #3d3d3d;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+  .origin-badge:hover {
+    border-color: #555;
+    color: var(--text-color);
+  }
+
+  /* Status select styling */
+  .status-select-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+  .status-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    outline: none;
+    width: auto;
+    box-sizing: border-box;
+  }
+
+  /* Color themes for status */
+  .status-select.open {
+    border: 1px solid #444444;
+    color: var(--text-muted);
+  }
+  .status-select.done {
+    border: 1px solid #3a532d;
+    color: #b8df9e;
+  }
+  .status-select.partial {
+    border: 1px solid #5a4b22;
+    color: #e4c070;
+  }
+  .status-select.cancelled {
+    border: 1px solid #632d2d;
+    color: #ff8888;
+  }
+  
+  option {
+    background: var(--bg-panel);
+    color: var(--text-color);
+  }
 </style>
 

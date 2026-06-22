@@ -91,8 +91,15 @@ describe("logger editing", () => {
   it("emits Daily activity edits", async () => {
     const onUpdate = vi.fn();
     render(ActivityRow, { activity: { subjects: ["rust"], minutes: 20, description: "Old" }, onUpdate, onDelete: vi.fn() });
-    await fireEvent.input(screen.getByLabelText("Minutes"), { target: { value: "45" } });
-    await fireEvent.input(screen.getByLabelText("Description"), { target: { value: "New description" } });
+    
+    // Open minutes editor by clicking the badge
+    await fireEvent.click(screen.getByLabelText("Edit minutes spent"));
+    await fireEvent.input(screen.getByRole("spinbutton"), { target: { value: "45" } });
+    
+    // Open description editor by clicking the description text
+    await fireEvent.click(screen.getByText("Old"));
+    await fireEvent.input(screen.getByPlaceholderText("What happened?"), { target: { value: "New description" } });
+    
     expect(onUpdate).toHaveBeenCalledWith({ minutes: 45 });
     expect(onUpdate).toHaveBeenCalledWith({ description: "New description" });
   });
@@ -113,7 +120,7 @@ describe("logger editing", () => {
       objective: { subjects: ["rust"], origin: "planned", status: "open", description: "Ship" },
       onUpdate, onDelete: vi.fn()
     });
-    await fireEvent.change(screen.getByLabelText("Origin"), { target: { value: "unplanned" } });
+    await fireEvent.click(screen.getByRole("button", { name: "Planned" }));
     await fireEvent.change(screen.getByLabelText("Status"), { target: { value: "partial" } });
     expect(onUpdate).toHaveBeenCalledWith({ origin: "unplanned" });
     expect(onUpdate).toHaveBeenCalledWith({ status: "partial" });
