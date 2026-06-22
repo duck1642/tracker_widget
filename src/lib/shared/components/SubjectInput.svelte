@@ -31,6 +31,7 @@
           onkeydown={(e) => { if (e.key === "Enter") isEditing = false; }}
           aria-invalid={invalid}
           placeholder="rust, programming"
+          spellcheck={false}
           use:focus
         />
       </div>
@@ -136,7 +137,7 @@
     padding: 0 8px;
     font-size: 11px;
     font-weight: 600;
-    line-height: 26px;
+    line-height: 24px;
     box-sizing: border-box;
     outline: none;
     transition: all 0.15s ease;
