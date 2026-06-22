@@ -40,5 +40,6 @@
   button.active { background: var(--accent-soft); color: var(--accent); }
   .week-row { color: var(--text-color); font-weight: 650; }
   .children { display: grid; gap: 1px; padding-left: 18px; }
+  .children button { justify-self: start; padding: 0 8px; }
   p { padding: 12px; color: var(--text-muted); font-size: var(--text-sm); }
 </style>
