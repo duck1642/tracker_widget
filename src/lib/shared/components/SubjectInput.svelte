@@ -4,9 +4,11 @@
   let { subjects = [], onChange, label = "Subjects", variant = "default" } = $props();
   let invalid = $state(false);
   let isEditing = $state(false);
+  let currentText = $state("");
 
   function handleInput(event) {
-    const next = event.currentTarget.value.split(",").map((item) => item.trim().normalize("NFC")).filter(Boolean);
+    currentText = event.currentTarget.value;
+    const next = currentText.split(",").map((item) => item.trim().normalize("NFC")).filter(Boolean);
     invalid = next.length === 0 || next.some((subject) => !isValidSubject(subject));
     if (!invalid) onChange(next);
   }
@@ -19,20 +21,23 @@
 {#if variant === "badge"}
   <div class="subject-badges-container">
     {#if isEditing}
-      <input
-        class="badge-input"
-        value={subjects.join(", ")}
-        oninput={handleInput}
-        onblur={() => isEditing = false}
-        onkeydown={(e) => { if (e.key === "Enter") isEditing = false; }}
-        aria-invalid={invalid}
-        placeholder="rust, programming"
-        use:focus
-      />
+      <div class="badge-input-container">
+        <span class="badge-input-sizer">{currentText || "rust, programming"}</span>
+        <input
+          class="badge-input"
+          value={currentText}
+          oninput={handleInput}
+          onblur={() => isEditing = false}
+          onkeydown={(e) => { if (e.key === "Enter") isEditing = false; }}
+          aria-invalid={invalid}
+          placeholder="rust, programming"
+          use:focus
+        />
+      </div>
     {:else}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
-      <div class="subject-badges" onclick={() => isEditing = true} role="button" tabindex="0" aria-label="Edit subjects">
+      <div class="subject-badges" onclick={() => { currentText = subjects.join(", "); isEditing = true; }} role="button" tabindex="0" aria-label="Edit subjects">
         {#each subjects as subject}
           <div class="subject-badge">{subject}</div>
         {/each}
@@ -97,20 +102,44 @@
     border-style: dashed;
     background: transparent;
   }
+  .badge-input-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    min-width: 60px;
+    max-width: 280px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .badge-input-sizer {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0 8px;
+    border: 1px solid transparent;
+    white-space: pre;
+    visibility: hidden;
+    pointer-events: none;
+    user-select: none;
+  }
   .badge-input {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
     background: #121212;
     color: #b3b3b3;
     border: 1px solid #2d2d2d;
     border-radius: 4px;
     padding: 0 8px;
-    height: 26px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-size: 11px;
     font-weight: 600;
     line-height: 1;
-    width: 140px;
     box-sizing: border-box;
     outline: none;
     transition: all 0.15s ease;
