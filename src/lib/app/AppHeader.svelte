@@ -8,11 +8,13 @@
     statusMessage, 
     title = "Tracker",
     showModeMenu,
+    isMaximized = false,
     onToggleSidebar,
     onToggleModeMenu, 
     onSelectMode,
     onToggleSettings, 
     onShrinkApp,
+    onMaximizeApp,
     onCloseApp 
   } = $props();
 
@@ -44,6 +46,15 @@
     <button class="icon-btn-header" onclick={onShrinkApp} title={layerMode === "desktop" ? "Hide to tray" : "Minimize"}>
       <Minus size={13} />
     </button>
+    {#if layerMode !== "desktop"}
+      <button class="icon-btn-header" onclick={onMaximizeApp} title={isMaximized ? "Restore Down" : "Maximize"}>
+        {#if isMaximized}
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1"><path d="M3 1.5H8.5V7H7" /><rect x="1.5" y="3" width="5.5" height="5.5" rx="0.5" /></svg>
+        {:else}
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="1.5" y="1.5" width="7" height="7" rx="0.5" /></svg>
+        {/if}
+      </button>
+    {/if}
     <button class="icon-btn-header close" onclick={onCloseApp} title="Close">
       <X size={13} />
     </button>

@@ -39,17 +39,20 @@ describe("application navigation", () => {
 });
 
 describe("window controls", () => {
-  it("emits minimize and close actions from the title bar", async () => {
+  it("emits minimize, maximize, and close actions from the title bar", async () => {
     const onShrinkApp = vi.fn();
+    const onMaximizeApp = vi.fn();
     const onCloseApp = vi.fn();
     render(AppHeader, {
       dragEnabled: true, layerMode: "normal", statusMessage: "", title: "Tasks", showModeMenu: false,
       onToggleSidebar: vi.fn(), onToggleModeMenu: vi.fn(), onSelectMode: vi.fn(), onToggleSettings: vi.fn(),
-      onShrinkApp, onCloseApp
+      onShrinkApp, onMaximizeApp, onCloseApp
     });
     await fireEvent.click(screen.getByTitle("Minimize"));
+    await fireEvent.click(screen.getByTitle("Maximize"));
     await fireEvent.click(screen.getByTitle("Close"));
     expect(onShrinkApp).toHaveBeenCalledOnce();
+    expect(onMaximizeApp).toHaveBeenCalledOnce();
     expect(onCloseApp).toHaveBeenCalledOnce();
   });
 

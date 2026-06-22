@@ -25,6 +25,7 @@
   let todoPathInput = $state("");
   let showModeMenu = $state(false);
   let selectedPath = $state("");
+  let isMaximized = $state(false);
 
   function descriptorFor(week) {
     const date = week.days[0]?.date ? new Date(`${week.days[0].date}T12:00:00`) : new Date();
@@ -65,6 +66,11 @@
     let disposed = false;
     let unlistenClose;
     let unlistenQuit;
+    const handleResize = async () => {
+      isMaximized = await appWindow.isMaximized();
+    };
+    window.addEventListener("resize", handleResize);
+    handleResize();
     (async () => {
       unlistenQuit = await listen("request-quit", async () => {
         if (await persistenceRegistry.flushAll()) await invoke("exit_app");
@@ -87,7 +93,7 @@
     })();
     const handleFocus = async () => { await persistenceRegistry.checkActive(appStore.currentView); if (appStore.currentView !== "tasks") await workspaceStore.refresh(); };
     window.addEventListener("focus", handleFocus);
-    return () => { disposed = true; unlistenClose?.(); unlistenQuit?.(); window.removeEventListener("focus", handleFocus); };
+    return () => { disposed = true; unlistenClose?.(); unlistenQuit?.(); window.removeEventListener("focus", handleFocus); window.removeEventListener("resize", handleResize); };
   });
 
   async function saveTodoPath() {
@@ -115,10 +121,19 @@
       appStore.showStatus("Minimize failed: " + error);
     }
   }
+
+  async function toggleMaximizeApp() {
+    try {
+      const appWindow = getCurrentWindow();
+      await appWindow.toggleMaximize();
+    } catch (error) {
+      appStore.showStatus("Maximize failed: " + error);
+    }
+  }
 </script>
 
 <main class="app-container" class:desktop-mode={appStore.layerMode === "desktop"}>
-  <AppHeader title={appStore.currentView === "tasks" ? "Tasks" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} {showModeMenu} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onCloseApp={closeApp} />
+  <AppHeader title={appStore.currentView === "tasks" ? "Tasks" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} {showModeMenu} {isMaximized} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onMaximizeApp={toggleMaximizeApp} onCloseApp={closeApp} />
   <div class="workspace-shell">
     {#if workspaceStore.sidebarOpen}<div class="sidebar-wrap"><AppSidebar {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} /></div>{/if}
     <section class="main-workspace">
