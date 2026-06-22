@@ -36,7 +36,7 @@ export function parseWeeklyIndex(markdown, isoWeek) {
   const { frontmatterRaw, body } = splitFrontmatter(markdown);
   const preserved = preservedMarkdown(body);
   const objectives = section(body, "Objectives").split("\n").map(parseObjectiveLine).filter(Boolean).map((objective, index) => ({ id: createId("objective", index), ...objective }));
-  const plan = tableRows(section(body, "Weekly Plan"), "plan");
+  const plan = tableRows(section(body, "Weekly Plan") || section(body, "Plan"), "plan");
   const actualBlock = body.match(/<!-- tracker:actual:start -->([\s\S]*?)<!-- tracker:actual:end -->/)?.[1] || "";
   return { frontmatterRaw, ...preserved, isoWeek, objectives, plan, actual: tableRows(actualBlock, "actual"), notesRaw: section(body, "Notes") };
 }

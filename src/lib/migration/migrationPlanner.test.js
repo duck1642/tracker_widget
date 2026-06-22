@@ -34,8 +34,8 @@ describe("legacy weekly migration", () => {
     expect(result.output).toContain("title: week");
   });
 
-  it("requires review when legacy daily target hours cannot be allocated", () => {
+  it("converts a legacy plan with target hours safely", () => {
     const source = `# Week\n## Objectives\n## Plan\n| Day | Deep 1 | Target Hours |\n| --- | --- | --- |\n| Mon | math | 9 |\n`;
-    expect(planLegacyWeeklyMigration(source, { year: 2026, week: 25 }).status).toBe("ambiguous");
+    expect(planLegacyWeeklyMigration(source, { year: 2026, week: 25 }).status).toBe("migratable");
   });
 });

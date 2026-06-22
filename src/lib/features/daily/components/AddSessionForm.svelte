@@ -13,5 +13,5 @@
   label { color: var(--text-muted); font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
   div { display: flex; gap: 8px; }
   input { flex: 1; }
-  button { min-width: 100px; background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 700; }
+  button { min-width: 100px; background: var(--accent); color: var(--accent-ink); border-color: transparent; border-radius: 5px; font-weight: 700; }
 </style>

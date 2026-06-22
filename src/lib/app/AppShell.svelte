@@ -135,7 +135,7 @@
 <main class="app-container" class:desktop-mode={appStore.layerMode === "desktop"}>
   <AppHeader title={appStore.currentView === "tasks" ? "Tasks" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} {showModeMenu} {isMaximized} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onMaximizeApp={toggleMaximizeApp} onCloseApp={closeApp} />
   <div class="workspace-shell">
-    {#if workspaceStore.sidebarOpen}<div class="sidebar-wrap"><AppSidebar {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} /></div>{/if}
+    {#if workspaceStore.sidebarOpen}<AppSidebar {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} />{/if}
     <section class="main-workspace">
       {#if editingSettings}
         <SettingsPanel bind:pathInputVal={todoPathInput} logsRootPath={appStore.logsRootPath} dragEnabled={appStore.dragEnabled} autostartEnabled={appStore.autostartEnabled} onSave={saveTodoPath} onCancel={() => editingSettings = false} onToggleDrag={() => appStore.toggleDrag()} onToggleAutostart={() => appStore.toggleAutostart()} />
@@ -143,7 +143,7 @@
         <MainTabs currentView={appStore.currentView} onSelect={(view) => view === "tasks" ? appStore.currentView = "tasks" : openCurrent(view)} />
         {#if appStore.currentView === "tasks" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
         <div class="panel-scroll">{#if appStore.currentView === "tasks"}<TasksPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
-        {#if appStore.currentView === "tasks"}<TodoToolbar redoStackLength={todoStore.redoStack.length} onAddTask={() => todoStore.addTask(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={() => todoStore.loadFile()} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
+        {#if appStore.currentView === "tasks"}<TodoToolbar undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTask={() => todoStore.addTask(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={() => todoStore.loadFile()} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
       {/if}
     </section>
   </div>
@@ -151,8 +151,6 @@
 
 <style>
   .workspace-shell { display: flex; flex: 1; min-height: 0; overflow: hidden; }
-  .sidebar-wrap { flex: none; min-width: 210px; }
   .main-workspace { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; background: var(--bg-panel); }
   .panel-scroll { flex: 1; min-height: 0; overflow: auto; scroll-behavior: smooth; }
-  @media (max-width: 720px) { .sidebar-wrap { position: absolute; inset: 32px auto 0 0; z-index: 40; height: calc(100% - 32px); box-shadow: 16px 0 36px rgba(0,0,0,.36); } }
 </style>

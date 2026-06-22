@@ -2,7 +2,8 @@
   import { Plus, Undo2, Redo2, RotateCw, ListX } from "@lucide/svelte";
 
   let { 
-    redoStackLength, 
+    undoStackLength = 0,
+    redoStackLength = 0, 
     onAddTask, 
     onUndo, 
     onRedo, 
@@ -16,7 +17,7 @@
     <Plus size={13} />
   </button>
   <div class="footer-right">
-    <button class="action-btn" onclick={onUndo} title="Undo last action">
+    <button class="action-btn" onclick={onUndo} disabled={undoStackLength === 0} title="Undo last action">
       <Undo2 size={13} />
     </button>
     <button class="action-btn" onclick={onRedo} disabled={redoStackLength === 0} title="Redo last undone action">

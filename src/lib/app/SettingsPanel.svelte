@@ -6,7 +6,7 @@
 </script>
 
 <div class="settings-panel">
-  <header><div><span>Application</span><h2>Settings</h2></div><button onclick={onCancel}>Close</button></header>
+  <header><div><span>Application</span><h2>Settings</h2></div></header>
   <section>
     <h3>Todo document</h3>
     <label for="path-input">Markdown file</label>
@@ -38,7 +38,7 @@
   h2 { margin: 4px 0 0; } h3 { margin: 0 0 12px; font-size: var(--text-md); }
   section { display: grid; align-content: start; gap: 8px; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--surface); }
   label, p { color: var(--text-muted); font-size: var(--text-sm); }
-  .path-display { display: flex; gap: 8px; align-items: center; } .path-display code { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
+  .path-display { display: flex; gap: 8px; align-items: center; min-width: 0; } .path-display code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); font-size: var(--text-xs); } .path-display button { flex-shrink: 0; }
   button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-color); cursor: pointer; }
   button:hover { border-color: var(--border-strong); background: var(--surface-hover); }
   .toggle-row { justify-content: flex-start; border: 0; background: transparent; }

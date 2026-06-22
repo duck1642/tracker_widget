@@ -43,17 +43,18 @@
 </aside>
 
 <style>
-  aside { position: relative; display: grid; grid-template-rows: auto auto 1fr; min-width: 210px; max-width: 420px; height: 100%; border-right: 1px solid var(--border-color); background: var(--surface); overflow: hidden; }
+  aside { position: relative; display: grid; grid-template-rows: auto auto 1fr; flex: none; min-width: 210px; max-width: 420px; height: 100%; border-right: 1px solid var(--border-color); background: var(--surface); overflow: hidden; }
   header { display: flex; align-items: center; min-height: 41px; padding: 8px 12px 6px; box-sizing: border-box; }
   header div { display: grid; gap: 2px; }
   .eyebrow { color: var(--accent); font-size: 9px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
   strong { font-size: var(--text-sm); }
   .actions { display: grid; grid-template-columns: repeat(4, 34px); gap: 5px; padding: 0 10px 9px; }
-  .actions button { display: grid; place-items: center; width: 34px; height: 32px; padding: 0; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-muted); cursor: pointer; }
+  .actions button { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-muted); cursor: pointer; }
   .actions button:hover { color: var(--text-color); border-color: var(--border-strong); }
   .unavailable { display: grid; align-content: start; gap: 8px; margin: 8px; padding: 14px; border: 1px dashed var(--warning); border-radius: var(--radius-md); color: var(--text-muted); font-size: var(--text-sm); }
   .unavailable button { min-height: 34px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-color); cursor: pointer; }
   .unavailable button:hover { border-color: var(--border-strong); background: var(--surface-hover); }
-  .resize-handle { position: absolute; inset: 0 -3px 0 auto; width: 6px; border: 0; padding: 0; background: transparent; cursor: ew-resize; }
+  .resize-handle { position: absolute; inset: 0 -3px 0 auto; width: 6px; border: 0; padding: 0; background: transparent; cursor: ew-resize; z-index: 10; }
   .resize-handle:hover, .resize-handle:focus-visible { background: var(--accent-soft); }
+  @media (max-width: 720px) { aside { position: absolute !important; inset: 32px auto 0 0 !important; z-index: 40; height: calc(100% - 32px) !important; box-shadow: 16px 0 36px rgba(0,0,0,.36); } }
 </style>

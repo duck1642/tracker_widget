@@ -80,7 +80,6 @@ export function planLegacyWeeklyMigration(markdown, isoWeek) {
   const issues = [];
   const plan = [];
   rows.slice(2).forEach((cells, rowIndex) => {
-    if (targetIndex >= 0 && cells[targetIndex]?.trim()) issues.push(`${cells[0]}: Target Hours cannot be allocated to sessions automatically`);
     headers.forEach((header, columnIndex) => {
       if (columnIndex === 0 || columnIndex === targetIndex || !cells[columnIndex]?.trim()) return;
       plan.push({ id: `legacy-plan-${rowIndex}-${columnIndex}`, day: cells[0], session: header, subjects: cells[columnIndex].split(",").map((item) => item.trim()).filter(Boolean), targetMinutes: 0 });
