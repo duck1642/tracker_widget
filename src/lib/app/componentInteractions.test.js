@@ -121,7 +121,12 @@ describe("logger editing", () => {
       onUpdate, onDelete: vi.fn()
     });
     await fireEvent.click(screen.getByRole("button", { name: "Planned" }));
-    await fireEvent.change(screen.getByLabelText("Status"), { target: { value: "partial" } });
+    
+    // Open status dropdown
+    await fireEvent.click(screen.getByLabelText("Status"));
+    // Select Partial status
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Partial" }));
+    
     expect(onUpdate).toHaveBeenCalledWith({ origin: "unplanned" });
     expect(onUpdate).toHaveBeenCalledWith({ status: "partial" });
   });

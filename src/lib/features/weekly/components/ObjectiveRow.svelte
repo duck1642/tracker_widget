@@ -5,13 +5,37 @@
   let { objective, onUpdate, onDelete } = $props();
 
   let isEditingDesc = $state(false);
+  let showStatusDropdown = $state(false);
+  /** @type {HTMLDivElement | undefined} */
+  let dropdownEl = $state();
 
   function toggleOrigin() {
     onUpdate({ origin: objective.origin === "planned" ? "unplanned" : "planned" });
   }
 
+  function handleOutsideClick(event) {
+    if (showStatusDropdown && dropdownEl && !dropdownEl.contains(event.target)) {
+      showStatusDropdown = false;
+    }
+  }
+
+  $effect(() => {
+    if (showStatusDropdown) {
+      document.addEventListener("pointerdown", handleOutsideClick);
+    } else {
+      document.removeEventListener("pointerdown", handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsideClick);
+    };
+  });
+
   function focus(node) {
     node.focus();
+  }
+
+  function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
   }
 </script>
 
@@ -45,13 +69,34 @@
       {objective.origin === "planned" ? "Planned" : "Unplanned"}
     </button>
     
-    <div class="status-select-container">
-      <select aria-label="Status" class={`status-select ${objective.status}`} value={objective.status} onchange={(event) => onUpdate({ status: event.currentTarget.value })}>
-        <option value="open">Open</option>
-        <option value="done">Done</option>
-        <option value="partial">Partial</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
+    <div class="status-dropdown-container" bind:this={dropdownEl}>
+      <button
+        type="button"
+        aria-label="Status"
+        class={`status-badge ${objective.status}`}
+        onclick={() => showStatusDropdown = !showStatusDropdown}
+      >
+        {capitalize(objective.status)}
+      </button>
+
+      {#if showStatusDropdown}
+        <div class="dropdown-menu" role="menu">
+          {#each ["open", "done", "partial", "cancelled"] as opt}
+            <button
+              type="button"
+              class={`menu-item ${opt} ${objective.status === opt ? "active" : ""}`}
+              onclick={() => {
+                onUpdate({ status: opt });
+                showStatusDropdown = false;
+              }}
+              role="menuitem"
+              aria-label={capitalize(opt)}
+            >
+              {capitalize(opt)}
+            </button>
+          {/each}
+        </div>
+      {/if}
     </div>
   </div>
 </article>
@@ -118,14 +163,11 @@
   }
 
   /* Status select styling */
-  .status-select-container {
+  .status-dropdown-container {
     position: relative;
     display: inline-flex;
-    align-items: center;
   }
-  .status-select {
-    appearance: none;
-    -webkit-appearance: none;
+  .status-badge {
     background: transparent;
     border-radius: 4px;
     padding: 0 8px;
@@ -136,48 +178,105 @@
     font-weight: 600;
     cursor: pointer;
     outline: none;
-    width: auto;
     box-sizing: border-box;
     transition: all 0.15s ease;
   }
 
   /* Color themes for status */
-  .status-select.open {
+  .status-badge.open {
     border: 1px solid #444444;
     color: var(--text-muted);
   }
-  .status-select.open:hover {
+  .status-badge.open:hover {
     border-color: #666;
     color: var(--text-color);
   }
-  .status-select.done {
+  .status-badge.done {
     border: 1px solid #3a532d;
     color: #b8df9e;
   }
-  .status-select.done:hover {
+  .status-badge.done:hover {
     border-color: #5c8547;
     color: #c8f0ae;
   }
-  .status-select.partial {
+  .status-badge.partial {
     border: 1px solid #5a4b22;
     color: #e4c070;
   }
-  .status-select.partial:hover {
+  .status-badge.partial:hover {
     border-color: #8f7636;
     color: #f0d48f;
   }
-  .status-select.cancelled {
+  .status-badge.cancelled {
     border: 1px solid #632d2d;
     color: #ff8888;
   }
-  .status-select.cancelled:hover {
+  .status-badge.cancelled:hover {
     border-color: #9c4747;
     color: #ffa3a3;
   }
-  
-  option {
-    background: var(--bg-panel);
+
+  /* Dropdown Menu styling */
+  .dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    width: 100px;
+    padding: 4px;
+    border: 1px solid #333333;
+    border-radius: 6px;
+    background: #181818;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    box-sizing: border-box;
+  }
+  .menu-item {
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    height: 26px;
+    width: 100%;
+    box-sizing: border-box;
+    transition: all 0.1s ease;
+  }
+
+  /* Dropdown Menu item colors & hovers */
+  .menu-item.open {
+    color: var(--text-muted);
+  }
+  .menu-item.open:hover, .menu-item.open.active {
+    background: rgba(255, 255, 255, 0.05);
     color: var(--text-color);
+  }
+  .menu-item.done {
+    color: #b8df9e;
+  }
+  .menu-item.done:hover, .menu-item.done.active {
+    background: rgba(184, 223, 158, 0.1);
+    color: #c8f0ae;
+  }
+  .menu-item.partial {
+    color: #e4c070;
+  }
+  .menu-item.partial:hover, .menu-item.partial.active {
+    background: rgba(228, 192, 112, 0.1);
+    color: #f0d48f;
+  }
+  .menu-item.cancelled {
+    color: #ff8888;
+  }
+  .menu-item.cancelled:hover, .menu-item.cancelled.active {
+    background: rgba(255, 136, 136, 0.1);
+    color: #ffa3a3;
   }
 </style>
 
