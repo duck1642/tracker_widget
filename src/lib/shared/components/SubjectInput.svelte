@@ -73,10 +73,18 @@
     color: #b3b3b3;
     border: 1px solid #2d2d2d;
     border-radius: 4px;
-    padding: 3px 8px;
+    padding: 0 8px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
     font-size: 11px;
     font-weight: 600;
-    line-height: 1.2;
+    box-sizing: border-box;
+    transition: all 0.15s ease;
+  }
+  .subject-badges:hover .subject-badge {
+    border-color: #555;
+    color: var(--text-color);
   }
   .subject-badge.placeholder {
     color: var(--text-muted);
@@ -88,13 +96,19 @@
     color: #b3b3b3;
     border: 1px solid #2d2d2d;
     border-radius: 4px;
-    padding: 3px 8px;
+    padding: 0 8px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
     font-size: 11px;
     font-weight: 600;
-    line-height: 1.2;
     width: 140px;
     box-sizing: border-box;
     outline: none;
+    transition: all 0.15s ease;
+  }
+  .badge-input:hover {
+    border-color: #555;
   }
   .badge-input:focus {
     border-color: var(--accent);

@@ -102,11 +102,15 @@
     color: #888888;
     border: 1px solid #3d3d3d;
     border-radius: 4px;
-    padding: 3px 8px;
+    padding: 0 8px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
     font-size: 11px;
     font-weight: 600;
-    line-height: 1.2;
+    box-sizing: border-box;
     cursor: pointer;
+    transition: all 0.15s ease;
   }
   .origin-badge:hover {
     border-color: #555;
@@ -124,14 +128,17 @@
     -webkit-appearance: none;
     background: transparent;
     border-radius: 4px;
-    padding: 3px 8px;
+    padding: 0 8px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
     font-size: 11px;
     font-weight: 600;
-    line-height: 1.2;
     cursor: pointer;
     outline: none;
     width: auto;
     box-sizing: border-box;
+    transition: all 0.15s ease;
   }
 
   /* Color themes for status */
@@ -139,17 +146,33 @@
     border: 1px solid #444444;
     color: var(--text-muted);
   }
+  .status-select.open:hover {
+    border-color: #666;
+    color: var(--text-color);
+  }
   .status-select.done {
     border: 1px solid #3a532d;
     color: #b8df9e;
+  }
+  .status-select.done:hover {
+    border-color: #5c8547;
+    color: #c8f0ae;
   }
   .status-select.partial {
     border: 1px solid #5a4b22;
     color: #e4c070;
   }
+  .status-select.partial:hover {
+    border-color: #8f7636;
+    color: #f0d48f;
+  }
   .status-select.cancelled {
     border: 1px solid #632d2d;
     color: #ff8888;
+  }
+  .status-select.cancelled:hover {
+    border-color: #9c4747;
+    color: #ffa3a3;
   }
   
   option {

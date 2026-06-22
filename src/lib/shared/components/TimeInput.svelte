@@ -46,11 +46,15 @@
     color: var(--text-muted);
     border: 1px solid #3d3d3d;
     border-radius: 4px;
-    padding: 3px 8px;
+    padding: 0 8px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
     font-size: 11px;
     font-weight: 600;
-    line-height: 1.2;
+    box-sizing: border-box;
     cursor: pointer;
+    transition: all 0.15s ease;
   }
   .time-badge:hover {
     border-color: #555;
@@ -61,13 +65,19 @@
     color: var(--text-color);
     border: 1px solid #3d3d3d;
     border-radius: 4px;
-    padding: 3px 8px;
+    padding: 0 8px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
     font-size: 11px;
     font-weight: 600;
-    line-height: 1.2;
     width: 60px;
     box-sizing: border-box;
     outline: none;
+    transition: all 0.15s ease;
+  }
+  .badge-input:hover {
+    border-color: #555;
   }
   .badge-input:focus {
     border-color: var(--accent);
