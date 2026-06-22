@@ -80,7 +80,11 @@
         event.preventDefault();
         if (!(await persistenceRegistry.flushAll())) return appStore.showStatus("Resolve file conflicts before closing");
         closingAfterFlush = true;
-        await appWindow.close();
+        try {
+          await invoke("exit_app");
+        } catch (error) {
+          appStore.showStatus("Close failed: " + error);
+        }
       });
       if (disposed) { unlistenClose?.(); unlistenQuit?.(); }
     })();
