@@ -14,7 +14,7 @@
 
 <main class="daily-panel">
   {#if !dailyStore.loaded}
-    <div class="empty"><strong>No daily log selected</strong><span>Choose a day from the file tree or open Today.</span></div>
+    <div class="empty"><strong>No daily log selected</strong><span>Choose a day from the file tree or open Day.</span></div>
   {:else}
     <DailyHeader date={dailyStore.date} totalMinutes={dailyStore.totalMinutes} saving={dailyStore.saving} />
     {#if dailyStore.conflict}<ConflictBanner onReloadExternal={() => dailyStore.resolveConflict("reload")} onKeepLocal={() => dailyStore.resolveConflict("keep-local")} />{/if}

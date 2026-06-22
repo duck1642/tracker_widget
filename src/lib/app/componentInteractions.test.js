@@ -24,7 +24,7 @@ describe("application navigation", () => {
   it("changes the main view from the tab bar", async () => {
     const onSelect = vi.fn();
     render(MainTabs, { currentView: "tasks", onSelect });
-    await fireEvent.click(screen.getByRole("button", { name: "Today" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Day" }));
     expect(onSelect).toHaveBeenCalledWith("day");
   });
 

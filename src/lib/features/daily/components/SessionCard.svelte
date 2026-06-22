@@ -25,8 +25,8 @@
 
 <style>
   .session-card { border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; box-shadow: var(--shadow-sm); }
-  header { display: flex; align-items: center; padding: 3px 7px 3px 4px; background: linear-gradient(90deg, var(--surface-2), var(--surface)); }
-  .session-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex: 1; min-height: 46px; border: 0; background: transparent; color: var(--text-color); padding: 0 10px; text-align: left; cursor: pointer; }
+  header { display: flex; align-items: center; padding: 0 10px; background: linear-gradient(90deg, var(--surface-2), var(--surface)); }
+  .session-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; min-height: 46px; border: 0; background: transparent; color: var(--text-color); padding: 0; text-align: left; cursor: pointer; }
   .session-title span { font-size: var(--text-md); font-weight: 700; }
   small { color: var(--text-muted); }
   .activities p { padding: 12px 14px; color: var(--text-muted); }
