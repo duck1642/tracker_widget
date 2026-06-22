@@ -360,11 +360,24 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   font-style: italic;
 }
 
-.empty-state {
-  text-align: center;
-  font-size: 12px;
+.empty {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  min-height: 360px;
   color: var(--text-muted);
-  padding-top: 40px;
+  text-align: center;
+}
+
+.empty strong {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.empty span {
+  font-size: var(--text-sm);
 }
 
 /* Controls visibility on hover */

@@ -44,8 +44,9 @@
   {/each}
 
   {#if tasks.length === 0}
-    <div class="empty-state">
-      No tasks. Press [+] below to start.
+    <div class="empty">
+      <strong>No tasks</strong>
+      <span>Press [+] below to start.</span>
     </div>
   {/if}
 </div>

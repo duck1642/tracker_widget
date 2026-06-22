@@ -152,5 +152,6 @@
 <style>
   .workspace-shell { display: flex; flex: 1; min-height: 0; overflow: hidden; }
   .main-workspace { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; background: var(--bg-panel); }
-  .panel-scroll { flex: 1; min-height: 0; overflow: auto; scroll-behavior: smooth; }
+  .panel-scroll { flex: 1; min-height: 0; overflow: auto; scroll-behavior: smooth; scrollbar-width: none; }
+  .panel-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
 </style>

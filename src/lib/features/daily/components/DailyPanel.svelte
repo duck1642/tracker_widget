@@ -31,6 +31,4 @@
 <style>
   .daily-panel { display: grid; align-content: start; gap: 18px; width: min(100%, 1040px); margin: 0 auto; padding: 22px; box-sizing: border-box; }
   .sessions { display: grid; gap: 12px; }
-  .empty { display: grid; place-items: center; align-content: center; gap: 8px; min-height: 320px; color: var(--text-muted); text-align: center; }
-  .empty strong { color: var(--text-color); font-size: var(--text-lg); }
 </style>

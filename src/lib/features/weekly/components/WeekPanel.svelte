@@ -48,5 +48,4 @@
   .eyebrow { color: var(--accent); font-size: var(--text-xs); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
   h1 { margin: 5px 0 2px; font-size: var(--text-xl); } p { margin: 0; color: var(--text-muted); }
   nav { display: flex; gap: 4px; } nav a { padding: 7px 9px; border-radius: 5px; color: var(--text-muted); text-decoration: none; font-size: var(--text-sm); } nav a:hover { background: var(--surface-hover); color: var(--text-color); }
-  .empty { display: grid; place-items: center; align-content: center; gap: 8px; min-height: 360px; color: var(--text-muted); }
 </style>
