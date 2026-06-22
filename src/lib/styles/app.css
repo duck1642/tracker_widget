@@ -319,7 +319,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   background: transparent;
   border: none;
   color: var(--text-color);
-  font-size: 13px;
+  font-size: var(--text-md);
   outline: none;
   min-height: 26px;
   height: 26px;
