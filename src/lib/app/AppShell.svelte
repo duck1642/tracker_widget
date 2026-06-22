@@ -25,7 +25,6 @@
   let todoPathInput = $state("");
   let showModeMenu = $state(false);
   let selectedPath = $state("");
-  let closingAfterFlush = false;
 
   function descriptorFor(week) {
     const date = week.days[0]?.date ? new Date(`${week.days[0].date}T12:00:00`) : new Date();
@@ -76,14 +75,12 @@
       await todoStore.loadFile();
       await workspaceStore.refresh();
       unlistenClose = await appWindow.onCloseRequested(async (event) => {
-        if (closingAfterFlush) return;
         event.preventDefault();
         if (!(await persistenceRegistry.flushAll())) return appStore.showStatus("Resolve file conflicts before closing");
-        closingAfterFlush = true;
         try {
-          await invoke("exit_app");
+          await appWindow.hide();
         } catch (error) {
-          appStore.showStatus("Close failed: " + error);
+          appStore.showStatus("Hide failed: " + error);
         }
       });
       if (disposed) { unlistenClose?.(); unlistenQuit?.(); }
@@ -102,9 +99,10 @@
   async function closeApp() {
     if (!(await persistenceRegistry.flushAll())) return appStore.showStatus("Resolve file conflicts before closing");
     try {
-      await invoke("exit_app");
+      const appWindow = getCurrentWindow();
+      await appWindow.hide();
     } catch (error) {
-      appStore.showStatus("Close failed: " + error);
+      appStore.showStatus("Hide failed: " + error);
     }
   }
 
