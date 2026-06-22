@@ -107,7 +107,7 @@
     display: inline-flex;
     align-items: center;
     height: 26px;
-    min-width: 60px;
+    min-width: 0;
     max-width: 280px;
     box-sizing: border-box;
     overflow: hidden;
