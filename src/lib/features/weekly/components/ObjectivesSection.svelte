@@ -24,7 +24,7 @@
 
 <style>
   .objectives-list { display: flex; flex-direction: column; }
-  .actions-footer { display: flex; justify-content: flex-start; padding-top: 8px; border-top: 1px solid var(--border-subtle); }
+  .actions-footer { display: flex; justify-content: flex-start; padding: 12px 0 2px; border-top: 1px solid var(--border-subtle); }
   .objectives-list :global(.objective-card:last-of-type) { border-bottom: none; }
   .add-activity-btn { display: flex; align-items: center; gap: 6px; min-height: 30px; border: 0; background: transparent; color: var(--accent); cursor: pointer; font-size: var(--text-sm); font-weight: 500; padding: 0; transition: color 0.15s ease; }
   .add-activity-btn:hover { color: var(--text-color); }

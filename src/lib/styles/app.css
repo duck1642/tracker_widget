@@ -17,7 +17,7 @@
   --warning: #e3ba70;
   --success: #92d19a;
   --font-sans: "Segoe UI", system-ui, sans-serif;
-  --font-mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  --font-mono: Consolas, "Cascadia Code", "SFMono-Regular", monospace;
   --text-xs: 10px;
   --text-sm: 12px;
   --text-md: 14px;

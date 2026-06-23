@@ -39,7 +39,6 @@ describe("application navigation", () => {
     expect(onSelectDay).toHaveBeenCalledWith(week.days[0], week);
   });
 });
-
 describe("window controls", () => {
   it("emits minimize, maximize, and close actions from the title bar", async () => {
     const onShrinkApp = vi.fn();
@@ -261,4 +260,49 @@ describe("sidebar sorting", () => {
     expect(screen.getByRole("button", { name: "2025w52" }).getAttribute("aria-expanded")).toBe("false");
   });
 
+});
+
+describe("NotesEditor interactions", () => {
+  it("renders preview mode by default and shows help on hover", async () => {
+    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
+    const onChange = vi.fn();
+    render(NotesEditor, { value: "- [ ] Buy milk\n- Task 2", onChange, label: "Daily Notes" });
+
+    // Expect label to be correct
+    expect(screen.getByText("Daily Notes")).toBeTruthy();
+
+    // Check preview items
+    expect(screen.getByText("Buy milk")).toBeTruthy();
+    expect(screen.getByText("Task 2")).toBeTruthy();
+
+    // Trigger help popover hover
+    const helpBtn = screen.getByRole("button", { name: "Formatting help" });
+    await fireEvent.mouseEnter(helpBtn.parentElement);
+    expect(screen.getByText("Formatting Guide")).toBeTruthy();
+  });
+
+  it("updates raw text directly when clicking a preview checkbox", async () => {
+    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
+    const onChange = vi.fn();
+    render(NotesEditor, { value: "- [ ] Todo item\n* List item", onChange });
+
+    const checkbox = screen.getByRole("checkbox");
+    expect(checkbox.checked).toBe(false);
+
+    await fireEvent.click(checkbox);
+    expect(onChange).toHaveBeenCalledWith("- [x] Todo item\n* List item");
+  });
+
+  it("opens edit mode with focused textarea when clicking a line", async () => {
+    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
+    const onChange = vi.fn();
+    render(NotesEditor, { value: "- [ ] Item 1\n- Item 2\n\nSome text here", onChange });
+
+    // Click the paragraph text to enter edit mode
+    await fireEvent.click(screen.getByText("Some text here"));
+
+    const textarea = screen.getByRole("textbox");
+    expect(textarea).toBeTruthy();
+    expect(textarea.value).toBe("- [ ] Item 1\n- Item 2\n\nSome text here");
+  });
 });
