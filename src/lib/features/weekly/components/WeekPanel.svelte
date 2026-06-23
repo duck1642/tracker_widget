@@ -14,6 +14,34 @@
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
+
+  let sessionColWidth = $state(
+    typeof window !== "undefined"
+      ? Number(localStorage.getItem("week-session-col-width")) || 140
+      : 140
+  );
+
+  function handleStartResize(e) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = sessionColWidth;
+    
+    function handlePointerMove(moveEvent) {
+      const deltaX = moveEvent.clientX - startX;
+      sessionColWidth = Math.max(80, Math.min(400, startWidth + deltaX));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("week-session-col-width", sessionColWidth);
+      }
+    }
+    
+    function handlePointerUp() {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    }
+    
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  }
 </script>
 
 <main class="week-panel">
@@ -34,8 +62,8 @@
     </header>
     {#if weekStore.conflict}<ConflictBanner onReloadExternal={() => weekStore.resolveConflict("reload")} onKeepLocal={() => weekStore.resolveConflict("keep-local")} />{/if}
     <ObjectivesSection objectives={weekStore.objectives} onAdd={() => weekStore.addObjective()} onUpdate={(id, patch) => weekStore.updateObjective(id, patch)} onDelete={(id) => weekStore.removeObjective(id)} />
-    <PlanSection plan={weekStore.plan} onAdd={(day) => weekStore.addPlanEntry(day)} onUpdate={(id, patch) => weekStore.updatePlanEntry(id, patch)} onDelete={(id) => weekStore.removePlanEntry(id)} />
-    <ActualSection actual={weekStore.actual} onRefresh={() => weekStore.refreshActual()} />
+    <PlanSection plan={weekStore.plan} {sessionColWidth} onStartResize={handleStartResize} onAdd={(day) => weekStore.addPlanEntry(day)} onUpdate={(id, patch) => weekStore.updatePlanEntry(id, patch)} onDelete={(id) => weekStore.removePlanEntry(id)} />
+    <ActualSection actual={weekStore.actual} {sessionColWidth} onStartResize={handleStartResize} onRefresh={() => weekStore.refreshActual()} />
     <section id="week-notes" class="week-section"><header><div><h2>Notes</h2></div></header><NotesEditor value={weekStore.notesRaw} onChange={(value) => weekStore.updateNotes(value)} label="Weekly notes" /></section>
   {/if}
 </main>

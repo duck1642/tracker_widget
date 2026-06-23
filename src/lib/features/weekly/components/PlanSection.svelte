@@ -3,7 +3,7 @@
   import { Plus, Trash2 } from "@lucide/svelte";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
   import TimeInput from "$lib/shared/components/TimeInput.svelte";
-  let { plan, onAdd, onUpdate, onDelete } = $props();
+  let { plan, sessionColWidth = 140, onStartResize, onAdd, onUpdate, onDelete } = $props();
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   let editingSessionId = $state(null);
@@ -32,7 +32,7 @@
   }
 </script>
 
-<section id="plan" class="week-section">
+<section id="plan" class="week-section" style="--session-width: {sessionColWidth}px">
   <header>
     <div><h2>Weekly plan</h2></div>
   </header>
@@ -40,7 +40,11 @@
   <div class="plan-grid">
     <div class="table-head">
       <span>Day</span>
-      <span>Session</span>
+      <span class="session-head">
+        Session
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="resize-handle" onpointerdown={onStartResize} title="Drag to resize column"></div>
+      </span>
       <span>Subjects</span>
       <span>Minutes</span>
       <span></span>
@@ -105,14 +109,14 @@
     {/each}
     
     {#if plan.length === 0}
-      <div class="day-empty">No sessions planned. Click below to add one.</div>
+      <div class="day-empty">No sessions planned.</div>
     {/if}
-  </div>
-
-  <div class="actions-footer">
-    <button type="button" class="add-inline-btn" onclick={handleAdd} title="Add planned session">
-      <Plus size={12} /> Add planned session
-    </button>
+    
+    <div class="actions-footer">
+      <button type="button" class="add-activity-btn" onclick={handleAdd} title="Add planned session">
+        <Plus size={14} /> Add planned session
+      </button>
+    </div>
   </div>
 </section>
 
@@ -121,7 +125,7 @@
   
   .table-head {
     display: grid;
-    grid-template-columns: 70px minmax(130px, 1fr) minmax(150px, 1.4fr) 90px 32px;
+    grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px 32px;
     gap: 12px;
     align-items: center;
     min-height: 38px;
@@ -139,7 +143,7 @@
   
   .plan-row {
     display: grid;
-    grid-template-columns: 70px minmax(130px, 1fr) minmax(150px, 1.4fr) 90px 32px;
+    grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px 32px;
     gap: 12px;
     align-items: center;
     padding: 6px 12px;
@@ -148,6 +152,37 @@
   
   .plan-grid :global(.plan-row:first-of-type) {
     border-top: none;
+  }
+
+  .session-head {
+    position: relative;
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    height: 100%;
+  }
+  .resize-handle {
+    position: absolute;
+    right: -6px;
+    top: 0;
+    bottom: 0;
+    width: 12px;
+    cursor: col-resize;
+    z-index: 10;
+    background: transparent;
+  }
+  .resize-handle::after {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: transparent;
+    transition: background 0.15s ease;
+  }
+  .resize-handle:hover::after {
+    background: var(--border-strong);
   }
   
   .day-col { display: flex; align-items: center; }
@@ -227,8 +262,8 @@
   .row-btn:hover { background: var(--surface-hover); color: var(--text-color); }
   .row-btn.del:hover { background: rgba(255, 136, 136, 0.1); color: #ff8888; }
   
-  .add-inline-btn { display: inline-flex; align-items: center; justify-content: center; gap: 3px; height: 28px; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-muted); font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
-  .add-inline-btn:hover { background: var(--surface-hover); color: var(--text-color); border-color: var(--border-strong); }
-  .actions-footer { display: flex; justify-content: flex-start; padding-top: 12px; }
+  .add-activity-btn { display: flex; align-items: center; gap: 6px; min-height: 30px; border: 0; background: transparent; color: var(--accent); cursor: pointer; font-size: var(--text-sm); font-weight: 500; padding: 0; transition: color 0.15s ease; }
+  .add-activity-btn:hover { color: var(--text-color); }
+  .actions-footer { display: flex; justify-content: flex-start; padding: 8px 12px; border-top: 1px solid var(--border-subtle); background: var(--surface); border-bottom-left-radius: var(--radius-md); border-bottom-right-radius: var(--radius-md); }
   .day-empty { display: flex; align-items: center; justify-content: center; min-height: 50px; color: var(--text-muted); font-size: var(--text-sm); font-style: italic; }
 </style>
