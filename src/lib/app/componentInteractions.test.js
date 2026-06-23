@@ -149,7 +149,7 @@ describe("task actions", () => {
     });
     await fireEvent.click(screen.getByTitle("Delete"));
     expect(onDeleteTask).toHaveBeenCalledWith(2);
-    expect(screen.getByPlaceholderText("New Task...").getAttribute("spellcheck")).toBe("false");
+    expect(screen.getByPlaceholderText("New Task").getAttribute("spellcheck")).toBeNull();
   });
 
   it("deletes the focused row from the task store through its trash button", async () => {
@@ -199,7 +199,7 @@ describe("task actions", () => {
     const deleteTask = vi.spyOn(todoStore, "deleteTask").mockImplementation((index) => todoStore.tasks.splice(index, 1));
     try {
       render(TasksPanel);
-      const emptyTask = screen.getAllByPlaceholderText("New Task...")[1];
+      const emptyTask = screen.getAllByPlaceholderText("New Task")[1];
       emptyTask.focus();
       await fireEvent.keyDown(emptyTask, { key: "Backspace" });
 
