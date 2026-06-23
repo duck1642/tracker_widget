@@ -183,6 +183,14 @@
     outline: none;
   }
 
+  .session-input:focus,
+  .session-input:focus-visible {
+    border: 0;
+    border-bottom: 1px dashed var(--accent);
+    box-shadow: none;
+    outline: none;
+  }
+
   .delete-btn {
     display: grid;
     place-items: center;

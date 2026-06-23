@@ -22,7 +22,6 @@
   <div class="subject-badges-container">
     {#if isEditing}
       <div class="badge-input-container">
-        <span class="badge-input-sizer">{currentText || "rust, programming"}</span>
         <input
           class="badge-input"
           value={currentText}
@@ -107,26 +106,10 @@
     display: inline-flex;
     align-items: center;
     height: 26px;
-    min-width: 0;
+    width: 100%;
+    min-width: 120px;
     max-width: 280px;
     box-sizing: border-box;
-    overflow: hidden;
-  }
-  .badge-input-sizer {
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-    padding: 0 8px;
-    border: 1px solid transparent;
-    white-space: pre;
-    visibility: hidden;
-    pointer-events: none;
-    user-select: none;
-  }
-  .badge-input-sizer::after {
-    content: "";
-    display: inline-block;
-    width: 1.25ch;
   }
   .badge-input {
     position: absolute;
@@ -144,7 +127,7 @@
     line-height: 24px;
     box-sizing: border-box;
     outline: none;
-    transition: all 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
   }
   .badge-input:hover {
     border-color: #555;

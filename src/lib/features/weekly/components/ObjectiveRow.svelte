@@ -134,6 +134,13 @@
     outline: none;
     padding: 2px 0;
   }
+  .desc-input:focus,
+  .desc-input:focus-visible {
+    border: none;
+    border-bottom: 1px dashed var(--accent);
+    box-shadow: none;
+    outline: none;
+  }
   .row-bottom {
     display: flex;
     align-items: center;

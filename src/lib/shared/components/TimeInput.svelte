@@ -62,7 +62,14 @@
     border-color: #555;
     color: var(--text-color);
   }
+  .badge-input::-webkit-outer-spin-button,
+  .badge-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
   .badge-input {
+    -moz-appearance: textfield;
+    appearance: textfield;
     background: transparent;
     color: var(--text-color);
     border: 1px solid #3d3d3d;
@@ -78,7 +85,7 @@
     width: 60px;
     box-sizing: border-box;
     outline: none;
-    transition: all 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
   }
   .badge-input:hover {
     border-color: #555;
