@@ -28,20 +28,6 @@ pub fn write_file(path: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn get_default_path() -> String {
-    if cfg!(debug_assertions) {
-        if let Ok(cwd) = std::env::current_dir() {
-            return cwd.join("todo.md").to_string_lossy().to_string();
-        }
-    } else if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(parent) = exe_path.parent() {
-            return parent.join("todo.md").to_string_lossy().to_string();
-        }
-    }
-    "todo.md".to_string()
-}
-
-#[tauri::command]
 pub fn get_file_modified_time(path: String) -> Result<u64, String> {
     fs::metadata(&path)
         .and_then(|m| m.modified())

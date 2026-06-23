@@ -1,4 +1,3 @@
-use super::fs::get_default_path;
 use std::fs;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -14,7 +13,7 @@ pub struct AppConfig {
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
-            file_path: get_default_path(),
+            file_path: String::new(),
             logs_root_path: String::new(),
             layer_mode: "normal".to_string(),
             drag_enabled: true,

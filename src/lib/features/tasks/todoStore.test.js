@@ -10,7 +10,6 @@ function createHarness(initialFiles = { "A.md": "- [ ] A\n" }, debounceMs = 250)
   const files = new Map(Object.entries(initialFiles));
   const writes = [];
   const fileService = {
-    getDefaultPath: vi.fn(async () => "A.md"),
     readFile: vi.fn(async (path) => files.get(path) ?? ""),
     writeFile: vi.fn(async (path, content) => {
       writes.push({ path, content });
@@ -35,6 +34,16 @@ function createHarness(initialFiles = { "A.md": "- [ ] A\n" }, debounceMs = 250)
 
 describe("TodoStore persistence", () => {
   beforeEach(() => vi.useFakeTimers());
+
+  it("does not auto-select a default todo path when no path is configured", async () => {
+    const { store, appStore, fileService } = createHarness();
+    appStore.filePath = "";
+
+    expect(await store.loadFile()).toBe(false);
+    expect(fileService.readFile).not.toHaveBeenCalled();
+    expect(appStore.filePath).toBe("");
+    expect(store.fileMissing).toBe(true);
+  });
 
   it("debounces rapid typing and writes only the newest snapshot", async () => {
     const { store, writes } = createHarness();

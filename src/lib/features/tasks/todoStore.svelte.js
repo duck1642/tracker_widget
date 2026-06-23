@@ -52,19 +52,8 @@ export class TodoStore {
   async loadFile({ path } = {}) {
     let targetPath = path || this.appStore.filePath;
     if (!targetPath) {
-      const defaultPath = await this.fileService.getDefaultPath();
-      if (defaultPath) {
-        const defaultExists = await this.fileService.pathExists(defaultPath);
-        if (defaultExists) {
-          targetPath = defaultPath;
-        } else {
-          this.fileMissing = true;
-          return false;
-        }
-      } else {
-        this.fileMissing = true;
-        return false;
-      }
+      this.fileMissing = true;
+      return false;
     }
     const exists = await this.fileService.pathExists(targetPath);
     if (!exists) {

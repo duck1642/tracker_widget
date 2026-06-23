@@ -1,9 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
 
-export async function getDefaultPath() {
-  return await invoke("get_default_path");
-}
-
 /** @param {string} path */
 export async function readFile(path) {
   return await invoke("read_file", { path });

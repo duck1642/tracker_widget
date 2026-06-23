@@ -22,6 +22,8 @@ vite.config.ts.timestamp-*
 # Rust / Tauri Backend
 src-tauri/target/
 src-tauri/gen/schemas/
+/t/
+/build-artifacts/
 
 # IDE / Editors
 .vscode/
