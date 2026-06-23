@@ -1,318 +1,251 @@
 <script>
   // @ts-nocheck
-  import { onMount } from "svelte";
   import { Plus, Trash2 } from "@lucide/svelte";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
   import TimeInput from "$lib/shared/components/TimeInput.svelte";
-  let { plan, sessionColWidth = 140, onStartResize, onAdd, onUpdate, onDelete } = $props();
+
+  let { plan, onAdd, onUpdate, onDelete } = $props();
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   let editingSessionId = $state(null);
-  let showDayDropdownId = $state(null);
 
   function focus(node) {
     node.focus();
   }
-
-  onMount(() => {
-    function handlePointerDown(e) {
-      if (!e.target.closest(".day-dropdown-container")) {
-        showDayDropdownId = null;
-      }
-    }
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => window.removeEventListener("pointerdown", handlePointerDown);
-  });
-
-  const dayOrder = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
-  let sortedPlan = $derived([...plan].sort((a, b) => dayOrder[a.day] - dayOrder[b.day]));
-
-  function handleAdd() {
-    const lastEntry = plan[plan.length - 1];
-    const defaultDay = lastEntry ? lastEntry.day : "Mon";
-    onAdd(defaultDay);
-  }
 </script>
 
-<section id="plan" class="week-section" style="--session-width: {sessionColWidth}px">
+<section id="plan" class="week-section">
   <header>
     <div><h2>Weekly plan</h2></div>
   </header>
 
-  <div class="plan-grid">
-    <div class="table-head">
-      <span>Day</span>
-      <span class="session-head">
-        Session
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="resize-handle" onpointerdown={onStartResize} title="Drag to resize column"></div>
-      </span>
-      <span>Subjects</span>
-      <span class="minutes-head">Minutes</span>
-      <span class="action-head"></span>
-    </div>
+  <div class="week-board">
+    {#each days as day}
+      {@const entries = plan.filter((entry) => entry.day === day)}
+      <section class="day-column" aria-label={`${day} plan`}>
+        <header class="day-header">
+          <h3>{day}</h3>
+          <span>{entries.length}</span>
+        </header>
 
-    {#each sortedPlan as entry (entry.id)}
-      <div class="plan-row">
-        <!-- Day Selector Column -->
-        <div class="day-col">
-          <div class="day-dropdown-container">
-            <button type="button" class="day-badge" onclick={() => showDayDropdownId = entry.id}>
-              {entry.day}
-            </button>
-            {#if showDayDropdownId === entry.id}
-              <div class="day-menu" role="menu">
-                {#each days as d}
-                  <button type="button" class="day-menu-item" onclick={() => { onUpdate(entry.id, { day: d }); showDayDropdownId = null; }}>
-                    {d}
+        <div class="card-list">
+          {#each entries as entry (entry.id)}
+            <article class="plan-card">
+              <div class="card-top">
+                {#if editingSessionId === entry.id}
+                  <input
+                    class="session-input"
+                    value={entry.session}
+                    onblur={() => editingSessionId = null}
+                    onkeydown={(e) => { if (e.key === "Enter") editingSessionId = null; }}
+                    oninput={(event) => onUpdate(entry.id, { session: event.currentTarget.value })}
+                    placeholder="What session?"
+                    use:focus
+                  />
+                {:else}
+                  <button type="button" class="session-title" onclick={() => editingSessionId = entry.id}>
+                    {entry.session || "Unnamed session"}
                   </button>
-                {/each}
-              </div>
-            {/if}
-          </div>
-        </div>
+                {/if}
 
-        <!-- Session Column -->
-        <div class="session-col">
-          {#if editingSessionId === entry.id}
-            <input
-              class="session-input"
-              value={entry.session}
-              onblur={() => editingSessionId = null}
-              onkeydown={(e) => { if (e.key === "Enter") editingSessionId = null; }}
-              oninput={(event) => onUpdate(entry.id, { session: event.currentTarget.value })}
-              placeholder="What session?"
-              use:focus
-            />
-          {:else}
-            <button type="button" class="session-text" onclick={() => editingSessionId = entry.id}>
-              {entry.session || "Unnamed session"}
-            </button>
+                <button type="button" class="delete-btn" onpointerdown={(e) => e.preventDefault()} onclick={() => onDelete(entry.id)} aria-label="Delete plan entry" title="Delete">
+                  <Trash2 size={13} />
+                </button>
+              </div>
+
+              <div class="card-field">
+                <span>Subjects</span>
+                <SubjectInput subjects={entry.subjects} onChange={(subjects) => onUpdate(entry.id, { subjects })} variant="badge" />
+              </div>
+
+              <div class="card-field">
+                <span>Time</span>
+                <TimeInput minutes={entry.targetMinutes} onChange={(targetMinutes) => onUpdate(entry.id, { targetMinutes })} variant="badge" />
+              </div>
+            </article>
+          {/each}
+
+          {#if entries.length === 0}
+            <p class="day-empty">No sessions</p>
           {/if}
         </div>
 
-        <!-- Subjects Column -->
-        <div class="subjects-col">
-          <SubjectInput subjects={entry.subjects} onChange={(subjects) => onUpdate(entry.id, { subjects })} variant="badge" />
-        </div>
-
-        <!-- Minutes Column -->
-        <div class="time-col">
-          <TimeInput minutes={entry.targetMinutes} onChange={(targetMinutes) => onUpdate(entry.id, { targetMinutes })} variant="badge" />
-        </div>
-
-        <!-- Action Column -->
-        <div class="action-col">
-          <button type="button" class="row-btn del" onpointerdown={(e) => e.preventDefault()} onclick={() => onDelete(entry.id)} aria-label="Delete plan entry" title="Delete">
-            <Trash2 size={13} />
-          </button>
-        </div>
-      </div>
+        <button type="button" class="add-day-btn" onclick={() => onAdd(day)} title={`Add planned session to ${day}`}>
+          <Plus size={13} /> Add
+        </button>
+      </section>
     {/each}
-
-    {#if plan.length === 0}
-      <div class="day-empty">No sessions planned.</div>
-    {/if}
-
-    <div class="actions-footer">
-      <button type="button" class="add-activity-btn" onclick={handleAdd} title="Add planned session">
-        <Plus size={14} /> Add planned session
-      </button>
-    </div>
   </div>
 </section>
 
 <style>
-  .plan-grid {
-    position: relative;
-    --grid-pad: 12px;
-    --day-col: 70px;
-    --gap: 12px;
-    --minutes-col: 90px;
-    --action-col: 32px;
-    --footer-height: 47px;
-    --line-day-session: calc(var(--grid-pad) + var(--day-col) + (var(--gap) / 2));
-    --line-session-subjects: calc(var(--grid-pad) + var(--day-col) + var(--gap) + var(--session-width, 140px) + (var(--gap) / 2));
-    --line-subjects-minutes: calc(100% - var(--grid-pad) - var(--action-col) - var(--gap) - var(--minutes-col) - (var(--gap) / 2));
-    --line-minutes-action: calc(100% - var(--grid-pad) - var(--action-col) - (var(--gap) / 2));
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    overflow: visible;
-    background: var(--surface);
-  }
-
-  .plan-grid::before {
-    content: "";
-    position: absolute;
-    inset: 0 0 var(--footer-height);
-    z-index: 2;
-    pointer-events: none;
-    background-image:
-      linear-gradient(var(--border-subtle), var(--border-subtle)),
-      linear-gradient(var(--border-subtle), var(--border-subtle)),
-      linear-gradient(var(--border-subtle), var(--border-subtle)),
-      linear-gradient(var(--border-subtle), var(--border-subtle));
-    background-repeat: no-repeat;
-    background-size: 1px 100%, 1px 100%, 1px 100%, 1px 100%;
-    background-position:
-      var(--line-day-session) 0,
-      var(--line-session-subjects) 0,
-      var(--line-subjects-minutes) 0,
-      var(--line-minutes-action) 0;
-  }
-
-  .table-head {
+  .week-board {
     display: grid;
-    grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px 32px;
-    gap: 12px;
-    align-items: center;
-    min-height: 38px;
-    padding: 0 12px;
-    background: var(--surface-2);
-    color: var(--text-muted);
-    font-size: var(--text-xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    border-top-left-radius: var(--radius-md);
-    border-top-right-radius: var(--radius-md);
-    border-bottom: 1px solid var(--border-color);
-  }
-  .table-head > span:not(:first-child) { padding-left: 6px; }
-  .table-head .minutes-head,
-  .table-head .action-head {
-    justify-self: stretch;
-    padding-left: 6px;
-    text-align: left;
+    grid-template-columns: repeat(7, minmax(136px, 1fr));
+    gap: 8px;
+    overflow-x: hidden;
+    padding-bottom: 2px;
   }
 
-  .plan-row {
-    display: grid;
-    grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px 32px;
-    gap: 12px;
-    align-items: center;
-    padding: 6px 12px;
-    border-top: 1px solid var(--border-subtle);
-  }
-
-  .plan-grid :global(.plan-row:first-of-type) {
-    border-top: none;
-  }
-
-  .session-head {
-    position: relative;
-    display: flex;
-    align-items: center;
-    align-self: stretch;
-    height: 100%;
-  }
-  .resize-handle {
-    position: absolute;
-    left: calc(var(--gap) / 2);
-    top: 0;
-    bottom: 0;
-    width: 12px;
-    transform: translateX(-50%);
-    cursor: col-resize;
-    z-index: 10;
-    background: transparent;
-  }
-  .resize-handle::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    top: 8px;
-    bottom: 8px;
-    width: 2px;
-    background: transparent;
-    transition: background 0.15s ease;
-  }
-  .resize-handle:hover::after {
-    background: var(--border-strong);
-  }
-
-  .day-col { display: flex; align-items: center; }
-  .session-col { display: flex; align-items: center; min-width: 0; padding-left: 6px; }
-  .session-text { flex: 1; min-width: 0; min-height: 24px; display: flex; align-items: center; padding: 0; border: 0; background: transparent; color: var(--text-color); font-size: var(--text-sm); text-align: left; cursor: pointer; }
-  .session-text:hover { color: var(--accent); }
-  .session-input { flex: 1; background: transparent; border: none; border-bottom: 1px dashed var(--border-strong); color: var(--text-color); font-size: var(--text-sm); outline: none; padding: 2px 0; }
-
-  .subjects-col { display: flex; align-items: center; min-width: 0; padding-left: 6px; }
-  .time-col { display: flex; align-items: center; justify-content: flex-start; padding-left: 6px; }
-  .action-col { display: flex; align-items: center; justify-content: center; }
-
-  /* Day Dropdown styling */
-  .day-dropdown-container {
-    position: relative;
-    display: inline-flex;
-  }
-  .day-badge {
-    background: transparent;
-    color: var(--accent);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 0 8px;
-    height: 26px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1;
-    box-sizing: border-box;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  .day-badge:hover {
-    border-color: var(--accent);
-    background: var(--accent-soft);
-  }
-
-  .day-menu {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: 100;
+  .day-column {
     display: flex;
     flex-direction: column;
-    width: 80px;
-    padding: 4px;
-    border: 1px solid #333333;
-    border-radius: 6px;
-    background: #181818;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    box-sizing: border-box;
+    min-width: 0;
+    min-height: 220px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    overflow: hidden;
   }
-  .day-menu-item {
-    background: transparent;
-    border: none;
-    border-radius: 4px;
-    padding: 4px 8px;
-    color: var(--text-muted);
-    font-size: 11px;
-    font-weight: 600;
-    text-align: left;
-    cursor: pointer;
+
+  .day-header {
     display: flex;
     align-items: center;
-    height: 26px;
-    width: 100%;
-    box-sizing: border-box;
-    transition: all 0.1s ease;
+    justify-content: space-between;
+    min-height: 38px;
+    padding: 0 9px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--surface-2);
   }
-  .day-menu-item:hover {
+
+  h3 {
+    margin: 0;
+    color: var(--accent);
+    font-size: var(--text-sm);
+    font-weight: 750;
+  }
+
+  .day-header span {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .card-list {
+    display: grid;
+    align-content: start;
+    gap: 7px;
+    flex: 1;
+    padding: 7px;
+  }
+
+  .plan-card {
+    display: grid;
+    gap: 7px;
+    padding: 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: #161916;
+  }
+
+  .plan-card:hover {
+    border-color: var(--border-subtle);
+  }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .session-title {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-color);
+    font-size: var(--text-sm);
+    font-weight: 650;
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .session-title:hover {
+    color: var(--accent);
+  }
+
+  .session-input {
+    flex: 1;
+    min-width: 0;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px dashed var(--border-strong);
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-color);
+    font-size: var(--text-sm);
+    font-weight: 650;
+    outline: none;
+  }
+
+  .delete-btn {
+    display: grid;
+    place-items: center;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .delete-btn:hover {
+    background: rgba(255, 136, 136, 0.1);
+    color: #ff8888;
+  }
+
+  .card-field {
+    display: grid;
+    gap: 4px;
+  }
+
+  .card-field > span {
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .day-empty {
+    margin: 4px 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-style: italic;
+  }
+
+  .add-day-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 32px;
+    padding: 0 9px;
+    border: 0;
+    border-top: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--accent);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .add-day-btn:hover {
     background: var(--surface-hover);
     color: var(--text-color);
   }
 
-  .row-btn { background: transparent; border: none; border-radius: 4px; width: 22px; height: 22px; display: grid; place-items: center; color: var(--text-muted); cursor: pointer; transition: all 0.15s ease; }
-  .row-btn:hover { background: var(--surface-hover); color: var(--text-color); }
-  .row-btn.del:hover { background: rgba(255, 136, 136, 0.1); color: #ff8888; }
-
-  .add-activity-btn { display: flex; align-items: center; gap: 6px; min-height: 30px; border: 0; background: transparent; color: var(--accent); cursor: pointer; font-size: var(--text-sm); font-weight: 500; padding: 0; transition: color 0.15s ease; }
-  .add-activity-btn:hover { color: var(--text-color); }
-  .actions-footer { display: flex; justify-content: flex-start; padding: 8px 12px; border-top: 1px solid var(--border-subtle); background: var(--surface); border-bottom-left-radius: var(--radius-md); border-bottom-right-radius: var(--radius-md); }
-  .day-empty { display: flex; align-items: center; justify-content: center; min-height: 50px; color: var(--text-muted); font-size: var(--text-sm); font-style: italic; }
+  @media (max-width: 900px) {
+    .week-board {
+      grid-template-columns: repeat(7, 150px);
+      overflow-x: auto;
+    }
+  }
 </style>

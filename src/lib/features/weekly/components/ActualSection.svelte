@@ -1,13 +1,12 @@
 <script>
   // @ts-nocheck
   import { RefreshCw } from "@lucide/svelte";
-  let { actual, sessionColWidth = 140, onStartResize, onRefresh } = $props();
 
-  const dayOrder = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
-  let sortedActual = $derived([...actual].sort((a, b) => dayOrder[a.day] - dayOrder[b.day]));
+  let { actual, onRefresh } = $props();
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 </script>
 
-<section id="actual" class="week-section" style="--session-width: {sessionColWidth}px">
+<section id="actual" class="week-section">
   <header>
     <div><h2>Weekly actual</h2></div>
     <button type="button" class="refresh-btn" onclick={onRefresh} title="Refresh actual logs">
@@ -15,222 +14,164 @@
     </button>
   </header>
 
-  <div class="actual-grid">
-    <div class="table-head">
-      <span>Day</span>
-      <span class="session-head">
-        Session
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="resize-handle" onpointerdown={onStartResize} title="Drag to resize column"></div>
-      </span>
-      <span>Subjects</span>
-      <span class="minutes-head">Minutes</span>
-    </div>
+  <div class="week-board">
+    {#each days as day}
+      {@const entries = actual.filter((entry) => entry.day === day)}
+      <section class="day-column" aria-label={`${day} actual`}>
+        <header class="day-header">
+          <h3>{day}</h3>
+          <span>{entries.length}</span>
+        </header>
 
-    {#each sortedActual as entry}
-      <div class="actual-row">
-        <!-- Day Column -->
-        <div class="day-col">
-          <div class="day-badge">
-            {entry.day}
-          </div>
+        <div class="card-list">
+          {#each entries as entry}
+            <article class="actual-card">
+              <div class="card-top">
+                <strong>{entry.session || "Unnamed session"}</strong>
+                <span class="time-badge">{entry.actualMinutes}m</span>
+              </div>
+
+              <div class="subject-badges">
+                {#each entry.subjects as subject}
+                  <span class="subject-badge">{subject}</span>
+                {/each}
+                {#if entry.subjects.length === 0}
+                  <span class="subject-badge placeholder">-</span>
+                {/if}
+              </div>
+            </article>
+          {/each}
+
+          {#if entries.length === 0}
+            <p class="day-empty">No records</p>
+          {/if}
         </div>
-
-        <!-- Session Column -->
-        <div class="session-col">
-          <span class="session-text">
-            {entry.session || "Unnamed session"}
-          </span>
-        </div>
-
-        <!-- Subjects Column -->
-        <div class="subjects-col">
-          <div class="subject-badges">
-            {#each entry.subjects as subject}
-              <div class="subject-badge">{subject}</div>
-            {/each}
-            {#if entry.subjects.length === 0}
-              <div class="subject-badge placeholder">-</div>
-            {/if}
-          </div>
-        </div>
-
-        <!-- Minutes Column -->
-        <div class="time-col">
-          <div class="time-badge">
-            {entry.actualMinutes}m
-          </div>
-        </div>
-
-      </div>
+      </section>
     {/each}
-
-    {#if actual.length === 0}
-      <div class="empty-copy">No recorded sessions.</div>
-    {/if}
   </div>
 </section>
 
 <style>
-  .actual-grid {
-    position: relative;
-    --grid-pad: 12px;
-    --day-col: 70px;
-    --gap: 12px;
-    --minutes-col: 90px;
-    --line-day-session: calc(var(--grid-pad) + var(--day-col) + (var(--gap) / 2));
-    --line-session-subjects: calc(var(--grid-pad) + var(--day-col) + var(--gap) + var(--session-width, 140px) + (var(--gap) / 2));
-    --line-subjects-minutes: calc(100% - var(--grid-pad) - var(--minutes-col) - (var(--gap) / 2));
-    border: 1px solid var(--border-color);
+  .week-board {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(136px, 1fr));
+    gap: 8px;
+    overflow-x: hidden;
+    padding-bottom: 2px;
+  }
+
+  .day-column {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 180px;
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    overflow: hidden;
     background: var(--surface);
+    overflow: hidden;
   }
 
-  .actual-grid::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    pointer-events: none;
-    background-image:
-      linear-gradient(var(--border-subtle), var(--border-subtle)),
-      linear-gradient(var(--border-subtle), var(--border-subtle)),
-      linear-gradient(var(--border-subtle), var(--border-subtle));
-    background-repeat: no-repeat;
-    background-size: 1px 100%, 1px 100%, 1px 100%;
-    background-position:
-      var(--line-day-session) 0,
-      var(--line-session-subjects) 0,
-      var(--line-subjects-minutes) 0;
-  }
-
-  .table-head {
-    display: grid;
-    grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px;
-    gap: 12px;
-    align-items: center;
-    min-height: 38px;
-    padding: 0 12px;
-    background: var(--surface-2);
-    color: var(--text-muted);
-    font-size: var(--text-xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    border-bottom: 1px solid var(--border-color);
-  }
-  .table-head > span:not(:first-child) { padding-left: 6px; }
-  .table-head .minutes-head {
-    justify-self: stretch;
-    padding-left: 6px;
-    text-align: left;
-  }
-
-  .actual-row {
-    display: grid;
-    grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px;
-    gap: 12px;
-    align-items: center;
-    padding: 6px 12px;
-    border-top: 1px solid var(--border-subtle);
-  }
-
-  .actual-grid :global(.actual-row:first-of-type) {
-    border-top: none;
-  }
-
-  .session-head {
-    position: relative;
+  .day-header {
     display: flex;
     align-items: center;
-    align-self: stretch;
-    height: 100%;
-  }
-  .resize-handle {
-    position: absolute;
-    left: calc(var(--gap) / 2);
-    top: 0;
-    bottom: 0;
-    width: 12px;
-    transform: translateX(-50%);
-    cursor: col-resize;
-    z-index: 10;
-    background: transparent;
-  }
-  .resize-handle::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    top: 8px;
-    bottom: 8px;
-    width: 2px;
-    background: transparent;
-    transition: background 0.15s ease;
-  }
-  .resize-handle:hover::after {
-    background: var(--border-strong);
+    justify-content: space-between;
+    min-height: 38px;
+    padding: 0 9px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--surface-2);
   }
 
-  .day-col { display: flex; align-items: center; }
-  .day-badge {
-    background: transparent;
+  h3 {
+    margin: 0;
     color: var(--accent);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 0 8px;
-    height: 26px;
+    font-size: var(--text-sm);
+    font-weight: 750;
+  }
+
+  .day-header span {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .card-list {
+    display: grid;
+    align-content: start;
+    gap: 7px;
+    flex: 1;
+    padding: 7px;
+  }
+
+  .actual-card {
+    display: grid;
+    gap: 7px;
+    padding: 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: #161916;
+  }
+
+  .actual-card:hover {
+    border-color: var(--border-subtle);
+  }
+
+  .card-top {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .card-top strong {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-color);
+    font-size: var(--text-sm);
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .subject-badges {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .subject-badge,
+  .time-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1;
-    box-sizing: border-box;
-  }
-
-  .session-col { display: flex; align-items: center; min-width: 0; padding-left: 6px; }
-  .session-text { flex: 1; font-size: var(--text-sm); color: var(--text-color); min-height: 24px; display: flex; align-items: center; }
-
-  .subjects-col { display: flex; align-items: center; min-width: 0; padding-left: 6px; }
-  .subject-badges { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-  .subject-badge {
-    background: #121212;
-    color: #b3b3b3;
+    width: fit-content;
+    height: 24px;
+    padding: 0 8px;
     border: 1px solid #2d2d2d;
     border-radius: 4px;
-    padding: 0 8px;
-    height: 26px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: #121212;
+    color: #b3b3b3;
     font-size: 11px;
     font-weight: 600;
     line-height: 1;
     box-sizing: border-box;
   }
+
+  .time-badge {
+    color: var(--text-muted);
+    border-color: #3d3d3d;
+    background: transparent;
+  }
+
   .subject-badge.placeholder {
     color: var(--text-muted);
     border-style: dashed;
     background: transparent;
   }
 
-  .time-col { display: flex; align-items: center; justify-content: flex-start; padding-left: 6px; }
-  .time-badge {
-    background: transparent;
+  .day-empty {
+    margin: 4px 0;
     color: var(--text-muted);
-    border: 1px solid #3d3d3d;
-    border-radius: 4px;
-    padding: 0 8px;
-    height: 26px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-    box-sizing: border-box;
+    font-size: var(--text-xs);
+    font-style: italic;
   }
 
   .refresh-btn {
@@ -249,19 +190,17 @@
     cursor: pointer;
     transition: all 0.15s ease;
   }
+
   .refresh-btn:hover {
     background: var(--surface-hover);
     color: var(--text-color);
     border-color: var(--border-strong);
   }
 
-  .empty-copy {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 50px;
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    font-style: italic;
+  @media (max-width: 900px) {
+    .week-board {
+      grid-template-columns: repeat(7, 150px);
+      overflow-x: auto;
+    }
   }
 </style>
