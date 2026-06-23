@@ -14,7 +14,7 @@
       <RefreshCw size={12} /> Refresh
     </button>
   </header>
-  
+
   <div class="actual-grid">
     <div class="table-head">
       <span>Day</span>
@@ -27,7 +27,7 @@
       <span>Minutes</span>
       <span></span>
     </div>
-    
+
     {#each sortedActual as entry}
       <div class="actual-row">
         <!-- Day Column -->
@@ -36,14 +36,14 @@
             {entry.day}
           </div>
         </div>
-        
+
         <!-- Session Column -->
         <div class="session-col">
           <span class="session-text">
             {entry.session || "Unnamed session"}
           </span>
         </div>
-        
+
         <!-- Subjects Column -->
         <div class="subjects-col">
           <div class="subject-badges">
@@ -55,19 +55,19 @@
             {/if}
           </div>
         </div>
-        
+
         <!-- Minutes Column -->
         <div class="time-col">
           <div class="time-badge">
             {entry.actualMinutes}m
           </div>
         </div>
-        
+
         <!-- Empty Action Column to align with Planned Table -->
         <div class="action-col"></div>
       </div>
     {/each}
-    
+
     {#if actual.length === 0}
       <div class="empty-copy">No recorded sessions.</div>
     {/if}
@@ -76,7 +76,7 @@
 
 <style>
   .actual-grid { border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; background: var(--surface); }
-  
+
   .table-head {
     display: grid;
     grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px 32px;
@@ -92,7 +92,7 @@
     letter-spacing: .06em;
     border-bottom: 1px solid var(--border-color);
   }
-  
+
   .actual-row {
     display: grid;
     grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px 32px;
@@ -101,7 +101,7 @@
     padding: 6px 12px;
     border-top: 1px solid var(--border-subtle);
   }
-  
+
   .actual-grid :global(.actual-row:first-of-type) {
     border-top: none;
   }
@@ -136,7 +136,7 @@
   .resize-handle:hover::after {
     background: var(--border-strong);
   }
-  
+
   .day-col { display: flex; align-items: center; }
   .day-badge {
     background: transparent;
@@ -153,10 +153,10 @@
     line-height: 1;
     box-sizing: border-box;
   }
-  
+
   .session-col { display: flex; align-items: center; min-width: 0; }
   .session-text { flex: 1; font-size: var(--text-sm); color: var(--text-color); min-height: 24px; display: flex; align-items: center; }
-  
+
   .subjects-col { display: flex; align-items: center; min-width: 0; }
   .subject-badges { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
   .subject-badge {
@@ -179,7 +179,7 @@
     border-style: dashed;
     background: transparent;
   }
-  
+
   .time-col { display: flex; align-items: center; }
   .time-badge {
     background: transparent;
@@ -196,9 +196,9 @@
     line-height: 1;
     box-sizing: border-box;
   }
-  
+
   .action-col { display: flex; align-items: center; justify-content: flex-end; }
-  
+
   .refresh-btn {
     display: inline-flex;
     align-items: center;
@@ -220,7 +220,7 @@
     color: var(--text-color);
     border-color: var(--border-strong);
   }
-  
+
   .empty-copy {
     display: flex;
     align-items: center;

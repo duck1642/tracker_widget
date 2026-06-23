@@ -1,5 +1,6 @@
 <script>
   // @ts-nocheck
+  import { onMount } from "svelte";
   import { Plus, Trash2 } from "@lucide/svelte";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
   import TimeInput from "$lib/shared/components/TimeInput.svelte";
@@ -13,14 +14,16 @@
     node.focus();
   }
 
-  // Close dropdown on click outside
-  if (typeof window !== "undefined") {
-    window.addEventListener("pointerdown", (e) => {
+  onMount(() => {
+    function handlePointerDown(e) {
       if (!e.target.closest(".day-dropdown-container")) {
         showDayDropdownId = null;
       }
-    });
-  }
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  });
 
   const dayOrder = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
   let sortedPlan = $derived([...plan].sort((a, b) => dayOrder[a.day] - dayOrder[b.day]));
@@ -36,7 +39,7 @@
   <header>
     <div><h2>Weekly plan</h2></div>
   </header>
-  
+
   <div class="plan-grid">
     <div class="table-head">
       <span>Day</span>
@@ -49,7 +52,7 @@
       <span>Minutes</span>
       <span></span>
     </div>
-    
+
     {#each sortedPlan as entry (entry.id)}
       <div class="plan-row">
         <!-- Day Selector Column -->
@@ -69,7 +72,7 @@
             {/if}
           </div>
         </div>
-        
+
         <!-- Session Column -->
         <div class="session-col">
           {#if editingSessionId === entry.id}
@@ -83,22 +86,22 @@
               use:focus
             />
           {:else}
-            <span class="session-text" onclick={() => editingSessionId = entry.id}>
+            <button type="button" class="session-text" onclick={() => editingSessionId = entry.id}>
               {entry.session || "Unnamed session"}
-            </span>
+            </button>
           {/if}
         </div>
-        
+
         <!-- Subjects Column -->
         <div class="subjects-col">
           <SubjectInput subjects={entry.subjects} onChange={(subjects) => onUpdate(entry.id, { subjects })} variant="badge" />
         </div>
-        
+
         <!-- Minutes Column -->
         <div class="time-col">
           <TimeInput minutes={entry.targetMinutes} onChange={(targetMinutes) => onUpdate(entry.id, { targetMinutes })} variant="badge" />
         </div>
-        
+
         <!-- Action Column -->
         <div class="action-col">
           <button type="button" class="row-btn del" onpointerdown={(e) => e.preventDefault()} onclick={() => onDelete(entry.id)} aria-label="Delete plan entry" title="Delete">
@@ -107,11 +110,11 @@
         </div>
       </div>
     {/each}
-    
+
     {#if plan.length === 0}
       <div class="day-empty">No sessions planned.</div>
     {/if}
-    
+
     <div class="actions-footer">
       <button type="button" class="add-activity-btn" onclick={handleAdd} title="Add planned session">
         <Plus size={14} /> Add planned session
@@ -122,7 +125,7 @@
 
 <style>
   .plan-grid { border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: visible; background: var(--surface); }
-  
+
   .table-head {
     display: grid;
     grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px 32px;
@@ -140,7 +143,7 @@
     border-top-right-radius: var(--radius-md);
     border-bottom: 1px solid var(--border-color);
   }
-  
+
   .plan-row {
     display: grid;
     grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px 32px;
@@ -149,7 +152,7 @@
     padding: 6px 12px;
     border-top: 1px solid var(--border-subtle);
   }
-  
+
   .plan-grid :global(.plan-row:first-of-type) {
     border-top: none;
   }
@@ -184,16 +187,17 @@
   .resize-handle:hover::after {
     background: var(--border-strong);
   }
-  
+
   .day-col { display: flex; align-items: center; }
   .session-col { display: flex; align-items: center; min-width: 0; }
-  .session-text { flex: 1; font-size: var(--text-sm); color: var(--text-color); cursor: pointer; min-height: 24px; display: flex; align-items: center; }
+  .session-text { flex: 1; min-width: 0; min-height: 24px; display: flex; align-items: center; padding: 0; border: 0; background: transparent; color: var(--text-color); font-size: var(--text-sm); text-align: left; cursor: pointer; }
+  .session-text:hover { color: var(--accent); }
   .session-input { flex: 1; background: transparent; border: none; border-bottom: 1px dashed var(--border-strong); color: var(--text-color); font-size: var(--text-sm); outline: none; padding: 2px 0; }
-  
+
   .subjects-col { display: flex; align-items: center; min-width: 0; }
   .time-col { display: flex; align-items: center; }
   .action-col { display: flex; align-items: center; justify-content: flex-end; }
-  
+
   /* Day Dropdown styling */
   .day-dropdown-container {
     position: relative;
@@ -220,7 +224,7 @@
     border-color: var(--accent);
     background: var(--accent-soft);
   }
-  
+
   .day-menu {
     position: absolute;
     top: calc(100% + 4px);
@@ -257,11 +261,11 @@
     background: var(--surface-hover);
     color: var(--text-color);
   }
-  
+
   .row-btn { background: transparent; border: none; border-radius: 4px; width: 22px; height: 22px; display: grid; place-items: center; color: var(--text-muted); cursor: pointer; transition: all 0.15s ease; }
   .row-btn:hover { background: var(--surface-hover); color: var(--text-color); }
   .row-btn.del:hover { background: rgba(255, 136, 136, 0.1); color: #ff8888; }
-  
+
   .add-activity-btn { display: flex; align-items: center; gap: 6px; min-height: 30px; border: 0; background: transparent; color: var(--accent); cursor: pointer; font-size: var(--text-sm); font-weight: 500; padding: 0; transition: color 0.15s ease; }
   .add-activity-btn:hover { color: var(--text-color); }
   .actions-footer { display: flex; justify-content: flex-start; padding: 8px 12px; border-top: 1px solid var(--border-subtle); background: var(--surface); border-bottom-left-radius: var(--radius-md); border-bottom-right-radius: var(--radius-md); }

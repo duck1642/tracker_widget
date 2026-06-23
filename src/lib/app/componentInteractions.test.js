@@ -110,7 +110,8 @@ describe("logger editing", () => {
       plan: [{ id: "plan-1", day: "Mon", session: "Development", subjects: ["rust"], targetMinutes: 60 }],
       onAdd: vi.fn(), onUpdate, onDelete: vi.fn()
     });
-    await fireEvent.input(screen.getByLabelText("Session"), { target: { value: "Review" } });
+    await fireEvent.click(screen.getByRole("button", { name: "Development" }));
+    await fireEvent.input(screen.getByPlaceholderText("What session?"), { target: { value: "Review" } });
     expect(onUpdate).toHaveBeenCalledWith("plan-1", { session: "Review" });
   });
 

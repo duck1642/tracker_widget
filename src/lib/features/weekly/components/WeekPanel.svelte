@@ -25,7 +25,7 @@
     e.preventDefault();
     const startX = e.clientX;
     const startWidth = sessionColWidth;
-    
+
     function handlePointerMove(moveEvent) {
       const deltaX = moveEvent.clientX - startX;
       sessionColWidth = Math.max(80, Math.min(400, startWidth + deltaX));
@@ -33,12 +33,12 @@
         localStorage.setItem("week-session-col-width", sessionColWidth);
       }
     }
-    
+
     function handlePointerUp() {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     }
-    
+
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
   }
@@ -50,7 +50,7 @@
   {:else}
     <header class="week-hero">
       <div>
-        <h1>{weekStore.descriptor.year} · Week {weekStore.descriptor.week}</h1>
+        <h1>{weekStore.descriptor.year} - Week {weekStore.descriptor.week}</h1>
         <p>{weekStore.descriptor.rangeLabel}</p>
       </div>
       <nav aria-label="Week sections">
