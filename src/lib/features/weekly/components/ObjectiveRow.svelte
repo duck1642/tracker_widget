@@ -64,11 +64,11 @@
   </div>
   <div class="row-bottom">
     <SubjectInput subjects={objective.subjects} onChange={(subjects) => onUpdate({ subjects })} variant="badge" />
-    
+
     <button type="button" class="origin-badge" onclick={toggleOrigin}>
       {objective.origin === "planned" ? "Planned" : "Unplanned"}
     </button>
-    
+
     <div class="status-dropdown-container" bind:this={dropdownEl}>
       <button
         type="button"
@@ -283,4 +283,3 @@
     color: #ffa3a3;
   }
 </style>
-

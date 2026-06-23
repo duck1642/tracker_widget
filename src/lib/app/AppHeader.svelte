@@ -57,7 +57,7 @@
 
 <header class="drag-header" class:draggable={dragEnabled} data-tauri-drag-region={dragEnabled ? true : undefined}>
   <span class="title-text" data-tauri-drag-region={dragEnabled ? true : undefined}>
-    {title} {statusMessage ? `· ${statusMessage}` : ""}
+    {title} {statusMessage ? `- ${statusMessage}` : ""}
   </span>
   <div class="header-controls">
     <button class="icon-btn-header" onclick={onToggleSidebar} title="Toggle file tree"><PanelLeft size={13} /></button>

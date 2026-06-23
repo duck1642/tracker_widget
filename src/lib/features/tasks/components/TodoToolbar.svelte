@@ -3,7 +3,7 @@
 
   let { 
     undoStackLength = 0,
-    redoStackLength = 0, 
+    redoStackLength = 0,
     onAddTask, 
     onUndo, 
     onRedo, 
