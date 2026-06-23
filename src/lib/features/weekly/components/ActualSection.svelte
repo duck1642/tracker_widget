@@ -4,7 +4,7 @@
 </script>
 
 <section id="actual" class="week-section">
-  <header><div><span class="section-index">03</span><h2>Weekly actual</h2></div><button class="primary-small" onclick={onRefresh}><RefreshCw size={14} /> Refresh</button></header>
+  <header><div><h2>Weekly actual</h2></div><button class="primary-small" onclick={onRefresh}><RefreshCw size={14} /> Refresh</button></header>
   <div class="actual-grid"><div class="table-head"><span>Day</span><span>Session</span><span>Subjects</span><span>Minutes</span></div>{#each actual as entry}<div class="actual-row"><strong>{entry.day}</strong><span>{entry.session}</span><span class="subjects">{entry.subjects.join(", ")}</span><strong>{entry.actualMinutes}m</strong></div>{/each}{#if actual.length === 0}<p class="empty-copy">No recorded sessions.</p>{/if}</div>
 </section>
 

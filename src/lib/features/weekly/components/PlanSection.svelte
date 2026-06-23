@@ -9,7 +9,7 @@
 
 <section id="plan" class="week-section">
   <header>
-    <div><span class="section-index">02</span><h2>Weekly plan</h2></div>
+    <div><h2>Weekly plan</h2></div>
   </header>
   <div class="plan-list">
     {#each days as day}

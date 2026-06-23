@@ -36,7 +36,7 @@
     <ObjectivesSection objectives={weekStore.objectives} onAdd={() => weekStore.addObjective()} onUpdate={(id, patch) => weekStore.updateObjective(id, patch)} onDelete={(id) => weekStore.removeObjective(id)} />
     <PlanSection plan={weekStore.plan} onAdd={(day) => weekStore.addPlanEntry(day)} onUpdate={(id, patch) => weekStore.updatePlanEntry(id, patch)} onDelete={(id) => weekStore.removePlanEntry(id)} />
     <ActualSection actual={weekStore.actual} onRefresh={() => weekStore.refreshActual()} />
-    <section id="week-notes" class="week-section"><header><div><span class="section-index">04</span><h2>Notes</h2></div></header><NotesEditor value={weekStore.notesRaw} onChange={(value) => weekStore.updateNotes(value)} label="Weekly notes" /></section>
+    <section id="week-notes" class="week-section"><header><div><h2>Notes</h2></div></header><NotesEditor value={weekStore.notesRaw} onChange={(value) => weekStore.updateNotes(value)} label="Weekly notes" /></section>
   {/if}
 </main>
 
