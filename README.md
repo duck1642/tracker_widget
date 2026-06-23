@@ -1,14 +1,13 @@
 # Tracker Widget
 
-A premium, transparent desktop productivity widget built with **Tauri v2**, **SvelteKit**, and **Rust**. It serves as a unified workspace for managing Checklists, Weekly Plans, Daily logs, and Markdown notes, with true desktop pinning integrations for Windows.
+A premium, transparent desktop productivity widget built with **Tauri v2**, **SvelteKit**, and **Rust**. It serves as a unified workspace for managing Checklists, Weekly Plans, Daily logs, and Markdown notes.
 
 ## Key Features
 
 - 🖥️ **Window Layering & Widget Modes**:
   - **Always on Top (`top`)**: Floats the tracker above all active apps.
   - **Normal Window (`normal`)**: Behave like a standard window layout.
-  - **Fake Widget (`desktop`)**: Keeps the window on the bottom of the stack and hides it from the taskbar.
-  - **True Widget (`true-desktop`)**: *Windows Only.* Natively parents the borderless, transparent window directly to the desktop workspace (`WorkerW`/`Progman`) using Win32 API hooks in Rust, pinning it securely behind desktop icons.
+  - **Desktop Widget (`desktop`)**: Pins the widget to the desktop background (keeps it on the bottom of the window stack and hides it from the taskbar).
 - 📝 **Unified Productivity Views**:
   - **Tasks**: Hierarchical checklist with keyboard shortcuts, subtask support, undo/redo logs, and file backup.
   - **Weekly Planner**: Manage objectives, target schedules, and view actual activity aggregation.
