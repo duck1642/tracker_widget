@@ -149,7 +149,7 @@
   async function minimizeApp() {
     try {
       const appWindow = getCurrentWindow();
-      if (appStore.layerMode === "desktop") await appWindow.hide();
+      if (appStore.layerMode === "desktop" || appStore.layerMode === "true-desktop") await appWindow.hide();
       else await appWindow.minimize();
     } catch (error) {
       appStore.showStatus("Minimize failed: " + error);
@@ -166,7 +166,7 @@
   }
 </script>
 
-<main class="app-container" class:desktop-mode={appStore.layerMode === "desktop"}>
+<main class="app-container" class:desktop-mode={appStore.layerMode === "desktop" || appStore.layerMode === "true-desktop"}>
   <AppHeader title={appStore.currentView === "tasks" ? "Tasks" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} {showModeMenu} {isMaximized} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onDismissModeMenu={() => showModeMenu = false} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onMaximizeApp={toggleMaximizeApp} onCloseApp={closeApp} />
   <div class="workspace-shell">
     <AppSidebar open={workspaceStore.sidebarOpen} {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} />

@@ -2,7 +2,7 @@ import { applyLayerMode as applyNativeLayerMode } from "$lib/shared/services/win
 import * as defaultConfigService from "$lib/shared/services/configService.js";
 import * as defaultAutostartService from "$lib/shared/services/autostart.js";
 
-const VALID_LAYER_MODES = new Set(["normal", "top", "desktop"]);
+const VALID_LAYER_MODES = new Set(["normal", "top", "desktop", "true-desktop"]);
 
 export class AppStore {
   filePath = $state("");

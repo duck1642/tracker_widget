@@ -22,7 +22,7 @@ function createStore(mode) {
 }
 
 describe("AppStore native layer restoration", () => {
-  it.each(["top", "desktop"])("applies persisted %s mode from normal", async (mode) => {
+  it.each(["top", "desktop", "true-desktop"])("applies persisted %s mode from normal", async (mode) => {
     const { store, applyLayerMode } = createStore(mode);
 
     await store.loadConfig();

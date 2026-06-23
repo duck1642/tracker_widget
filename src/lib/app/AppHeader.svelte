@@ -50,9 +50,12 @@
   /** @param {string} mode */
   function getModeLabel(mode) {
     if (mode === "top") return "Top";
-    if (mode === "desktop") return "Desk";
+    if (mode === "desktop") return "Fake";
+    if (mode === "true-desktop") return "True";
     return "Norm";
   }
+
+  let isWidgetMode = $derived(layerMode === "desktop" || layerMode === "true-desktop");
 </script>
 
 <header class="drag-header" class:draggable={dragEnabled} data-tauri-drag-region={dragEnabled ? true : undefined}>
@@ -62,7 +65,7 @@
   <div class="header-controls">
     <button class="icon-btn-header" onclick={onToggleSidebar} title="Toggle file tree"><PanelLeft size={13} /></button>
     <div class="mode-selector" bind:this={modeSelector}>
-      <button class="icon-btn-header mode-trigger" bind:this={modeTrigger} onclick={onToggleModeMenu} title={layerMode === "desktop" ? "Window mode: Desktop (tray only)" : "Window layer mode"} aria-haspopup="menu" aria-expanded={showModeMenu}>
+      <button class="icon-btn-header mode-trigger" bind:this={modeTrigger} onclick={onToggleModeMenu} title={isWidgetMode ? "Window mode: Widget (tray only)" : "Window layer mode"} aria-haspopup="menu" aria-expanded={showModeMenu}>
         <Layers size={13} />
         <span class="btn-text">{getModeLabel(layerMode)}</span>
         <ChevronDown size={10} />
@@ -72,10 +75,10 @@
     <button class="icon-btn-header" onclick={onToggleSettings} title="Settings">
       <Settings size={13} />
     </button>
-    <button class="icon-btn-header" onclick={onShrinkApp} title={layerMode === "desktop" ? "Hide to tray" : "Minimize"}>
+    <button class="icon-btn-header" onclick={onShrinkApp} title={isWidgetMode ? "Hide to tray" : "Minimize"}>
       <Minus size={13} />
     </button>
-    {#if layerMode !== "desktop"}
+    {#if !isWidgetMode}
       <button class="icon-btn-header" onclick={onMaximizeApp} title={isMaximized ? "Restore Down" : "Maximize"}>
         {#if isMaximized}
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1"><path d="M3 1.5H8.5V7H7" /><rect x="1.5" y="3" width="5.5" height="5.5" rx="0.5" /></svg>

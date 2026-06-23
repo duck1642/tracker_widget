@@ -4,7 +4,8 @@
   const modes = [
     { id: "top", label: "Always on Top" },
     { id: "normal", label: "Normal Window" },
-    { id: "desktop", label: "Pin to Desktop", detail: "Tray only" }
+    { id: "desktop", label: "Fake Widget", detail: "Stable visual" },
+    { id: "true-desktop", label: "True Widget", detail: "Desktop host" }
   ];
 </script>
 
@@ -18,7 +19,7 @@
 </div>
 
 <style>
-  .dropdown-menu { position: absolute; top: calc(100% + 5px); right: 0; z-index: 1000; display: grid; width: 176px; padding: 4px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--bg-header); box-shadow: 0 10px 24px rgba(0, 0, 0, .38); }
+  .dropdown-menu { position: absolute; top: calc(100% + 5px); right: 0; z-index: 1000; display: grid; width: 184px; padding: 4px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--bg-header); box-shadow: 0 10px 24px rgba(0, 0, 0, .38); }
   .menu-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 34px; padding: 6px 8px; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); text-align: left; cursor: pointer; }
   .menu-item:hover { background: var(--surface-hover); color: var(--text-color); }
   .menu-item.active { background: var(--accent-soft); color: var(--accent); }
