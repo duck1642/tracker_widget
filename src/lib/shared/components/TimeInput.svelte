@@ -12,7 +12,8 @@
   });
 
   function handleCommit() {
-    const next = Math.max(1, Number(localValue) || 1);
+    const valStr = String(localValue).trim();
+    const next = valStr === "" ? minutes : Math.max(0, Number(valStr) || 0);
     onChange(next);
     isEditing = false;
   }
@@ -46,7 +47,8 @@
       type="number"
       value={minutes}
       onchange={(event) => {
-        const next = Math.max(1, Number(event.currentTarget.value) || 1);
+        const valStr = event.currentTarget.value.trim();
+        const next = valStr === "" ? minutes : Math.max(0, Number(valStr) || 0);
         onChange(next);
       }}
     />
