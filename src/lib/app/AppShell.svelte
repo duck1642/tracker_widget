@@ -26,7 +26,6 @@
   let showModeMenu = $state(false);
   let selectedPath = $state("");
   let isMaximized = $state(false);
-  let windowSizeView = $state("");
 
   const viewSizeConstraints = {
     tasks: { width: 480, height: 360 },
@@ -90,8 +89,8 @@
 
   $effect(() => {
     const view = appStore.currentView;
-    if (!view || view === windowSizeView) return;
-    windowSizeView = view;
+    if (!view) return;
+    if (isMaximized) return;
     applyViewSizeConstraints(view);
   });
 
@@ -100,12 +99,31 @@
     let disposed = false;
     let unlistenClose;
     let unlistenQuit;
+    let unlistenResized;
     const handleResize = async () => {
-      isMaximized = await appWindow.isMaximized();
+      try {
+        isMaximized = await appWindow.isMaximized();
+      } catch (err) {
+        // Safe fallback if permission is not yet loaded or initialized
+      }
+      setTimeout(async () => {
+        try {
+          isMaximized = await appWindow.isMaximized();
+        } catch {}
+      }, 100);
+      setTimeout(async () => {
+        try {
+          isMaximized = await appWindow.isMaximized();
+        } catch {}
+      }, 300);
     };
     window.addEventListener("resize", handleResize);
     handleResize();
     (async () => {
+      try {
+        unlistenResized = await appWindow.onResized(handleResize);
+        if (disposed) unlistenResized();
+      } catch {}
       unlistenQuit = await listen("request-quit", async () => {
         if (await persistenceRegistry.flushAll()) await invoke("exit_app");
         else appStore.showStatus("Resolve file conflicts before quitting");
@@ -127,7 +145,7 @@
     })();
     const handleFocus = async () => { await persistenceRegistry.checkActive(appStore.currentView); if (appStore.currentView !== "tasks") await workspaceStore.refresh(); };
     window.addEventListener("focus", handleFocus);
-    return () => { disposed = true; unlistenClose?.(); unlistenQuit?.(); window.removeEventListener("focus", handleFocus); window.removeEventListener("resize", handleResize); };
+    return () => { disposed = true; unlistenClose?.(); unlistenQuit?.(); unlistenResized?.(); window.removeEventListener("focus", handleFocus); window.removeEventListener("resize", handleResize); };
   });
 
   async function saveTodoPath() {

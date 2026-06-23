@@ -82,6 +82,17 @@ export class DailyStore {
     void this.save(true);
   }
 
+  renameSession(sessionId, name) {
+    const normalized = name.trim().normalize("NFC");
+    if (!normalized || ["notes", "total time"].includes(normalized.toLowerCase())) return false;
+    if (this.sessions.some((session) => session.id !== sessionId && session.name.toLowerCase() === normalized.toLowerCase())) return false;
+    const session = this.sessions.find((item) => item.id === sessionId);
+    if (!session) return false;
+    session.name = normalized;
+    void this.save(true);
+    return true;
+  }
+
   addActivity(sessionId) {
     const session = this.sessions.find((item) => item.id === sessionId);
     if (!session) return;

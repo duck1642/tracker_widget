@@ -20,7 +20,7 @@
     {#if dailyStore.conflict}<ConflictBanner onReloadExternal={() => dailyStore.resolveConflict("reload")} onKeepLocal={() => dailyStore.resolveConflict("keep-local")} />{/if}
     <section class="sessions">
       {#each dailyStore.sessions as session (session.id)}
-        <SessionCard {session} onAddActivity={() => dailyStore.addActivity(session.id)} onUpdateActivity={(activityId, patch) => dailyStore.updateActivity(session.id, activityId, patch)} onDeleteActivity={(activityId) => dailyStore.removeActivity(session.id, activityId)} onDeleteSession={() => dailyStore.removeSession(session.id)} />
+        <SessionCard {session} onAddActivity={() => dailyStore.addActivity(session.id)} onUpdateActivity={(activityId, patch) => dailyStore.updateActivity(session.id, activityId, patch)} onDeleteActivity={(activityId) => dailyStore.removeActivity(session.id, activityId)} onDeleteSession={() => dailyStore.removeSession(session.id)} onRenameSession={(name) => dailyStore.renameSession(session.id, name)} />
       {/each}
       <AddSessionForm {suggestions} onAdd={(name) => dailyStore.addSession(name)} />
     </section>

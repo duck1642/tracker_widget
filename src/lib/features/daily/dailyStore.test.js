@@ -46,4 +46,22 @@ describe("DailyStore editing", () => {
     expect(store.sessions).toHaveLength(0);
     expect(files.get("day.md")).not.toContain("## Work");
   });
+
+  it("renames a session correctly and preserves uniqueness", async () => {
+    const { store, files } = harness("# 2026-06-22\n\n## Work\n\n## Play\n\n## Total Time\n\n0m\n\n## Notes\n");
+    await store.loadPath("day.md", "2026-06-22");
+    const workId = store.sessions[0].id;
+    const playId = store.sessions[1].id;
+    
+    // Cannot rename to an existing session (case-insensitive check)
+    expect(store.renameSession(workId, "play")).toBe(false);
+    
+    // Can rename to a valid new name
+    expect(store.renameSession(workId, "Coding")).toBe(true);
+    await store.flushSave();
+    
+    expect(store.sessions[0].name).toBe("Coding");
+    expect(files.get("day.md")).toContain("## Coding");
+    expect(files.get("day.md")).not.toContain("## Work");
+  });
 });
