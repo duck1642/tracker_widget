@@ -11,7 +11,6 @@
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
-  import { pathExists } from "$lib/shared/services/fileService.js";
   import AppHeader from "./AppHeader.svelte";
   import SettingsPanel from "./SettingsPanel.svelte";
   import MainTabs from "./MainTabs.svelte";
@@ -129,19 +128,6 @@
         else appStore.showStatus("Resolve file conflicts before quitting");
       });
       await appStore.loadConfig();
-      if (appStore.filePath) {
-        try {
-          const exists = await pathExists(appStore.filePath);
-          if (!exists) {
-            appStore.showStatus("Todo file not found. Please locate it.");
-            const ok = await todoStore.chooseFile();
-            if (!ok) {
-              appStore.filePath = "";
-              editingSettings = true;
-            }
-          }
-        } catch {}
-      }
       await todoStore.loadFile();
       await workspaceStore.refresh();
       unlistenClose = await appWindow.onCloseRequested(async (event) => {
@@ -201,7 +187,7 @@
         <MainTabs currentView={appStore.currentView} onSelect={(view) => view === "tasks" ? appStore.currentView = "tasks" : openCurrent(view)} />
         {#if appStore.currentView === "tasks" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
         <div class="panel-scroll">{#if appStore.currentView === "tasks"}<TasksPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
-        {#if appStore.currentView === "tasks"}<TodoToolbar undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTask={() => todoStore.addTask(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={() => todoStore.loadFile()} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
+        {#if appStore.currentView === "tasks" && !todoStore.fileMissing}<TodoToolbar undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTask={() => todoStore.addTask(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={() => todoStore.loadFile()} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
       {/if}
     </section>
   </div>

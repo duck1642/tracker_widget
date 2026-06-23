@@ -15,7 +15,8 @@ function createHarness(initialFiles = { "A.md": "- [ ] A\n" }, debounceMs = 250)
       writes.push({ path, content });
       files.set(path, content);
     }),
-    getFileModifiedTime: vi.fn(async () => 1)
+    getFileModifiedTime: vi.fn(async () => 1),
+    pathExists: vi.fn(async (path) => files.has(path))
   };
   const appStore = {
     filePath: "A.md",

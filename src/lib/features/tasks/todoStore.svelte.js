@@ -20,6 +20,7 @@ export class TodoStore {
   dirty = $state(false);
   saving = $state(false);
   conflict = $state(null);
+  fileMissing = $state(false);
 
   constructor({ fileService = defaultFileService, appStore = defaultAppStore, debounceMs = 250 } = {}) {
     this.fileService = fileService;
@@ -50,7 +51,26 @@ export class TodoStore {
 
   async loadFile({ path } = {}) {
     let targetPath = path || this.appStore.filePath;
-    if (!targetPath) targetPath = await this.fileService.getDefaultPath();
+    if (!targetPath) {
+      const defaultPath = await this.fileService.getDefaultPath();
+      if (defaultPath) {
+        const defaultExists = await this.fileService.pathExists(defaultPath);
+        if (defaultExists) {
+          targetPath = defaultPath;
+        } else {
+          this.fileMissing = true;
+          return false;
+        }
+      } else {
+        this.fileMissing = true;
+        return false;
+      }
+    }
+    const exists = await this.fileService.pathExists(targetPath);
+    if (!exists) {
+      this.fileMissing = true;
+      return false;
+    }
     if (this.loadedPath && !(await this.flushSave())) return false;
     try {
       const content = await this.fileService.readFile(targetPath);
@@ -59,10 +79,12 @@ export class TodoStore {
       this.tasks = markdownToTasks(content);
       this.resetHistory();
       this.persistence.reset(targetPath, content);
+      this.fileMissing = false;
       this.appStore.showStatus("Loaded");
       return true;
     } catch (error) {
       this.appStore.showStatus("Todo load failed: " + error);
+      this.fileMissing = true;
       return false;
     }
   }
@@ -72,6 +94,7 @@ export class TodoStore {
     if (!selected) return false;
     const ok = await this.loadFile({ path: selected });
     if (ok) {
+      this.fileMissing = false;
       await this.appStore.saveConfig();
     }
     return ok;

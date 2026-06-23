@@ -87,28 +87,61 @@
   }
 </script>
 
-<TaskList 
-  tasks={todoStore.tasks}
-  inputElements={inputElements}
-  onToggleTask={(/** @type {string} */ id) => todoStore.toggleTask(id)}
-  onUpdateText={(/** @type {string} */ id, /** @type {string} */ text) => todoStore.updateText(id, text)}
-  onMoveTaskUp={(/** @type {number} */ index) => todoStore.moveTaskUp(index)}
-  onMoveTaskDown={(/** @type {number} */ index) => todoStore.moveTaskDown(index)}
-  onDeleteTask={(/** @type {number} */ index) => todoStore.deleteTask(index)}
-  onFocus={(/** @type {string} */ id, /** @type {string} */ text) => {
-    focusedTaskId = id;
-    originalTexts[id] = text;
-  }}
-  onBlur={(/** @type {string} */ id, /** @type {string} */ text) => {
-    if (focusedTaskId === id) {
-      focusedTaskId = "";
-    }
-    const oldText = originalTexts[id];
-    if (oldText !== undefined && oldText !== text) {
-      todoStore.commitTextEdit(id, oldText, text);
-    }
-    delete originalTexts[id];
-    void todoStore.flushSave();
-  }}
-  onKeyDown={handleKeyDown}
-/>
+{#if todoStore.fileMissing}
+  <div class="empty">
+    <strong>No Todo File Detected</strong>
+    <span>Choose or relocate a todo.md file to start.</span>
+    <button onclick={() => todoStore.chooseFile()}>
+      Locate todo.md
+    </button>
+  </div>
+{:else}
+  <TaskList 
+    tasks={todoStore.tasks}
+    inputElements={inputElements}
+    onToggleTask={(/** @type {string} */ id) => todoStore.toggleTask(id)}
+    onUpdateText={(/** @type {string} */ id, /** @type {string} */ text) => todoStore.updateText(id, text)}
+    onMoveTaskUp={(/** @type {number} */ index) => todoStore.moveTaskUp(index)}
+    onMoveTaskDown={(/** @type {number} */ index) => todoStore.moveTaskDown(index)}
+    onDeleteTask={(/** @type {number} */ index) => todoStore.deleteTask(index)}
+    onFocus={(/** @type {string} */ id, /** @type {string} */ text) => {
+      focusedTaskId = id;
+      originalTexts[id] = text;
+    }}
+    onBlur={(/** @type {string} */ id, /** @type {string} */ text) => {
+      if (focusedTaskId === id) {
+        focusedTaskId = "";
+      }
+      const oldText = originalTexts[id];
+      if (oldText !== undefined && oldText !== text) {
+        todoStore.commitTextEdit(id, oldText, text);
+      }
+      delete originalTexts[id];
+      void todoStore.flushSave();
+    }}
+    onKeyDown={handleKeyDown}
+  />
+{/if}
+
+<style>
+  .empty button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 34px;
+    padding: 0 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background: var(--surface-2);
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    margin-top: 16px;
+  }
+  .empty button:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-hover);
+  }
+</style>
