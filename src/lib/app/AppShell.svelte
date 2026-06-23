@@ -22,7 +22,6 @@
   import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
 
   let editingSettings = $state(false);
-  let todoPathInput = $state("");
   let showModeMenu = $state(false);
   let selectedPath = $state("");
   let isMaximized = $state(false);
@@ -129,7 +128,6 @@
         else appStore.showStatus("Resolve file conflicts before quitting");
       });
       await appStore.loadConfig();
-      todoPathInput = appStore.filePath;
       await todoStore.loadFile();
       await workspaceStore.refresh();
       unlistenClose = await appWindow.onCloseRequested(async (event) => {
@@ -147,12 +145,6 @@
     window.addEventListener("focus", handleFocus);
     return () => { disposed = true; unlistenClose?.(); unlistenQuit?.(); unlistenResized?.(); window.removeEventListener("focus", handleFocus); window.removeEventListener("resize", handleResize); };
   });
-
-  async function saveTodoPath() {
-    const value = todoPathInput.trim();
-    if (!value) return;
-    if (await todoStore.loadFile({ path: value })) { editingSettings = false; await appStore.saveConfig(); }
-  }
 
   async function closeApp() {
     if (!(await persistenceRegistry.flushAll())) return appStore.showStatus("Resolve file conflicts before closing");
@@ -190,7 +182,7 @@
     <AppSidebar open={workspaceStore.sidebarOpen} {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} />
     <section class="main-workspace">
       {#if editingSettings}
-        <SettingsPanel bind:pathInputVal={todoPathInput} logsRootPath={appStore.logsRootPath} dragEnabled={appStore.dragEnabled} autostartEnabled={appStore.autostartEnabled} onSave={saveTodoPath} onToggleDrag={() => appStore.toggleDrag()} onToggleAutostart={() => appStore.toggleAutostart()} />
+        <SettingsPanel dragEnabled={appStore.dragEnabled} autostartEnabled={appStore.autostartEnabled} onToggleDrag={() => appStore.toggleDrag()} onToggleAutostart={() => appStore.toggleAutostart()} />
       {:else}
         <MainTabs currentView={appStore.currentView} onSelect={(view) => view === "tasks" ? appStore.currentView = "tasks" : openCurrent(view)} />
         {#if appStore.currentView === "tasks" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}

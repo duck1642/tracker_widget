@@ -6,6 +6,7 @@ import * as defaultFileService from "$lib/shared/services/fileService.js";
 import { PersistenceCoordinator } from "$lib/shared/persistence/persistenceCoordinator.js";
 import { appStore as defaultAppStore } from "$lib/app/appStore.svelte.js";
 import { persistenceRegistry } from "$lib/app/persistenceRegistry.js";
+import { selectTodoFile } from "$lib/shared/services/logWorkspaceService.js";
 
 function cloneAction(action) {
   return JSON.parse(JSON.stringify(action));
@@ -64,6 +65,16 @@ export class TodoStore {
       this.appStore.showStatus("Todo load failed: " + error);
       return false;
     }
+  }
+
+  async chooseFile() {
+    const selected = await selectTodoFile();
+    if (!selected) return false;
+    const ok = await this.loadFile({ path: selected });
+    if (ok) {
+      await this.appStore.saveConfig();
+    }
+    return ok;
   }
 
   scheduleSave({ immediate = false } = {}) {

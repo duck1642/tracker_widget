@@ -1,22 +1,23 @@
 <script>
   // @ts-nocheck
-  import { Check, FolderOpen } from "@lucide/svelte";
+  import { Check, FolderOpen, FileText } from "@lucide/svelte";
   import { workspaceStore } from "./workspaceStore.svelte.js";
-  let { pathInputVal = $bindable(), logsRootPath = "", dragEnabled, autostartEnabled, onSave, onToggleDrag, onToggleAutostart } = $props();
+  import { todoStore } from "$lib/features/tasks/todoStore.svelte.js";
+  import { appStore } from "./appStore.svelte.js";
+  let { dragEnabled, autostartEnabled, onToggleDrag, onToggleAutostart } = $props();
 </script>
 
 <div class="settings-panel">
   <header><div><span>Application</span><h2>Settings</h2></div></header>
   <section>
     <h3>Todo document</h3>
-    <label for="path-input">Markdown file</label>
-    <input id="path-input" class="settings-input" bind:value={pathInputVal} placeholder="C:\...\todo.md" />
-    <button class="primary-small" onclick={onSave}>Save todo path</button>
+    <span class="field-label">Markdown file</span>
+    <div class="path-display"><code>{appStore.filePath || "No file selected"}</code><button onclick={() => todoStore.chooseFile()}><FileText size={14} /> Select</button></div>
   </section>
   <section>
     <h3>Logger workspace</h3>
     <span class="field-label">Logs folder</span>
-    <div class="path-display"><code>{logsRootPath || "No folder selected"}</code><button onclick={() => workspaceStore.chooseRoot()}><FolderOpen size={14} /> Select</button></div>
+    <div class="path-display"><code>{appStore.logsRootPath || "No folder selected"}</code><button onclick={() => workspaceStore.chooseRoot()}><FolderOpen size={14} /> Select</button></div>
   </section>
   <section>
     <h3>Window</h3>
@@ -31,7 +32,7 @@
   header span { color: var(--accent); font-size: var(--text-xs); font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
   h2 { margin: 4px 0 0; } h3 { margin: 0 0 12px; font-size: var(--text-md); }
   section { display: grid; align-content: start; gap: 8px; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--surface); }
-  label { color: var(--text-muted); font-size: var(--text-sm); }
+  .field-label { color: var(--text-muted); font-size: var(--text-sm); }
   .path-display { display: flex; gap: 8px; align-items: center; min-width: 0; } .path-display code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); font-size: var(--text-xs); } .path-display button { flex-shrink: 0; }
   button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-color); cursor: pointer; }
   button:hover { border-color: var(--border-strong); background: var(--surface-hover); }

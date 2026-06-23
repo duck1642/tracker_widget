@@ -1,6 +1,9 @@
-// @ts-nocheck
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TodoStore } from "./todoStore.svelte.js";
+
+vi.mock("$lib/shared/services/logWorkspaceService.js", () => ({
+  selectTodoFile: vi.fn()
+}));
 
 function createHarness(initialFiles = { "A.md": "- [ ] A\n" }, debounceMs = 250) {
   const files = new Map(Object.entries(initialFiles));
@@ -192,5 +195,22 @@ describe("TodoStore session history", () => {
     await store.loadFile();
     expect(store.clearCompleted()).toBe(false);
     expect(appStore.showStatus).toHaveBeenLastCalledWith("No completed tasks to clear");
+  });
+
+  it("allows selecting a file and reloading tasks from it", async () => {
+    const { store, appStore } = createHarness({ "B.md": "- [ ] Select\n" });
+    const { selectTodoFile } = await import("$lib/shared/services/logWorkspaceService.js");
+    
+    // User cancels dialog
+    selectTodoFile.mockResolvedValueOnce(null);
+    expect(await store.chooseFile()).toBe(false);
+    
+    // User selects B.md
+    selectTodoFile.mockResolvedValueOnce("B.md");
+    expect(await store.chooseFile()).toBe(true);
+    expect(store.loadedPath).toBe("B.md");
+    expect(appStore.filePath).toBe("B.md");
+    expect(store.tasks[0].text).toBe("Select");
+    expect(appStore.saveConfig).toHaveBeenCalled();
   });
 });

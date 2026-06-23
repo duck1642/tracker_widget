@@ -81,3 +81,18 @@ export async function selectLogsFolder() {
   const selected = await open({ directory: true, multiple: false, title: "Select logs folder" });
   return typeof selected === "string" ? selected : null;
 }
+
+export async function selectTodoFile() {
+  const selected = await open({
+    directory: false,
+    multiple: false,
+    title: "Select Todo Markdown file",
+    filters: [
+      {
+        name: "Markdown",
+        extensions: ["md"]
+      }
+    ]
+  });
+  return typeof selected === "string" ? selected : null;
+}
