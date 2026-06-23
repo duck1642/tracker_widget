@@ -11,6 +11,7 @@
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
+  import { pathExists } from "$lib/shared/services/fileService.js";
   import AppHeader from "./AppHeader.svelte";
   import SettingsPanel from "./SettingsPanel.svelte";
   import MainTabs from "./MainTabs.svelte";
@@ -128,6 +129,19 @@
         else appStore.showStatus("Resolve file conflicts before quitting");
       });
       await appStore.loadConfig();
+      if (appStore.filePath) {
+        try {
+          const exists = await pathExists(appStore.filePath);
+          if (!exists) {
+            appStore.showStatus("Todo file not found. Please locate it.");
+            const ok = await todoStore.chooseFile();
+            if (!ok) {
+              appStore.filePath = "";
+              editingSettings = true;
+            }
+          }
+        } catch {}
+      }
       await todoStore.loadFile();
       await workspaceStore.refresh();
       unlistenClose = await appWindow.onCloseRequested(async (event) => {

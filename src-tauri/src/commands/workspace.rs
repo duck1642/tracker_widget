@@ -47,7 +47,7 @@ fn display_path(path: &Path) -> String {
 
 #[tauri::command]
 pub fn path_exists(path: String) -> bool {
-    Path::new(&path).is_dir()
+    Path::new(&path).exists()
 }
 
 #[tauri::command]
