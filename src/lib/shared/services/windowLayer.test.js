@@ -4,7 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const invoke = vi.fn(async () => {});
 const appWindow = {
   setAlwaysOnBottom: vi.fn(async () => {}),
-  setSkipTaskbar: vi.fn(async () => {})
+  setSkipTaskbar: vi.fn(async () => {}),
+  isMinimized: vi.fn(async () => false),
+  unminimize: vi.fn(async () => {}),
+  show: vi.fn(async () => {})
 };
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
@@ -19,6 +22,11 @@ describe("applyLayerMode", () => {
     invoke.mockClear();
     appWindow.setAlwaysOnBottom.mockClear();
     appWindow.setSkipTaskbar.mockClear();
+    appWindow.isMinimized.mockReset();
+    appWindow.isMinimized.mockResolvedValue(false);
+    appWindow.unminimize.mockClear();
+    appWindow.show.mockClear();
+    vi.useRealTimers();
   });
 
   it("does nothing when mode is unchanged", async () => {
@@ -64,5 +72,29 @@ describe("applyLayerMode", () => {
     expect(invoke).toHaveBeenCalledWith("set_always_on_top", { onTop: false });
     expect(appWindow.setSkipTaskbar).toHaveBeenLastCalledWith(true);
     expect(appWindow.setAlwaysOnBottom).toHaveBeenLastCalledWith(true);
+  });
+
+  it("restores desktop mode when Show Desktop minimizes the window", async () => {
+    vi.useFakeTimers();
+    appWindow.isMinimized.mockResolvedValue(true);
+
+    await applyLayerMode("normal", "desktop");
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(appWindow.unminimize).toHaveBeenCalled();
+    expect(appWindow.show).toHaveBeenCalled();
+    expect(appWindow.setAlwaysOnBottom).toHaveBeenLastCalledWith(true);
+  });
+
+  it("stops the desktop guard when leaving desktop mode", async () => {
+    vi.useFakeTimers();
+    appWindow.isMinimized.mockResolvedValue(true);
+
+    await applyLayerMode("normal", "desktop");
+    await applyLayerMode("desktop", "normal");
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(appWindow.unminimize).not.toHaveBeenCalled();
+    expect(appWindow.show).not.toHaveBeenCalled();
   });
 });
