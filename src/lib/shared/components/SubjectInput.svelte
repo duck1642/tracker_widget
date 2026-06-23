@@ -50,7 +50,7 @@
 {:else}
   <label>
     <span>{label}</span>
-    <input value={subjects.join(", ")} oninput={handleInput} aria-invalid={invalid} required placeholder="rust, programming" />
+    <input value={subjects.join(", ")} oninput={handleInput} aria-invalid={invalid} placeholder="rust, programming" />
     {#if invalid}<small>Use letters, numbers, _ or -. At least one subject is required.</small>{/if}
   </label>
 {/if}

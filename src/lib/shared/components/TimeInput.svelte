@@ -2,6 +2,20 @@
   // @ts-nocheck
   let { minutes = 1, onChange, variant = "default" } = $props();
   let isEditing = $state(false);
+  let localValue = $state(0);
+
+  // Sync prop changes back to localValue when not editing
+  $effect(() => {
+    if (!isEditing) {
+      localValue = minutes;
+    }
+  });
+
+  function handleCommit() {
+    const next = Math.max(1, Number(localValue) || 1);
+    onChange(next);
+    isEditing = false;
+  }
 
   function focus(node) {
     node.focus();
@@ -13,17 +27,14 @@
     {#if isEditing}
       <input
         type="number"
-        min="1"
-        step="1"
         class="badge-input"
-        value={minutes}
-        oninput={(event) => onChange(Math.max(1, Number(event.currentTarget.value) || 1))}
-        onblur={() => isEditing = false}
-        onkeydown={(e) => { if (e.key === "Enter") isEditing = false; }}
+        bind:value={localValue}
+        onblur={handleCommit}
+        onkeydown={(e) => { if (e.key === "Enter") handleCommit(); }}
         use:focus
       />
     {:else}
-      <button type="button" class="time-badge" onclick={() => isEditing = true} aria-label="Edit minutes spent">
+      <button type="button" class="time-badge" onclick={() => { localValue = minutes; isEditing = true; }} aria-label="Edit minutes spent">
         {minutes}m
       </button>
     {/if}
@@ -31,7 +42,14 @@
 {:else}
   <label>
     <span>Minutes</span>
-    <input type="number" min="1" step="1" value={minutes} oninput={(event) => onChange(Math.max(1, Number(event.currentTarget.value) || 1))} />
+    <input
+      type="number"
+      value={minutes}
+      onchange={(event) => {
+        const next = Math.max(1, Number(event.currentTarget.value) || 1);
+        onChange(next);
+      }}
+    />
   </label>
 {/if}
 
