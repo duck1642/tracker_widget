@@ -19,8 +19,8 @@
         "transparent": true,
         "decorations": false,
         "shadow": false,
-        "minWidth": 1280,
-        "minHeight": 700,
+        "minWidth": 480,
+        "minHeight": 360,
         "skipTaskbar": false
       }
     ],
