@@ -25,8 +25,8 @@
         </div>
         <div class="day-entries">
           {#each entries as entry (entry.id)}
-            <div class="plan-card">
-              <div class="card-top">
+            <div class="plan-row">
+              <div class="session-col">
                 {#if editingSessionId === entry.id}
                   <input
                     class="session-input"
@@ -42,13 +42,17 @@
                     {entry.session || "Unnamed session"}
                   </span>
                 {/if}
+              </div>
+              <div class="subjects-col">
+                <SubjectInput subjects={entry.subjects} onChange={(subjects) => onUpdate(entry.id, { subjects })} variant="badge" />
+              </div>
+              <div class="time-col">
+                <TimeInput minutes={entry.targetMinutes} onChange={(targetMinutes) => onUpdate(entry.id, { targetMinutes })} variant="badge" />
+              </div>
+              <div class="action-col">
                 <button type="button" class="row-btn del" onpointerdown={(e) => e.preventDefault()} onclick={() => onDelete(entry.id)} aria-label="Delete plan entry" title="Delete">
                   <Trash2 size={13} />
                 </button>
-              </div>
-              <div class="card-bottom">
-                <SubjectInput subjects={entry.subjects} onChange={(subjects) => onUpdate(entry.id, { subjects })} variant="badge" />
-                <TimeInput minutes={entry.targetMinutes} onChange={(targetMinutes) => onUpdate(entry.id, { targetMinutes })} variant="badge" />
               </div>
             </div>
           {/each}
@@ -73,15 +77,30 @@
   .day-title { display: flex; align-items: center; height: 28px; }
   .day-title > strong { color: var(--accent); font-size: var(--text-md); font-weight: 700; }
   .day-entries { display: flex; flex-direction: column; }
-  .plan-card { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); }
-  .day-entries :global(.plan-card:last-of-type) { border-bottom: none; }
-  .card-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  
+  /* Aligned Table-like Row styling */
+  .plan-row {
+    display: grid;
+    grid-template-columns: minmax(130px, 0.8fr) minmax(150px, 1fr) 86px 32px;
+    gap: 12px;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .day-entries :global(.plan-row:last-of-type) { border-bottom: none; }
+  
+  .session-col { display: flex; align-items: center; }
   .session-text { flex: 1; font-size: var(--text-sm); color: var(--text-color); cursor: pointer; min-height: 24px; display: flex; align-items: center; }
   .session-input { flex: 1; background: transparent; border: none; border-bottom: 1px dashed var(--border-strong); color: var(--text-color); font-size: var(--text-sm); outline: none; padding: 2px 0; }
-  .card-bottom { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  
+  .subjects-col { display: flex; align-items: center; min-width: 0; }
+  .time-col { display: flex; align-items: center; }
+  .action-col { display: flex; align-items: center; justify-content: flex-end; }
+  
   .row-btn { background: transparent; border: none; border-radius: 4px; width: 22px; height: 22px; display: grid; place-items: center; color: var(--text-muted); cursor: pointer; transition: all 0.15s ease; }
   .row-btn:hover { background: var(--surface-hover); color: var(--text-color); }
   .row-btn.del:hover { background: rgba(255, 136, 136, 0.1); color: #ff8888; }
+  
   .add-inline-btn { display: inline-flex; align-items: center; justify-content: center; gap: 3px; height: 22px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--surface-2); color: var(--text-muted); font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
   .add-inline-btn:hover { background: var(--surface-hover); color: var(--text-color); border-color: var(--border-strong); }
   .actions-footer { display: flex; justify-content: flex-start; padding-top: 8px; }
