@@ -20,6 +20,8 @@
     "core:window:allow-maximize",
     "core:window:allow-unmaximize",
     "core:window:allow-toggle-maximize",
+    "core:window:allow-set-min-size",
+    "core:window:allow-set-size",
     "core:window:allow-start-dragging",
     "autostart:allow-enable",
     "autostart:allow-disable",

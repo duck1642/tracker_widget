@@ -3,7 +3,7 @@
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
-  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
   import { appStore } from "./appStore.svelte.js";
   import { workspaceStore } from "./workspaceStore.svelte.js";
   import { persistenceRegistry } from "./persistenceRegistry.js";
@@ -26,6 +26,13 @@
   let showModeMenu = $state(false);
   let selectedPath = $state("");
   let isMaximized = $state(false);
+  let windowSizeView = $state("");
+
+  const viewSizeConstraints = {
+    tasks: { width: 480, height: 360 },
+    day: { width: 900, height: 620 },
+    week: { width: 1280, height: 700 }
+  };
 
   function descriptorFor(week) {
     const date = week.days[0]?.date ? new Date(`${week.days[0].date}T12:00:00`) : new Date();
@@ -60,6 +67,33 @@
     }
     appStore.currentView = kind;
   }
+
+  async function applyViewSizeConstraints(view) {
+    const constraints = viewSizeConstraints[view] ?? viewSizeConstraints.tasks;
+    try {
+      const appWindow = getCurrentWindow();
+      await appWindow.setMinSize(new LogicalSize(constraints.width, constraints.height));
+      if (await appWindow.isMaximized()) return;
+
+      const scaleFactor = await appWindow.scaleFactor();
+      const logicalSize = (await appWindow.innerSize()).toLogical(scaleFactor);
+      if (logicalSize.width < constraints.width || logicalSize.height < constraints.height) {
+        await appWindow.setSize(new LogicalSize(
+          Math.max(logicalSize.width, constraints.width),
+          Math.max(logicalSize.height, constraints.height)
+        ));
+      }
+    } catch (error) {
+      appStore.showStatus("Window size update failed: " + error);
+    }
+  }
+
+  $effect(() => {
+    const view = appStore.currentView;
+    if (!view || view === windowSizeView) return;
+    windowSizeView = view;
+    applyViewSizeConstraints(view);
+  });
 
   onMount(() => {
     const appWindow = getCurrentWindow();
