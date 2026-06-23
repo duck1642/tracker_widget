@@ -123,6 +123,11 @@
     pointer-events: none;
     user-select: none;
   }
+  .badge-input-sizer::after {
+    content: "";
+    display: inline-block;
+    width: 1.25ch;
+  }
   .badge-input {
     position: absolute;
     left: 0;
