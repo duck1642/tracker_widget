@@ -24,8 +24,7 @@
         <div class="resize-handle" onpointerdown={onStartResize} title="Drag to resize column"></div>
       </span>
       <span>Subjects</span>
-      <span>Minutes</span>
-      <span></span>
+      <span class="minutes-head">Minutes</span>
     </div>
 
     {#each sortedActual as entry}
@@ -63,8 +62,6 @@
           </div>
         </div>
 
-        <!-- Empty Action Column to align with Planned Table -->
-        <div class="action-col"></div>
       </div>
     {/each}
 
@@ -75,11 +72,42 @@
 </section>
 
 <style>
-  .actual-grid { border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; background: var(--surface); }
+  .actual-grid {
+    position: relative;
+    --grid-pad: 12px;
+    --day-col: 70px;
+    --gap: 12px;
+    --minutes-col: 90px;
+    --line-day-session: calc(var(--grid-pad) + var(--day-col) + (var(--gap) / 2));
+    --line-session-subjects: calc(var(--grid-pad) + var(--day-col) + var(--gap) + var(--session-width, 140px) + (var(--gap) / 2));
+    --line-subjects-minutes: calc(100% - var(--grid-pad) - var(--minutes-col) - (var(--gap) / 2));
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .actual-grid::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background-image:
+      linear-gradient(var(--border-subtle), var(--border-subtle)),
+      linear-gradient(var(--border-subtle), var(--border-subtle)),
+      linear-gradient(var(--border-subtle), var(--border-subtle));
+    background-repeat: no-repeat;
+    background-size: 1px 100%, 1px 100%, 1px 100%;
+    background-position:
+      var(--line-day-session) 0,
+      var(--line-session-subjects) 0,
+      var(--line-subjects-minutes) 0;
+  }
 
   .table-head {
     display: grid;
-    grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px 32px;
+    grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px;
     gap: 12px;
     align-items: center;
     min-height: 38px;
@@ -92,10 +120,16 @@
     letter-spacing: .06em;
     border-bottom: 1px solid var(--border-color);
   }
+  .table-head > span:not(:first-child) { padding-left: 6px; }
+  .table-head .minutes-head {
+    justify-self: stretch;
+    padding-left: 6px;
+    text-align: left;
+  }
 
   .actual-row {
     display: grid;
-    grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px 32px;
+    grid-template-columns: 70px var(--session-width, 140px) minmax(150px, 1.4fr) 90px;
     gap: 12px;
     align-items: center;
     padding: 6px 12px;
@@ -115,10 +149,11 @@
   }
   .resize-handle {
     position: absolute;
-    right: -6px;
+    left: calc(var(--gap) / 2);
     top: 0;
     bottom: 0;
     width: 12px;
+    transform: translateX(-50%);
     cursor: col-resize;
     z-index: 10;
     background: transparent;
@@ -126,7 +161,8 @@
   .resize-handle::after {
     content: "";
     position: absolute;
-    left: 5px;
+    left: 50%;
+    transform: translateX(-50%);
     top: 8px;
     bottom: 8px;
     width: 2px;
@@ -154,10 +190,10 @@
     box-sizing: border-box;
   }
 
-  .session-col { display: flex; align-items: center; min-width: 0; }
+  .session-col { display: flex; align-items: center; min-width: 0; padding-left: 6px; }
   .session-text { flex: 1; font-size: var(--text-sm); color: var(--text-color); min-height: 24px; display: flex; align-items: center; }
 
-  .subjects-col { display: flex; align-items: center; min-width: 0; }
+  .subjects-col { display: flex; align-items: center; min-width: 0; padding-left: 6px; }
   .subject-badges { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
   .subject-badge {
     background: #121212;
@@ -180,7 +216,7 @@
     background: transparent;
   }
 
-  .time-col { display: flex; align-items: center; }
+  .time-col { display: flex; align-items: center; justify-content: flex-start; padding-left: 6px; }
   .time-badge {
     background: transparent;
     color: var(--text-muted);
@@ -196,8 +232,6 @@
     line-height: 1;
     box-sizing: border-box;
   }
-
-  .action-col { display: flex; align-items: center; justify-content: flex-end; }
 
   .refresh-btn {
     display: inline-flex;

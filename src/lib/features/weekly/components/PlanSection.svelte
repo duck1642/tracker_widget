@@ -49,8 +49,8 @@
         <div class="resize-handle" onpointerdown={onStartResize} title="Drag to resize column"></div>
       </span>
       <span>Subjects</span>
-      <span>Minutes</span>
-      <span></span>
+      <span class="minutes-head">Minutes</span>
+      <span class="action-head"></span>
     </div>
 
     {#each sortedPlan as entry (entry.id)}
@@ -124,7 +124,43 @@
 </section>
 
 <style>
-  .plan-grid { border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: visible; background: var(--surface); }
+  .plan-grid {
+    position: relative;
+    --grid-pad: 12px;
+    --day-col: 70px;
+    --gap: 12px;
+    --minutes-col: 90px;
+    --action-col: 32px;
+    --footer-height: 47px;
+    --line-day-session: calc(var(--grid-pad) + var(--day-col) + (var(--gap) / 2));
+    --line-session-subjects: calc(var(--grid-pad) + var(--day-col) + var(--gap) + var(--session-width, 140px) + (var(--gap) / 2));
+    --line-subjects-minutes: calc(100% - var(--grid-pad) - var(--action-col) - var(--gap) - var(--minutes-col) - (var(--gap) / 2));
+    --line-minutes-action: calc(100% - var(--grid-pad) - var(--action-col) - (var(--gap) / 2));
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: visible;
+    background: var(--surface);
+  }
+
+  .plan-grid::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 var(--footer-height);
+    z-index: 2;
+    pointer-events: none;
+    background-image:
+      linear-gradient(var(--border-subtle), var(--border-subtle)),
+      linear-gradient(var(--border-subtle), var(--border-subtle)),
+      linear-gradient(var(--border-subtle), var(--border-subtle)),
+      linear-gradient(var(--border-subtle), var(--border-subtle));
+    background-repeat: no-repeat;
+    background-size: 1px 100%, 1px 100%, 1px 100%, 1px 100%;
+    background-position:
+      var(--line-day-session) 0,
+      var(--line-session-subjects) 0,
+      var(--line-subjects-minutes) 0,
+      var(--line-minutes-action) 0;
+  }
 
   .table-head {
     display: grid;
@@ -142,6 +178,13 @@
     border-top-left-radius: var(--radius-md);
     border-top-right-radius: var(--radius-md);
     border-bottom: 1px solid var(--border-color);
+  }
+  .table-head > span:not(:first-child) { padding-left: 6px; }
+  .table-head .minutes-head,
+  .table-head .action-head {
+    justify-self: stretch;
+    padding-left: 6px;
+    text-align: left;
   }
 
   .plan-row {
@@ -166,10 +209,11 @@
   }
   .resize-handle {
     position: absolute;
-    right: -6px;
+    left: calc(var(--gap) / 2);
     top: 0;
     bottom: 0;
     width: 12px;
+    transform: translateX(-50%);
     cursor: col-resize;
     z-index: 10;
     background: transparent;
@@ -177,7 +221,8 @@
   .resize-handle::after {
     content: "";
     position: absolute;
-    left: 5px;
+    left: 50%;
+    transform: translateX(-50%);
     top: 8px;
     bottom: 8px;
     width: 2px;
@@ -189,14 +234,14 @@
   }
 
   .day-col { display: flex; align-items: center; }
-  .session-col { display: flex; align-items: center; min-width: 0; }
+  .session-col { display: flex; align-items: center; min-width: 0; padding-left: 6px; }
   .session-text { flex: 1; min-width: 0; min-height: 24px; display: flex; align-items: center; padding: 0; border: 0; background: transparent; color: var(--text-color); font-size: var(--text-sm); text-align: left; cursor: pointer; }
   .session-text:hover { color: var(--accent); }
   .session-input { flex: 1; background: transparent; border: none; border-bottom: 1px dashed var(--border-strong); color: var(--text-color); font-size: var(--text-sm); outline: none; padding: 2px 0; }
 
-  .subjects-col { display: flex; align-items: center; min-width: 0; }
-  .time-col { display: flex; align-items: center; }
-  .action-col { display: flex; align-items: center; justify-content: flex-end; }
+  .subjects-col { display: flex; align-items: center; min-width: 0; padding-left: 6px; }
+  .time-col { display: flex; align-items: center; justify-content: flex-start; padding-left: 6px; }
+  .action-col { display: flex; align-items: center; justify-content: center; }
 
   /* Day Dropdown styling */
   .day-dropdown-container {
