@@ -13,7 +13,7 @@
       target.selectionStart = target.selectionEnd = start + 2;
       onChange(target.value);
     }
-  }} spellcheck="true"></textarea>
+  }} ></textarea>
 </section>
 
 <style>

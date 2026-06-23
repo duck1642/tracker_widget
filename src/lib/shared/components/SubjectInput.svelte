@@ -31,7 +31,6 @@
           onkeydown={(e) => { if (e.key === "Enter") isEditing = false; }}
           aria-invalid={invalid}
           placeholder="rust, programming"
-          spellcheck={false}
           use:focus
         />
       </div>

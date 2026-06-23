@@ -50,7 +50,6 @@
     onblur={() => onBlur(task.id, task.text)}
     oninput={(e) => onUpdateText(task.id, e.currentTarget.value)}
     onkeydown={(e) => onKeyDown(e, index, task)}
-    spellcheck={false}
     placeholder="New Task"
   />
   <div class="row-actions">
