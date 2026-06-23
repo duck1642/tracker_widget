@@ -12,12 +12,12 @@
   <section>
     <h3>Todo document</h3>
     <span class="field-label">Markdown file</span>
-    <div class="path-display"><code>{appStore.filePath || "No file selected"}</code><button onclick={() => todoStore.chooseFile()}><FileText size={14} /> Select</button></div>
+    <div class="path-display"><code title={appStore.filePath || "No file selected"}>{appStore.filePath || "No file selected"}</code><button onclick={() => todoStore.chooseFile()}><FileText size={14} /> Select</button></div>
   </section>
   <section>
     <h3>Logger workspace</h3>
     <span class="field-label">Logs folder</span>
-    <div class="path-display"><code>{appStore.logsRootPath || "No folder selected"}</code><button onclick={() => workspaceStore.chooseRoot()}><FolderOpen size={14} /> Select</button></div>
+    <div class="path-display"><code title={appStore.logsRootPath || "No folder selected"}>{appStore.logsRootPath || "No folder selected"}</code><button onclick={() => workspaceStore.chooseRoot()}><FolderOpen size={14} /> Select</button></div>
   </section>
   <section>
     <h3>Window</h3>
