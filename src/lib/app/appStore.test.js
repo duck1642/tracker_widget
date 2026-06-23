@@ -22,7 +22,7 @@ function createStore(mode) {
 }
 
 describe("AppStore native layer restoration", () => {
-  it.each(["top", "desktop", "true-desktop"])("applies persisted %s mode from normal", async (mode) => {
+  it.each(["top", "desktop"])("applies persisted %s mode from normal", async (mode) => {
     const { store, applyLayerMode } = createStore(mode);
 
     await store.loadConfig();
@@ -33,6 +33,15 @@ describe("AppStore native layer restoration", () => {
 
   it("falls back to normal for an invalid persisted mode", async () => {
     const { store, applyLayerMode } = createStore("invalid");
+
+    await store.loadConfig();
+
+    expect(applyLayerMode).toHaveBeenCalledWith("normal", "normal");
+    expect(store.layerMode).toBe("normal");
+  });
+
+  it("falls back to normal for the removed true-desktop mode", async () => {
+    const { store, applyLayerMode } = createStore("true-desktop");
 
     await store.loadConfig();
 

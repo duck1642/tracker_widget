@@ -50,12 +50,11 @@
   /** @param {string} mode */
   function getModeLabel(mode) {
     if (mode === "top") return "Top";
-    if (mode === "desktop") return "Fake";
-    if (mode === "true-desktop") return "True";
+    if (mode === "desktop") return "Desk";
     return "Norm";
   }
 
-  let isWidgetMode = $derived(layerMode === "desktop" || layerMode === "true-desktop");
+  let isWidgetMode = $derived(layerMode === "desktop");
 </script>
 
 <header class="drag-header" class:draggable={dragEnabled} data-tauri-drag-region={dragEnabled ? true : undefined}>

@@ -12,10 +12,6 @@ export async function applyLayerMode(currentMode, targetMode) {
 
   const appWindow = getCurrentWindow();
 
-  if (currentMode === "true-desktop" && targetMode !== "true-desktop") {
-    await invoke("set_desktop_parent", { enable: false });
-  }
-
   await appWindow.setAlwaysOnBottom(false);
   await appWindow.setSkipTaskbar(false);
   await invoke("set_always_on_top", { onTop: false });
@@ -25,8 +21,6 @@ export async function applyLayerMode(currentMode, targetMode) {
   } else if (targetMode === "desktop") {
     await appWindow.setSkipTaskbar(true);
     await appWindow.setAlwaysOnBottom(true);
-  } else if (targetMode === "true-desktop") {
-    await invoke("set_desktop_parent", { enable: true });
   }
 
   return targetMode;

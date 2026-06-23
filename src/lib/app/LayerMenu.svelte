@@ -4,8 +4,7 @@
   const modes = [
     { id: "top", label: "Always on Top" },
     { id: "normal", label: "Normal Window" },
-    { id: "desktop", label: "Fake Widget", detail: "Stable visual" },
-    { id: "true-desktop", label: "True Widget", detail: "Desktop host" }
+    { id: "desktop", label: "Widget", detail: "Tray only" }
   ];
 </script>
 

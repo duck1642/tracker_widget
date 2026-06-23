@@ -2,7 +2,7 @@ mod commands;
 
 use commands::config::{read_config, write_config};
 use commands::fs::{get_default_path, get_file_modified_time, read_file, write_file};
-use commands::window::{exit_app, set_always_on_top, set_desktop_parent};
+use commands::window::{exit_app, set_always_on_top};
 use commands::workspace::{create_log_week, list_log_tree, path_exists};
 use tauri::{Emitter, Manager};
 
@@ -87,7 +87,6 @@ pub fn run() {
             get_default_path,
             get_file_modified_time,
             set_always_on_top,
-            set_desktop_parent,
             exit_app,
             read_config,
             write_config,
