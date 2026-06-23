@@ -19,6 +19,34 @@ A premium, transparent desktop productivity widget built with **Tauri v2**, **Sv
   - Live external modifications check (reloads cleanly without layout stutter).
   - Built-in conflict resolution (Keep Local vs. Reload External) on write/focus.
 
+## Getting Started & User Guide
+
+To get the most out of the Tracker Widget, follow this step-by-step workflow:
+
+### 1. Initial Setup
+* **Todo document**: Open **Settings** (gear icon in the top header) and click **Select** to choose your custom `todo.md` checklist file. If this file is ever missing (e.g. across synced computers with different drive letters), the Tasks tab will show an inline warning letting you relocate the file without silently auto-creating empty files.
+* **Logger workspace**: Select a root directory for your logbook workspace. The widget will automatically organize weekly directories (e.g., `2026w26`), template configurations, and daily logs within this folder.
+
+### 2. Checklist (Tasks Tab)
+* **Creating Tasks**: Click the `+` button in the toolbar, or press `Enter` on any active row to insert a new task.
+* **Hierarchy & Subtasks**:
+  * Press `Tab` on a task to indent it (create a subtask).
+  * Press `Shift + Tab` to outdent it.
+* **Navigation & History**: Use `Arrow Up`/`Arrow Down` to navigate, `Backspace` on an empty task to delete it, and the **Undo/Redo** buttons in the bottom toolbar to roll back or repeat checklist changes.
+
+### 3. Log Tracking (Day Tab)
+* **Log Entries**: Click **+ Add session** to record activities. Enter the session name, subjects, and time spent.
+* **Metadata Format**: Logs are stored as standard Markdown list items. The widget automatically parses inline metadata in curly braces:
+  ```markdown
+  - {subjects: (rust, ui), time: 120m} Refactored the settings panel layout.
+  ```
+* **Live Notes Editor**: Click inside the notes box to open the live-editing textarea. Press `Escape` or click outside to save and switch back to the rendered Markdown preview (which supports checkable markdown checkboxes, bold text, blockquotes, and code blocks).
+
+### 4. Weekly Planning (Week Tab)
+* **Objectives**: Define weekly goals, marking their origin (`planned`/`unplanned`) and status (done, partial, cancelled, open).
+* **Weekly Plan**: Allocate target minutes to specific subjects on chosen days.
+* **Weekly Actuals**: Click **Refresh** to automatically scan your daily logs for the active week, compile the total duration spent on each subject, and generate a side-by-side plan-vs-actual comparison table.
+
 ## Tech Stack
 
 - **Frontend**: SvelteKit 2, Svelte 5 (Runes), Vite, CSS.
