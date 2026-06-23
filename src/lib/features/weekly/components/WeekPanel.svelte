@@ -22,7 +22,6 @@
   {:else}
     <header class="week-hero">
       <div>
-        <span class="eyebrow">Planning ledger</span>
         <h1>{weekStore.descriptor.year} · Week {weekStore.descriptor.week}</h1>
         <p>{weekStore.descriptor.rangeLabel}</p>
       </div>
@@ -44,8 +43,7 @@
 
 <style>
   .week-panel { display: grid; align-content: start; gap: 16px; width: min(100%, 1120px); margin: 0 auto; padding: 22px; box-sizing: border-box; }
-  .week-hero { position: sticky; top: -22px; z-index: 5; display: flex; justify-content: space-between; align-items: end; gap: 20px; padding: 18px 0 14px; background: linear-gradient(var(--bg-panel) 80%, transparent); }
-  .eyebrow { color: var(--accent); font-size: var(--text-xs); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+  .week-hero { position: sticky; top: 0; z-index: 5; display: flex; justify-content: space-between; align-items: end; gap: 20px; padding: 18px 0 14px; background: var(--bg-panel); }
   h1 { margin: 5px 0 2px; font-size: var(--text-xl); } p { margin: 0; color: var(--text-muted); }
   nav { display: flex; gap: 4px; } nav a { padding: 7px 9px; border-radius: 5px; color: var(--text-muted); text-decoration: none; font-size: var(--text-sm); } nav a:hover { background: var(--surface-hover); color: var(--text-color); }
 </style>
