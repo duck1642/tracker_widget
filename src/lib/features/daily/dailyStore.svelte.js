@@ -96,7 +96,7 @@ export class DailyStore {
   addActivity(sessionId) {
     const session = this.sessions.find((item) => item.id === sessionId);
     if (!session) return;
-    session.activities.push({ id: id("activity"), subjects: ["general"], minutes: 1, description: "" });
+    session.activities.push({ id: id("activity"), subjects: ["general"], minutes: 0, description: "" });
     void this.save();
   }
 

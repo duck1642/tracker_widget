@@ -9,7 +9,7 @@ A premium, transparent desktop productivity widget built with **Tauri v2**, **Sv
   - **Normal Window (`normal`)**: Behave like a standard window layout.
   - **Desktop Widget (`desktop`)**: Pins the widget to the desktop background (keeps it on the bottom of the window stack and hides it from the taskbar).
 - 📝 **Unified Productivity Views**:
-  - **Tasks**: Hierarchical checklist with keyboard shortcuts, subtask support, undo/redo logs, and file backup.
+  - **Todo**: Hierarchical checklist with keyboard shortcuts, subtask support, undo/redo logs, and file backup.
   - **Weekly Planner**: Manage objectives, target schedules, and view actual activity aggregation.
   - **Daily Log**: Track session times, active subjects, descriptions, and take notes.
   - **Notes Editor**: Full markdown preview editor built into your workspace.
@@ -23,15 +23,15 @@ A premium, transparent desktop productivity widget built with **Tauri v2**, **Sv
 To get the most out of the Tracker Widget, follow this step-by-step workflow:
 
 ### 1. Initial Setup
-* **Todo document**: Open **Settings** (gear icon in the top header) and click **Select** to choose your custom `todo.md` checklist file. If this file is ever missing (e.g. across synced computers with different drive letters), the Tasks tab will show an inline warning letting you relocate the file without silently auto-creating empty files.
+* **Todo document**: Open **Settings** (gear icon in the top header) and click **Select** to choose your custom `todo.md` checklist file. If this file is ever missing (e.g. across synced computers with different drive letters), the Todo tab will show an inline warning letting you relocate the file without silently auto-creating empty files.
 * **Logger workspace**: Select a root directory for your logbook workspace. The widget will automatically organize weekly directories (e.g., `2026w26`), template configurations, and daily logs within this folder.
 
-### 2. Checklist (Tasks Tab)
-* **Creating Tasks**: Click the `+` button in the toolbar, or press `Enter` on any active row to insert a new task.
-* **Hierarchy & Subtasks**:
-  * Press `Tab` on a task to indent it (create a subtask).
+### 2. Checklist (Todo Tab)
+* **Creating Todos**: Click the `+` button in the toolbar, or press `Enter` on any active row to insert a new todo.
+* **Hierarchy & Nested Todos**:
+  * Press `Tab` on a todo to indent it under the previous todo.
   * Press `Shift + Tab` to outdent it.
-* **Navigation & History**: Use `Arrow Up`/`Arrow Down` to navigate, `Backspace` on an empty task to delete it, and the **Undo/Redo** buttons in the bottom toolbar to roll back or repeat checklist changes.
+* **Navigation & History**: Use `Arrow Up`/`Arrow Down` to navigate, `Backspace` on an empty todo to delete it, and the **Undo/Redo** buttons in the bottom toolbar to roll back or repeat checklist changes.
 
 ### 3. Log Tracking (Day Tab)
 * **Log Entries**: Click **+ Add session** to record activities. Enter the session name, subjects, and time spent.

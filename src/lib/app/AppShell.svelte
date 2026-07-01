@@ -177,7 +177,7 @@
 </script>
 
 <main class="app-container" class:desktop-mode={appStore.layerMode === "desktop"}>
-  <AppHeader title={appStore.currentView === "tasks" ? "Tasks" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} {showModeMenu} {isMaximized} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onDismissModeMenu={() => showModeMenu = false} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onMaximizeApp={toggleMaximizeApp} onCloseApp={closeApp} />
+  <AppHeader title={appStore.currentView === "tasks" ? "Todo" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} {showModeMenu} {isMaximized} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onDismissModeMenu={() => showModeMenu = false} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onMaximizeApp={toggleMaximizeApp} onCloseApp={closeApp} />
   <div class="workspace-shell">
     <AppSidebar open={workspaceStore.sidebarOpen} {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} />
     <section class="main-workspace">
@@ -186,7 +186,7 @@
       {:else}
         <MainTabs currentView={appStore.currentView} onSelect={(view) => view === "tasks" ? appStore.currentView = "tasks" : openCurrent(view)} />
         {#if appStore.currentView === "tasks" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
-        <div class="panel-scroll">{#if appStore.currentView === "tasks"}<TasksPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
+        <div class="panel-scroll" class:todo-scroll={appStore.currentView === "tasks"}>{#if appStore.currentView === "tasks"}<TasksPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
         {#if appStore.currentView === "tasks" && !todoStore.fileMissing}<TodoToolbar undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTask={() => todoStore.addTask(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={() => todoStore.loadFile()} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
       {/if}
     </section>
@@ -198,4 +198,9 @@
   .main-workspace { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; background: var(--bg-panel); }
   .panel-scroll { flex: 1; min-height: 0; overflow: auto; scroll-behavior: smooth; scrollbar-width: none; }
   .panel-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  .panel-scroll.todo-scroll { scrollbar-width: thin; scrollbar-color: #333333 transparent; }
+  .panel-scroll.todo-scroll::-webkit-scrollbar { width: 6px; height: 6px; display: block; }
+  .panel-scroll.todo-scroll::-webkit-scrollbar-track { background: transparent; }
+  .panel-scroll.todo-scroll::-webkit-scrollbar-thumb { background: #333333; border-radius: 3px; }
+  .panel-scroll.todo-scroll::-webkit-scrollbar-thumb:hover { background: #444444; }
 </style>

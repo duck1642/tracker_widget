@@ -45,7 +45,7 @@ describe("window controls", () => {
     const onMaximizeApp = vi.fn();
     const onCloseApp = vi.fn();
     render(AppHeader, {
-      dragEnabled: true, layerMode: "normal", statusMessage: "", title: "Tasks", showModeMenu: false,
+      dragEnabled: true, layerMode: "normal", statusMessage: "", title: "Todo", showModeMenu: false,
       onToggleSidebar: vi.fn(), onToggleModeMenu: vi.fn(), onSelectMode: vi.fn(), onToggleSettings: vi.fn(),
       onShrinkApp, onMaximizeApp, onCloseApp
     });
@@ -60,7 +60,7 @@ describe("window controls", () => {
   it("renders an anchored mode menu and emits selection", async () => {
     const onSelectMode = vi.fn();
     render(AppHeader, {
-      dragEnabled: true, layerMode: "normal", statusMessage: "", title: "Tasks", showModeMenu: true,
+      dragEnabled: true, layerMode: "normal", statusMessage: "", title: "Todo", showModeMenu: true,
       onToggleSidebar: vi.fn(), onToggleModeMenu: vi.fn(), onSelectMode, onToggleSettings: vi.fn(),
       onShrinkApp: vi.fn(), onCloseApp: vi.fn()
     });
@@ -73,7 +73,7 @@ describe("window controls", () => {
   it("dismisses the mode menu outside and with Escape", async () => {
     const onDismissModeMenu = vi.fn();
     render(AppHeader, {
-      dragEnabled: true, layerMode: "normal", statusMessage: "", title: "Tasks", showModeMenu: true,
+      dragEnabled: true, layerMode: "normal", statusMessage: "", title: "Todo", showModeMenu: true,
       onToggleSidebar: vi.fn(), onToggleModeMenu: vi.fn(), onDismissModeMenu, onSelectMode: vi.fn(), onToggleSettings: vi.fn(),
       onShrinkApp: vi.fn(), onMaximizeApp: vi.fn(), onCloseApp: vi.fn()
     });
@@ -101,6 +101,12 @@ describe("logger editing", () => {
 
     expect(onUpdate).toHaveBeenCalledWith({ minutes: 45 });
     expect(onUpdate).toHaveBeenCalledWith({ description: "New description" });
+  });
+
+  it("renders a zero-minute default when TimeInput has no minutes prop", async () => {
+    const { default: TimeInput } = await import("$lib/shared/components/TimeInput.svelte");
+    render(TimeInput, { onChange: vi.fn(), variant: "badge" });
+    expect(screen.getByRole("button", { name: "Edit minutes spent" }).textContent.trim()).toBe("0m");
   });
 
   it("emits Weekly plan edits", async () => {
@@ -149,7 +155,7 @@ describe("task actions", () => {
     });
     await fireEvent.click(screen.getByTitle("Delete"));
     expect(onDeleteTask).toHaveBeenCalledWith(2);
-    expect(screen.getByPlaceholderText("New Task").getAttribute("spellcheck")).toBeNull();
+    expect(screen.getByPlaceholderText("New todo").getAttribute("spellcheck")).toBeNull();
   });
 
   it("deletes the focused row from the task store through its trash button", async () => {
@@ -171,7 +177,7 @@ describe("task actions", () => {
     try {
       render(TasksPanel);
       const input = screen.getByDisplayValue("Delete");
-      const trash = screen.getAllByRole("button", { name: "Delete task" })[1];
+      const trash = screen.getAllByRole("button", { name: "Delete todo" })[1];
       input.focus();
       await fireEvent.pointerDown(trash);
       expect(document.activeElement).toBe(input);
@@ -199,7 +205,7 @@ describe("task actions", () => {
     const deleteTask = vi.spyOn(todoStore, "deleteTask").mockImplementation((index) => todoStore.tasks.splice(index, 1));
     try {
       render(TasksPanel);
-      const emptyTask = screen.getAllByPlaceholderText("New Task")[1];
+      const emptyTask = screen.getAllByPlaceholderText("New todo")[1];
       emptyTask.focus();
       await fireEvent.keyDown(emptyTask, { key: "Backspace" });
 

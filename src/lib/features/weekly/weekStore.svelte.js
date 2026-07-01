@@ -92,7 +92,7 @@ export class WeekStore {
   }
 
   addPlanEntry(day = "Mon") {
-    this.plan.push({ id: id("plan"), day, session: "Session", subjects: ["general"], targetMinutes: 60 });
+    this.plan.push({ id: id("plan"), day, session: "Session", subjects: ["general"], targetMinutes: 0 });
     void this.save();
   }
 

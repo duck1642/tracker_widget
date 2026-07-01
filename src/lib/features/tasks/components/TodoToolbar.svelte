@@ -13,7 +13,7 @@
 </script>
 
 <footer class="bottom-bar">
-  <button class="action-btn" onclick={onAddTask} title="Add Task">
+  <button class="action-btn" onclick={onAddTask} title="Add todo">
     <Plus size={13} />
   </button>
   <div class="footer-right">
@@ -26,7 +26,7 @@
     <button class="action-btn" onclick={onReload} title="Reload file">
       <RotateCw size={13} />
     </button>
-    <button class="action-btn del" onclick={onClearCompleted} aria-label="Clear completed tasks" title="Clear completed tasks">
+    <button class="action-btn del" onclick={onClearCompleted} aria-label="Clear completed todos" title="Clear completed todos">
       <ListX size={13} />
     </button>
   </div>

@@ -50,16 +50,16 @@
     onblur={() => onBlur(task.id, task.text)}
     oninput={(e) => onUpdateText(task.id, e.currentTarget.value)}
     onkeydown={(e) => onKeyDown(e, index, task)}
-    placeholder="New Task"
+    placeholder="New todo"
   />
   <div class="row-actions">
-    <button type="button" class="row-btn" onpointerdown={(event) => event.preventDefault()} onclick={() => onMoveTaskUp(index)} aria-label="Move task up" title="Move Up">
+    <button type="button" class="row-btn" onpointerdown={(event) => event.preventDefault()} onclick={() => onMoveTaskUp(index)} aria-label="Move todo up" title="Move up">
       <ChevronUp size={13} />
     </button>
-    <button type="button" class="row-btn" onpointerdown={(event) => event.preventDefault()} onclick={() => onMoveTaskDown(index)} aria-label="Move task down" title="Move Down">
+    <button type="button" class="row-btn" onpointerdown={(event) => event.preventDefault()} onclick={() => onMoveTaskDown(index)} aria-label="Move todo down" title="Move down">
       <ChevronDown size={13} />
     </button>
-    <button type="button" class="row-btn del" onpointerdown={(event) => event.preventDefault()} onclick={() => onDeleteTask(index)} aria-label="Delete task" title="Delete">
+    <button type="button" class="row-btn del" onpointerdown={(event) => event.preventDefault()} onclick={() => onDeleteTask(index)} aria-label="Delete todo" title="Delete">
       <Trash2 size={13} />
     </button>
   </div>

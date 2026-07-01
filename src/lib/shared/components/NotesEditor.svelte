@@ -268,7 +268,7 @@
           <h3>Formatting Guide</h3>
           <ul>
             <li><span>Bullets:</span> <code>- item</code> or <code>* item</code></li>
-            <li><span>Tasks:</span> <code>- [ ] todo</code> or <code>- [x] done</code></li>
+            <li><span>Todo items:</span> <code>- [ ] todo</code> or <code>- [x] done</code></li>
             <li><span>Bold:</span> <code>**text**</code></li>
             <li><span>Italic:</span> <code>*text*</code> or <code>_text_</code></li>
             <li><span>Quote:</span> <code>&gt; text</code></li>

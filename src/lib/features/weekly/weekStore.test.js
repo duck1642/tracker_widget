@@ -38,4 +38,13 @@ describe("WeekStore editing", () => {
     expect(store.conflict).toBeNull();
     expect(files.get("week.md")).toContain("local after reload");
   });
+
+  it("adds weekly plan entries with zero target minutes by default", async () => {
+    const { store, files } = harness();
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    store.addPlanEntry("Tue");
+    await store.flushSave();
+    expect(store.plan[0]).toMatchObject({ day: "Tue", session: "Session", subjects: ["general"], targetMinutes: 0 });
+    expect(files.get("week.md")).toContain("| Tue | Session | general | 0 |");
+  });
 });

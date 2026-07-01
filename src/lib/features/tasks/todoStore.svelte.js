@@ -191,13 +191,13 @@ export class TodoStore {
   clearCompleted() {
     const deletedTasks = this.tasks.map((task, index) => ({ task, index })).filter(({ task }) => task.isTask && task.checked);
     if (!deletedTasks.length) {
-      this.appStore.showStatus("No completed tasks to clear");
+      this.appStore.showStatus("No completed todos to clear");
       return false;
     }
     this.record({ type: "clear_completed", deletedTasks });
     this.tasks = this.tasks.filter((task) => !task.isTask || !task.checked);
     void this.scheduleSave({ immediate: true });
-    this.appStore.showStatus(`Cleared ${deletedTasks.length} completed ${deletedTasks.length === 1 ? "task" : "tasks"}`);
+    this.appStore.showStatus(`Cleared ${deletedTasks.length} completed ${deletedTasks.length === 1 ? "todo" : "todos"}`);
     return true;
   }
 

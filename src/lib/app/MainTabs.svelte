@@ -2,7 +2,7 @@
   import { CheckSquare2, CalendarRange, CalendarDays } from "@lucide/svelte";
   let { currentView, onSelect } = $props();
   const tabs = [
-    { id: "tasks", label: "Tasks", icon: CheckSquare2 },
+    { id: "tasks", label: "Todo", icon: CheckSquare2 },
     { id: "week", label: "Week", icon: CalendarRange },
     { id: "day", label: "Day", icon: CalendarDays }
   ];

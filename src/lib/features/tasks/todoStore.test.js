@@ -205,7 +205,7 @@ describe("TodoStore session history", () => {
     const { store, appStore } = createHarness({ "A.md": "- [ ] Active\n" });
     await store.loadFile();
     expect(store.clearCompleted()).toBe(false);
-    expect(appStore.showStatus).toHaveBeenLastCalledWith("No completed tasks to clear");
+    expect(appStore.showStatus).toHaveBeenLastCalledWith("No completed todos to clear");
   });
 
   it("allows selecting a file and reloading tasks from it", async () => {

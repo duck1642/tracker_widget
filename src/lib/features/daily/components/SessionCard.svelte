@@ -62,7 +62,7 @@
             isEditingName = true;
             editNameInput = session.name;
           }}
-          title="Click to rename"
+          title={`${session.name} - click to rename`}
         >
           {session.name}
         </span>
@@ -85,12 +85,12 @@
 <style>
   .session-card { border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; box-shadow: var(--shadow-sm); }
   header { display: flex; align-items: center; padding: 0 10px; background: linear-gradient(90deg, var(--surface-2), var(--surface)); }
-  .session-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; min-height: 46px; border: 0; background: transparent; color: var(--text-color); padding: 0; text-align: left; cursor: pointer; }
-  .session-name-text { font-size: var(--text-md); font-weight: 700; cursor: pointer; border-bottom: 1px dashed transparent; transition: border-color 0.15s ease, color 0.15s ease; }
+  .session-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; min-width: 0; min-height: 46px; border: 0; background: transparent; color: var(--text-color); padding: 0; text-align: left; cursor: pointer; }
+  .session-name-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; flex: 1; min-width: 0; font-size: var(--text-md); font-weight: 700; line-height: 1.25; cursor: pointer; border-bottom: 1px dashed transparent; transition: border-color 0.15s ease, color 0.15s ease; }
   .session-name-text:hover { border-bottom-color: var(--accent); color: var(--accent); }
   .name-input { flex: 1; font-size: var(--text-md); font-weight: 700; min-height: 46px; background: transparent; border: none; border-bottom: 1px dashed var(--border-strong); color: var(--text-color); outline: none; padding: 0; box-sizing: border-box; }
   .name-input:focus, .name-input:focus-visible { border: none; border-bottom: 1px dashed var(--accent); box-shadow: none; outline: none; }
-  small { color: var(--text-muted); }
+  small { flex-shrink: 0; color: var(--text-muted); }
   .activities p { padding: 12px 14px; color: var(--text-muted); }
   footer { padding: 8px 10px; border-top: 1px solid var(--border-subtle); }
   footer button { display: flex; align-items: center; gap: 6px; min-height: 30px; border: 0; background: transparent; color: var(--accent); cursor: pointer; }

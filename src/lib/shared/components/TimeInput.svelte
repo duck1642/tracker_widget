@@ -1,6 +1,6 @@
 <script>
   // @ts-nocheck
-  let { minutes = 1, onChange, variant = "default" } = $props();
+  let { minutes = 0, onChange, variant = "default" } = $props();
   let isEditing = $state(false);
   let localValue = $state(0);
 

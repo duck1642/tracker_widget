@@ -45,7 +45,7 @@
 
   {#if tasks.length === 0}
     <div class="empty">
-      <strong>No tasks</strong>
+      <strong>No todos</strong>
       <span>Press [+] below to start.</span>
     </div>
   {/if}

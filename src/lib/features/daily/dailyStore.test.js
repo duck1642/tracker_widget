@@ -64,4 +64,11 @@ describe("DailyStore editing", () => {
     expect(files.get("day.md")).toContain("## Coding");
     expect(files.get("day.md")).not.toContain("## Work");
   });
+
+  it("adds new activities with zero minutes by default", async () => {
+    const { store } = harness("# 2026-06-22\n\n## Work\n\n## Total Time\n\n0m\n\n## Notes\n");
+    await store.loadPath("day.md", "2026-06-22");
+    store.addActivity(store.sessions[0].id);
+    expect(store.sessions[0].activities[0]).toMatchObject({ subjects: ["general"], minutes: 0, description: "" });
+  });
 });
