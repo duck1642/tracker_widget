@@ -1,8 +1,7 @@
 <script>
   // @ts-nocheck
-  import { Check, FolderOpen, FileText } from "@lucide/svelte";
+  import { Check, FolderOpen, FileText, FilePlus, Upload } from "@lucide/svelte";
   import { workspaceStore } from "./workspaceStore.svelte.js";
-  import { todoStore } from "$lib/features/tasks/todoStore.svelte.js";
   import { appStore } from "./appStore.svelte.js";
   let { dragEnabled, autostartEnabled, onToggleDrag, onToggleAutostart } = $props();
 </script>
@@ -10,14 +9,17 @@
 <div class="settings-panel">
   <header><div><span>Application</span><h2>Settings</h2></div></header>
   <section>
-    <h3>Todo document</h3>
-    <span class="field-label">Markdown file</span>
-    <div class="path-display"><code title={appStore.filePath || "No file selected"}>{appStore.filePath || "No file selected"}</code><button onclick={() => todoStore.chooseFile()}><FileText size={14} /> Select</button></div>
-  </section>
-  <section>
-    <h3>Logger workspace</h3>
-    <span class="field-label">Logs folder</span>
+    <h3>Workspace folder</h3>
+    <span class="field-label">Folder</span>
     <div class="path-display"><code title={appStore.logsRootPath || "No folder selected"}>{appStore.logsRootPath || "No folder selected"}</code><button onclick={() => workspaceStore.chooseRoot()}><FolderOpen size={14} /> Select</button></div>
+    <span class="field-label">Todo file</span>
+    <div class="path-display"><code title={workspaceStore.todoPath || "No workspace selected"}>{workspaceStore.todoPath || "No workspace selected"}</code><span class:ok={workspaceStore.todoExists} class="status-pill">{workspaceStore.todoExists ? "Found" : "Missing"}</span></div>
+    {#if workspaceStore.workspaceAvailable && !workspaceStore.todoExists}
+      <div class="settings-actions">
+        <button onclick={() => workspaceStore.createTodo()}><FilePlus size={14} /> Create todo.md</button>
+        <button onclick={() => workspaceStore.importTodo()}><Upload size={14} /> Import Markdown</button>
+      </div>
+    {/if}
   </section>
   <section>
     <h3>Window</h3>
@@ -34,6 +36,8 @@
   section { display: grid; align-content: start; gap: 8px; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--surface); }
   .field-label { color: var(--text-muted); font-size: var(--text-sm); }
   .path-display { display: flex; gap: 8px; align-items: center; min-width: 0; } .path-display code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); font-size: var(--text-xs); } .path-display button { flex-shrink: 0; }
+  .status-pill { flex-shrink: 0; min-width: 54px; padding: 4px 7px; border: 1px solid var(--border-color); border-radius: 999px; color: var(--warning); font-size: var(--text-xs); text-align: center; }
+  .status-pill.ok { color: var(--success); }
   button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-color); cursor: pointer; }
   button:hover { border-color: var(--border-strong); background: var(--surface-hover); }
   .toggle-row { justify-content: flex-start; border: 0; background: transparent; }

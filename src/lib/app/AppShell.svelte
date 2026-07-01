@@ -128,8 +128,8 @@
         else appStore.showStatus("Resolve file conflicts before quitting");
       });
       await appStore.loadConfig();
-      await todoStore.loadFile();
       await workspaceStore.refresh();
+      if (appStore.filePath) await todoStore.loadFile();
       unlistenClose = await appWindow.onCloseRequested(async (event) => {
         event.preventDefault();
         if (!(await persistenceRegistry.flushAll())) return appStore.showStatus("Resolve file conflicts before closing");
@@ -177,23 +177,41 @@
 </script>
 
 <main class="app-container" class:desktop-mode={appStore.layerMode === "desktop"}>
-  <AppHeader title={appStore.currentView === "tasks" ? "Todo" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} {showModeMenu} {isMaximized} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onDismissModeMenu={() => showModeMenu = false} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onMaximizeApp={toggleMaximizeApp} onCloseApp={closeApp} />
-  <div class="workspace-shell">
-    <AppSidebar open={workspaceStore.sidebarOpen} {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} />
-    <section class="main-workspace">
-      {#if editingSettings}
-        <SettingsPanel dragEnabled={appStore.dragEnabled} autostartEnabled={appStore.autostartEnabled} onToggleDrag={() => appStore.toggleDrag()} onToggleAutostart={() => appStore.toggleAutostart()} />
-      {:else}
-        <MainTabs currentView={appStore.currentView} onSelect={(view) => view === "tasks" ? appStore.currentView = "tasks" : openCurrent(view)} />
-        {#if appStore.currentView === "tasks" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
-        <div class="panel-scroll" class:todo-scroll={appStore.currentView === "tasks"}>{#if appStore.currentView === "tasks"}<TasksPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
-        {#if appStore.currentView === "tasks" && !todoStore.fileMissing}<TodoToolbar undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTask={() => todoStore.addTask(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={() => todoStore.loadFile()} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
-      {/if}
+  <AppHeader title={workspaceStore.needsFirstSetup ? "Workspace setup" : appStore.currentView === "tasks" ? "Todo" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} {showModeMenu} {isMaximized} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onDismissModeMenu={() => showModeMenu = false} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onMaximizeApp={toggleMaximizeApp} onCloseApp={closeApp} />
+  {#if workspaceStore.needsFirstSetup}
+    <section class="setup-screen">
+      <div>
+        <span>Workspace</span>
+        <h1>Select a workspace folder</h1>
+        <p>The app will use this folder for todo.md and weekly log folders.</p>
+        <button onclick={() => workspaceStore.chooseRoot()}>Select workspace</button>
+      </div>
     </section>
-  </div>
+  {:else}
+    <div class="workspace-shell">
+      <AppSidebar open={workspaceStore.sidebarOpen} {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} />
+      <section class="main-workspace">
+        {#if editingSettings}
+          <SettingsPanel dragEnabled={appStore.dragEnabled} autostartEnabled={appStore.autostartEnabled} onToggleDrag={() => appStore.toggleDrag()} onToggleAutostart={() => appStore.toggleAutostart()} />
+        {:else}
+          <MainTabs currentView={appStore.currentView} onSelect={(view) => view === "tasks" ? appStore.currentView = "tasks" : openCurrent(view)} />
+          {#if appStore.currentView === "tasks" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
+          <div class="panel-scroll" class:todo-scroll={appStore.currentView === "tasks"}>{#if appStore.currentView === "tasks"}<TasksPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
+          {#if appStore.currentView === "tasks" && !todoStore.fileMissing}<TodoToolbar undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTask={() => todoStore.addTask(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={() => todoStore.loadFile()} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
+        {/if}
+      </section>
+    </div>
+  {/if}
 </main>
 
 <style>
+  .setup-screen { display: grid; place-items: center; flex: 1; min-height: 0; padding: 24px; box-sizing: border-box; }
+  .setup-screen > div { display: grid; justify-items: center; gap: 10px; width: min(420px, 100%); text-align: center; }
+  .setup-screen span { color: var(--accent); font-size: var(--text-xs); font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
+  .setup-screen h1 { margin: 0; font-size: 22px; }
+  .setup-screen p { margin: 0 0 8px; color: var(--text-muted); font-size: var(--text-sm); }
+  .setup-screen button { width: fit-content; min-height: 34px; padding: 0 14px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-color); cursor: pointer; }
+  .setup-screen button:hover { border-color: var(--border-strong); background: var(--surface-hover); }
   .workspace-shell { display: flex; flex: 1; min-height: 0; overflow: hidden; }
   .main-workspace { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; background: var(--bg-panel); }
   .panel-scroll { flex: 1; min-height: 0; overflow: auto; scroll-behavior: smooth; scrollbar-width: none; }

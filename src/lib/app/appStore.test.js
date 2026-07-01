@@ -48,4 +48,26 @@ describe("AppStore native layer restoration", () => {
     expect(applyLayerMode).toHaveBeenCalledWith("normal", "normal");
     expect(store.layerMode).toBe("normal");
   });
+
+  it("derives todo.md from logs root when legacy file path is empty", async () => {
+    const applyLayerMode = vi.fn(async (_current, target) => target);
+    const store = new AppStore({
+      applyLayerMode,
+      configService: {
+        readConfig: vi.fn(async () => ({
+          file_path: "",
+          logs_root_path: "C:\\Tracker",
+          layer_mode: "normal",
+          drag_enabled: true,
+          autostart_enabled: false
+        })),
+        writeConfig: vi.fn(async () => {})
+      },
+      autostartService: { isEnabled: vi.fn(async () => false) }
+    });
+
+    await store.loadConfig();
+
+    expect(store.filePath).toBe("C:\\Tracker\\todo.md");
+  });
 });

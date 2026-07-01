@@ -1,6 +1,7 @@
 import { applyLayerMode as applyNativeLayerMode } from "$lib/shared/services/windowLayer.js";
 import * as defaultConfigService from "$lib/shared/services/configService.js";
 import * as defaultAutostartService from "$lib/shared/services/autostart.js";
+import { todoPathForWorkspace } from "$lib/shared/services/logWorkspaceService.js";
 
 const VALID_LAYER_MODES = new Set(["normal", "top", "desktop"]);
 
@@ -37,6 +38,9 @@ export class AppStore {
       const config = await this.configService.readConfig();
       this.filePath = config.file_path;
       this.logsRootPath = config.logs_root_path || "";
+      if (this.logsRootPath && !this.filePath) {
+        this.filePath = todoPathForWorkspace(this.logsRootPath);
+      }
       this.dragEnabled = config.drag_enabled;
 
       try {

@@ -37,14 +37,14 @@
 
 <aside class:closed={!open}>
   <div class="actions">
-    <button onclick={() => workspaceStore.chooseRoot()} aria-label="Select logs root directory" title="Select logs root directory"><FolderOpen size={15} /></button>
+    <button onclick={() => workspaceStore.chooseRoot()} aria-label="Select workspace folder" title="Select workspace folder"><FolderOpen size={15} /></button>
     <button onclick={() => workspaceStore.createCurrentWeek(false)} aria-label="Initialize current week (creates all weekly files)" title="Initialize current week (creates all weekly files)"><FolderPlus size={15} /></button>
     <button onclick={() => workspaceStore.createCurrentWeek(true)} aria-label="Fill in missing files for current week" title="Fill in missing files for current week"><FilePlus size={15} /></button>
     <button onclick={() => sortAscending = !sortAscending} aria-label="Toggle week sorting" title={sortAscending ? "Sort: Oldest weeks first" : "Sort: Newest weeks first"}><ArrowDownUp size={15} /></button>
     <button onclick={openActiveMarkdown} aria-label="Open active file in system editor" title="Open active file in system editor"><ExternalLink size={15} /></button>
   </div>
   {#if workspaceStore.unavailable}
-    <div class="unavailable"><strong>Logs folder unavailable</strong><span>Locate the existing logs folder, select another one, or retry the configured path.</span><button onclick={() => workspaceStore.chooseRoot()}>Locate existing</button><button onclick={() => workspaceStore.chooseRoot()}>Select new</button><button onclick={() => workspaceStore.refresh()}>Retry</button></div>
+    <div class="unavailable"><strong>Workspace unavailable</strong><span>Locate the existing workspace folder, select another one, or retry the configured path.</span><button onclick={() => workspaceStore.chooseRoot()}>Locate existing</button><button onclick={() => workspaceStore.chooseRoot()}>Select new</button><button onclick={() => workspaceStore.refresh()}>Retry</button></div>
   {:else}
     <FileTree weeks={sortedWeeks} {selectedPath} {onSelectWeek} {onSelectDay} />
   {/if}

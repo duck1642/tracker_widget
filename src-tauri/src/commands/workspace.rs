@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 const DAILY_TEMPLATE: &str = include_str!("../../../templates/daily-log.md");
 const WEEKLY_TEMPLATE: &str = include_str!("../../../templates/weekly-index.md");
+const TODO_STARTER: &str = "- [ ] Welcome to your desktop todo widget!\n- [ ] Double-click to edit this todo.\n  - [ ] Use Tab to indent.\n  - [ ] Use Shift+Tab to outdent.\n";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -21,6 +22,15 @@ pub struct LogWeekEntry {
     path: String,
     index_path: Option<String>,
     days: Vec<LogDayEntry>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TodoImportSummary {
+    path: String,
+    todo_count: usize,
+    raw_line_count: usize,
+    replaced: bool,
 }
 
 fn is_week_name(name: &str) -> bool {
@@ -48,6 +58,80 @@ fn display_path(path: &Path) -> String {
 #[tauri::command]
 pub fn path_exists(path: String) -> bool {
     Path::new(&path).exists()
+}
+
+fn todo_path(root_path: &str) -> Result<PathBuf, String> {
+    let root = Path::new(root_path);
+    if !root.is_dir() {
+        return Err("Workspace folder unavailable".to_string());
+    }
+    Ok(root.join("todo.md"))
+}
+
+fn todo_counts(content: &str) -> (usize, usize) {
+    let mut todo_count = 0;
+    let mut raw_line_count = 0;
+    for line in content.lines() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("- [ ] ")
+            || trimmed.starts_with("- [x] ")
+            || trimmed.starts_with("- [X] ")
+        {
+            todo_count += 1;
+        } else if !trimmed.is_empty() {
+            raw_line_count += 1;
+        }
+    }
+    (todo_count, raw_line_count)
+}
+
+#[tauri::command]
+pub fn create_workspace_todo(root_path: String) -> Result<TodoImportSummary, String> {
+    let path = todo_path(&root_path)?;
+    if write_new(&path, TODO_STARTER)? {
+        let (todo_count, raw_line_count) = todo_counts(TODO_STARTER);
+        Ok(TodoImportSummary {
+            path: display_path(&path),
+            todo_count,
+            raw_line_count,
+            replaced: false,
+        })
+    } else {
+        Err("todo.md already exists".to_string())
+    }
+}
+
+#[tauri::command]
+pub fn import_workspace_todo(
+    root_path: String,
+    source_path: String,
+    replace: bool,
+) -> Result<TodoImportSummary, String> {
+    let destination = todo_path(&root_path)?;
+    if destination.exists() && !replace {
+        return Err("todo.md already exists".to_string());
+    }
+    let source = Path::new(&source_path);
+    if !source.is_file() {
+        return Err("Selected Markdown file is unavailable".to_string());
+    }
+    if !source
+        .extension()
+        .and_then(|value| value.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
+    {
+        return Err("Select a Markdown file".to_string());
+    }
+    let content = fs::read_to_string(source).map_err(|error| error.to_string())?;
+    let replaced = destination.exists();
+    fs::write(&destination, &content).map_err(|error| error.to_string())?;
+    let (todo_count, raw_line_count) = todo_counts(&content);
+    Ok(TodoImportSummary {
+        path: display_path(&destination),
+        todo_count,
+        raw_line_count,
+        replaced,
+    })
 }
 
 #[tauri::command]
@@ -246,6 +330,43 @@ mod tests {
     }
 
     #[test]
+    fn creates_todo_only_when_requested() {
+        let root = temp_directory("todo-create");
+        let created = create_workspace_todo(display_path(&root)).unwrap();
+        assert_eq!(created.todo_count, 4);
+        assert!(root.join("todo.md").exists());
+        assert!(create_workspace_todo(display_path(&root)).is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn imports_markdown_to_workspace_todo_with_replace_guard() {
+        let root = temp_directory("todo-import");
+        let source = root.join("old-name.md");
+        fs::write(&source, "# Header\n\n- [ ] Imported\nplain text").unwrap();
+        let imported =
+            import_workspace_todo(display_path(&root), display_path(&source), false).unwrap();
+        assert_eq!(imported.todo_count, 1);
+        assert_eq!(imported.raw_line_count, 2);
+        assert_eq!(
+            fs::read_to_string(root.join("todo.md")).unwrap(),
+            "# Header\n\n- [ ] Imported\nplain text"
+        );
+
+        let other = root.join("other.md");
+        fs::write(&other, "- [ ] Other").unwrap();
+        assert!(import_workspace_todo(display_path(&root), display_path(&other), false).is_err());
+        let replaced =
+            import_workspace_todo(display_path(&root), display_path(&other), true).unwrap();
+        assert!(replaced.replaced);
+        assert_eq!(
+            fs::read_to_string(root.join("todo.md")).unwrap(),
+            "- [ ] Other"
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn repairs_only_missing_week_files() {
         let root = temp_directory("week-repair");
         let created = create_log_week(
@@ -293,6 +414,27 @@ mod tests {
             false,
         );
         assert!(result.is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn log_tree_ignores_unrelated_workspace_files() {
+        let root = temp_directory("tree-ignore");
+        fs::write(root.join("todo.md"), "- [ ] todo").unwrap();
+        fs::write(root.join("notes.md"), "ignore").unwrap();
+        fs::create_dir_all(root.join("random")).unwrap();
+        let week = root.join("2026w26");
+        fs::create_dir_all(&week).unwrap();
+        fs::write(week.join("2026w26_index.md"), "index").unwrap();
+        fs::write(week.join("20260622_log.md"), "day").unwrap();
+        fs::write(week.join("misc.md"), "ignore").unwrap();
+
+        let tree = list_log_tree(display_path(&root)).unwrap();
+
+        assert_eq!(tree.len(), 1);
+        assert_eq!(tree[0].name, "2026w26");
+        assert_eq!(tree[0].days.len(), 1);
+        assert_eq!(tree[0].days[0].name, "20260622_log.md");
         fs::remove_dir_all(root).unwrap();
     }
 }

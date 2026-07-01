@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/sve
 import MainTabs from "./MainTabs.svelte";
 import AppHeader from "./AppHeader.svelte";
 import AppSidebar from "./AppSidebar.svelte";
+import SettingsPanel from "./SettingsPanel.svelte";
 import FileTree from "$lib/shared/components/FileTree.svelte";
 import ActivityRow from "$lib/features/daily/components/ActivityRow.svelte";
 import PlanSection from "$lib/features/weekly/components/PlanSection.svelte";
@@ -12,12 +13,17 @@ import ObjectiveRow from "$lib/features/weekly/components/ObjectiveRow.svelte";
 import TasksPanel from "$lib/features/tasks/components/TasksPanel.svelte";
 import { todoStore } from "$lib/features/tasks/todoStore.svelte.js";
 import { workspaceStore } from "./workspaceStore.svelte.js";
+import { appStore } from "./appStore.svelte.js";
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   workspaceStore.unavailable = false;
   workspaceStore.weeks = [];
+  workspaceStore.todoExists = false;
+  appStore.logsRootPath = "";
+  appStore.filePath = "";
+  todoStore.fileMissing = false;
 });
 
 describe("application navigation", () => {
@@ -224,7 +230,7 @@ describe("unavailable logs folder", () => {
     const chooseRoot = vi.spyOn(workspaceStore, "chooseRoot").mockResolvedValue(true);
     const refresh = vi.spyOn(workspaceStore, "refresh").mockResolvedValue(true);
     render(AppSidebar, { selectedPath: "", onSelectWeek: vi.fn(), onSelectDay: vi.fn(), onClose: vi.fn() });
-    const recovery = screen.getByText("Logs folder unavailable").parentElement;
+    const recovery = screen.getByText("Workspace unavailable").parentElement;
     await fireEvent.click(within(recovery).getByRole("button", { name: "Locate existing" }));
     await fireEvent.click(within(recovery).getByRole("button", { name: "Select new" }));
     await fireEvent.click(within(recovery).getByRole("button", { name: "Retry" }));
@@ -266,6 +272,34 @@ describe("sidebar sorting", () => {
     expect(screen.getByRole("button", { name: "2025w52" }).getAttribute("aria-expanded")).toBe("false");
   });
 
+});
+
+describe("workspace settings and todo recovery", () => {
+  it("shows one workspace setting with derived todo status", () => {
+    appStore.logsRootPath = "C:\\Tracker";
+    appStore.filePath = "C:\\Tracker\\todo.md";
+    workspaceStore.todoExists = false;
+    render(SettingsPanel, { dragEnabled: true, autostartEnabled: false, onToggleDrag: vi.fn(), onToggleAutostart: vi.fn() });
+
+    expect(screen.getByText("Workspace folder")).toBeTruthy();
+    expect(screen.queryByText("Todo document")).toBeNull();
+    expect(screen.getByTitle("C:\\Tracker")).toBeTruthy();
+    expect(screen.getByTitle("C:\\Tracker\\todo.md")).toBeTruthy();
+    expect(screen.getByText("Missing")).toBeTruthy();
+  });
+
+  it("offers create and import when workspace todo is missing", () => {
+    appStore.logsRootPath = "C:\\Tracker";
+    appStore.filePath = "C:\\Tracker\\todo.md";
+    workspaceStore.unavailable = false;
+    workspaceStore.todoExists = false;
+    todoStore.fileMissing = true;
+    render(TasksPanel);
+
+    expect(screen.getByText("No todo.md found")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Create todo.md" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Import Markdown" })).toBeTruthy();
+  });
 });
 
 describe("NotesEditor interactions", () => {

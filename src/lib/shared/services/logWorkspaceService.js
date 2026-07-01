@@ -64,6 +64,10 @@ export async function listLogTree(rootPath) {
   return await invoke("list_log_tree", { rootPath });
 }
 
+export async function pathExists(path) {
+  return await invoke("path_exists", { path });
+}
+
 export async function createWeek(rootPath, date, missingOnly = false) {
   const descriptor = getWeekDescriptor(date);
   return await invoke("create_log_week", {
@@ -75,6 +79,19 @@ export async function createWeek(rootPath, date, missingOnly = false) {
     dates: descriptor.dates.map(formatDate),
     missingOnly
   });
+}
+
+export function todoPathForWorkspace(rootPath) {
+  if (!rootPath) return "";
+  const separator = rootPath.includes("\\") ? "\\" : "/";
+  return `${rootPath.replace(/[\\/]$/, "")}${separator}todo.md`;
+}
+
+export function countTodoItems(markdown) {
+  return markdown.split(/\r?\n/).filter((line) => {
+    const trimmed = line.trimStart();
+    return trimmed.startsWith("- [ ] ") || trimmed.startsWith("- [x] ") || trimmed.startsWith("- [X] ");
+  }).length;
 }
 
 export async function selectLogsFolder() {
@@ -95,4 +112,12 @@ export async function selectTodoFile() {
     ]
   });
   return typeof selected === "string" ? selected : null;
+}
+
+export async function createWorkspaceTodo(rootPath) {
+  return await invoke("create_workspace_todo", { rootPath });
+}
+
+export async function importWorkspaceTodo(rootPath, sourcePath, replace = false) {
+  return await invoke("import_workspace_todo", { rootPath, sourcePath, replace });
 }

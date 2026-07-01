@@ -3,7 +3,9 @@ mod commands;
 use commands::config::{read_config, write_config};
 use commands::fs::{get_file_modified_time, read_file, write_file};
 use commands::window::{exit_app, set_always_on_top};
-use commands::workspace::{create_log_week, list_log_tree, path_exists};
+use commands::workspace::{
+    create_log_week, create_workspace_todo, import_workspace_todo, list_log_tree, path_exists,
+};
 use tauri::{Emitter, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -91,7 +93,9 @@ pub fn run() {
             write_config,
             path_exists,
             list_log_tree,
-            create_log_week
+            create_log_week,
+            create_workspace_todo,
+            import_workspace_todo
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

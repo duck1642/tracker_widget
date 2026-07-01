@@ -3,18 +3,6 @@ use std::time::UNIX_EPOCH;
 
 #[tauri::command]
 pub fn read_file(path: String) -> Result<String, String> {
-    let path_buf = std::path::Path::new(&path);
-    if !path_buf.exists() {
-        let default_content = if path.ends_with("todo.md") {
-            "- [ ] Welcome to your desktop to-do widget!\n- [ ] Double-click to edit this task.\n  - [ ] Use Tab to indent.\n  - [ ] Use Shift+Tab to outdent.\n"
-        } else {
-            ""
-        };
-        if let Some(parent) = path_buf.parent() {
-            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-        }
-        fs::write(&path, default_content).map_err(|e| e.to_string())?;
-    }
     fs::read_to_string(&path).map_err(|e| e.to_string())
 }
 

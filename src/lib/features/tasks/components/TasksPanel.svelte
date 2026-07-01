@@ -1,6 +1,7 @@
 <script>
   import { tick } from "svelte";
   import { todoStore } from "$lib/features/tasks/todoStore.svelte.js";
+  import { workspaceStore } from "$lib/app/workspaceStore.svelte.js";
   import TaskList from "./TaskList.svelte";
 
   let focusedTaskId = $state("");
@@ -89,11 +90,17 @@
 
 {#if todoStore.fileMissing}
   <div class="empty">
-    <strong>No Todo File Detected</strong>
-    <span>Choose or relocate a todo.md file to start.</span>
-    <button onclick={() => todoStore.chooseFile()}>
-      Locate todo.md
-    </button>
+    <strong>No todo.md found</strong>
+    {#if workspaceStore.workspaceAvailable}
+      <span>Create a workspace todo file or import an existing Markdown file.</span>
+      <div class="empty-actions">
+        <button onclick={() => workspaceStore.createTodo()}>Create todo.md</button>
+        <button onclick={() => workspaceStore.importTodo()}>Import Markdown</button>
+      </div>
+    {:else}
+      <span>Select a workspace folder before creating todo.md.</span>
+      <button onclick={() => workspaceStore.chooseRoot()}>Select workspace</button>
+    {/if}
   </div>
 {:else}
   <TaskList 
@@ -138,6 +145,15 @@
     cursor: pointer;
     font-size: var(--text-sm);
     font-weight: 500;
+    margin-top: 16px;
+  }
+  .empty-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .empty-actions button {
     margin-top: 16px;
   }
   .empty button:hover {
