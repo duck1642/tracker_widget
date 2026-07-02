@@ -1,11 +1,14 @@
 <script>
-  import { Check, ChevronUp, ChevronDown, Trash2 } from "@lucide/svelte";
+  import { Check, ChevronDown, ChevronRight, ChevronUp, Trash2 } from "@lucide/svelte";
 
   let { 
     todo, 
     index, 
+    hasChildren = false,
+    isFolded = false,
     inputElements, 
     onToggleTodo, 
+    onToggleFold,
     onUpdateText, 
     onMoveTodoUp, 
     onMoveTodoDown, 
@@ -31,6 +34,19 @@
 </script>
 
 <div class="todo-row" style="padding-left: {todo.indent * 16}px">
+  {#if hasChildren}
+    <button
+      type="button"
+      class="fold-btn"
+      onclick={() => onToggleFold(todo.id)}
+      aria-label={isFolded ? "Expand todo" : "Collapse todo"}
+      title={isFolded ? "Expand todo" : "Collapse todo"}
+    >
+      {#if isFolded}<ChevronRight size={13} />{:else}<ChevronDown size={13} />{/if}
+    </button>
+  {:else}
+    <span class="fold-placeholder" aria-hidden="true"></span>
+  {/if}
   <button 
     type="button"
     class="custom-check-btn {todo.checked ? 'checked' : ''}" 

@@ -11,6 +11,8 @@ import ActivityRow from "$lib/features/daily/components/ActivityRow.svelte";
 import PlanSection from "$lib/features/weekly/components/PlanSection.svelte";
 import ObjectiveRow from "$lib/features/weekly/components/ObjectiveRow.svelte";
 import TodoPanel from "$lib/features/todo/components/TodoPanel.svelte";
+import TodoToolbar from "$lib/features/todo/components/TodoToolbar.svelte";
+import { todoFoldStore } from "$lib/features/todo/todoFolding.svelte.js";
 import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
 import { workspaceStore } from "./workspaceStore.svelte.js";
 import { appStore } from "./appStore.svelte.js";
@@ -24,6 +26,8 @@ afterEach(() => {
   appStore.logsRootPath = "";
   appStore.filePath = "";
   todoStore.fileMissing = false;
+  todoFoldStore.expandAll();
+  todoFoldStore.setFoldableTodoIds([]);
 });
 
 describe("application navigation", () => {
@@ -217,6 +221,123 @@ describe("todo actions", () => {
 
       expect(deleteTodo).toHaveBeenCalledWith(1);
       expect(document.activeElement).toBe(screen.getByDisplayValue("Previous"));
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("folds and unfolds nested todo descendants", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "Parent", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Child", checked: false, indent: 1 },
+      { id: "todo-3", isTodo: true, text: "Peer", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      expect(screen.getByDisplayValue("Child")).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Collapse todo" })).toBeTruthy();
+
+      await fireEvent.click(screen.getByRole("button", { name: "Collapse todo" }));
+      expect(screen.queryByDisplayValue("Child")).toBeNull();
+      expect(screen.getByDisplayValue("Peer")).toBeTruthy();
+
+      await fireEvent.click(screen.getByRole("button", { name: "Expand todo" }));
+      expect(screen.getByDisplayValue("Child")).toBeTruthy();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("keeps nested folded state when an ancestor is expanded", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "Parent", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Child", checked: false, indent: 1 },
+      { id: "todo-3", isTodo: true, text: "Grandchild", checked: false, indent: 2 },
+      { id: "todo-4", isTodo: true, text: "Peer", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      const collapseButtons = screen.getAllByRole("button", { name: "Collapse todo" });
+      await fireEvent.click(collapseButtons[1]);
+      await fireEvent.click(collapseButtons[0]);
+      expect(screen.queryByDisplayValue("Child")).toBeNull();
+
+      await fireEvent.click(screen.getByRole("button", { name: "Expand todo" }));
+      expect(screen.getByDisplayValue("Child")).toBeTruthy();
+      expect(screen.queryByDisplayValue("Grandchild")).toBeNull();
+      expect(screen.getByRole("button", { name: "Expand todo" })).toBeTruthy();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("uses real store indices for row actions after folding", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      font: "",
+      measureText: (text) => ({ width: text.length * 7 })
+    });
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "Parent", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Hidden child", checked: false, indent: 1 },
+      { id: "todo-3", isTodo: true, text: "Visible peer", checked: false, indent: 0 }
+    ];
+    const deleteTodo = vi.spyOn(todoStore, "deleteTodo").mockImplementation(() => {});
+    try {
+      render(TodoPanel);
+      await fireEvent.click(screen.getByRole("button", { name: "Collapse todo" }));
+      await fireEvent.click(screen.getAllByRole("button", { name: "Delete todo" })[1]);
+      expect(deleteTodo).toHaveBeenCalledWith(2);
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("skips hidden descendants during keyboard navigation", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "Parent", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Hidden child", checked: false, indent: 1 },
+      { id: "todo-3", isTodo: true, text: "Visible peer", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      await fireEvent.click(screen.getByRole("button", { name: "Collapse todo" }));
+      const parent = screen.getByDisplayValue("Parent");
+      parent.focus();
+      await fireEvent.keyDown(parent, { key: "ArrowDown" });
+      expect(document.activeElement).toBe(screen.getByDisplayValue("Visible peer"));
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("collapses and expands all foldable todos from the toolbar", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "Parent", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Child", checked: false, indent: 1 },
+      { id: "todo-3", isTodo: true, text: "Peer", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      render(TodoToolbar, {
+        undoStackLength: 0,
+        redoStackLength: 0,
+        onAddTodo: vi.fn(),
+        onUndo: vi.fn(),
+        onRedo: vi.fn(),
+        onReload: vi.fn(),
+        onClearCompleted: vi.fn()
+      });
+
+      await fireEvent.click(screen.getByRole("button", { name: "Collapse all todos" }));
+      expect(screen.queryByDisplayValue("Child")).toBeNull();
+
+      await fireEvent.click(screen.getByRole("button", { name: "Expand all todos" }));
+      expect(screen.getByDisplayValue("Child")).toBeTruthy();
     } finally {
       todoStore.todos = originalTodos;
     }

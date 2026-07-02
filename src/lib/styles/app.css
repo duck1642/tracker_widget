@@ -271,6 +271,35 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   box-sizing: border-box;
 }
 
+.fold-btn,
+.fold-placeholder {
+  width: 16px;
+  height: 20px;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.fold-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.fold-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-color);
+}
+
+.fold-placeholder {
+  display: block;
+}
+
 .custom-check-btn {
   width: 14px;
   height: 14px;

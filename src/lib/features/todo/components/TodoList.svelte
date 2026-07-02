@@ -3,7 +3,7 @@
   import RawRow from "./RawRow.svelte";
 
   let { 
-    todos, 
+    rows, 
     inputElements, 
     onToggleTodo, 
     onUpdateText, 
@@ -12,18 +12,24 @@
     onDeleteTodo, 
     onFocus, 
     onBlur, 
-    onKeyDown 
+    onKeyDown,
+    onToggleFold
   } = $props();
 </script>
 
 <div class="todo-list">
-  {#each todos as todo, index (todo.id)}
+  {#each rows as row (row.todo.id)}
+    {@const todo = row.todo}
+    {@const index = row.storeIndex}
     {#if todo.isTodo}
       <TodoRow 
         todo={todo} 
         index={index} 
+        hasChildren={row.hasChildren}
+        isFolded={row.isFolded}
         inputElements={inputElements}
         onToggleTodo={onToggleTodo}
+        onToggleFold={onToggleFold}
         onUpdateText={onUpdateText}
         onMoveTodoUp={onMoveTodoUp}
         onMoveTodoDown={onMoveTodoDown}
@@ -43,7 +49,7 @@
     {/if}
   {/each}
 
-  {#if todos.length === 0}
+  {#if rows.length === 0}
     <div class="empty">
       <strong>No todos</strong>
       <span>Press [+] below to start.</span>

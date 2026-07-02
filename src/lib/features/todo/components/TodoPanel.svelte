@@ -1,6 +1,7 @@
 <script>
   import { tick } from "svelte";
   import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
+  import { buildVisibleTodoRows, todoFoldStore } from "$lib/features/todo/todoFolding.svelte.js";
   import { workspaceStore } from "$lib/app/workspaceStore.svelte.js";
   import TodoList from "./TodoList.svelte";
 
@@ -11,6 +12,16 @@
   // Keep a reference to inputs to set focus programmatically
   /** @type {Record<string, HTMLInputElement>} */
   let inputElements = {};
+  let visibleTodos = $derived(buildVisibleTodoRows(todoStore.todos, todoFoldStore.foldedTodoIds));
+
+  $effect(() => {
+    todoFoldStore.setFoldableTodoIds(visibleTodos.foldableIds);
+  });
+
+  /** @param {number} index */
+  function isVisibleStoreIndex(index) {
+    return visibleTodos.rows.some((row) => row.storeIndex === index);
+  }
 
   // Todo keyboard navigation and editing handlers
   /**
@@ -23,14 +34,14 @@
       event.preventDefault();
       let nextFocusId = "";
       for (let i = index - 1; i >= 0; i--) {
-        if (todoStore.todos[i].isTodo) {
+        if (todoStore.todos[i].isTodo && isVisibleStoreIndex(i)) {
           nextFocusId = todoStore.todos[i].id;
           break;
         }
       }
       if (!nextFocusId) {
         for (let i = index + 1; i < todoStore.todos.length; i++) {
-          if (todoStore.todos[i].isTodo) {
+          if (todoStore.todos[i].isTodo && isVisibleStoreIndex(i)) {
             nextFocusId = todoStore.todos[i].id;
             break;
           }
@@ -61,7 +72,7 @@
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       for (let i = index - 1; i >= 0; i--) {
-        if (todoStore.todos[i].isTodo) {
+        if (todoStore.todos[i].isTodo && isVisibleStoreIndex(i)) {
           focusedTodoId = todoStore.todos[i].id;
           if (inputElements[todoStore.todos[i].id]) {
             inputElements[todoStore.todos[i].id].focus();
@@ -72,7 +83,7 @@
     } else if (event.key === "ArrowDown") {
       event.preventDefault();
       for (let i = index + 1; i < todoStore.todos.length; i++) {
-        if (todoStore.todos[i].isTodo) {
+        if (todoStore.todos[i].isTodo && isVisibleStoreIndex(i)) {
           focusedTodoId = todoStore.todos[i].id;
           if (inputElements[todoStore.todos[i].id]) {
             inputElements[todoStore.todos[i].id].focus();
@@ -104,13 +115,14 @@
   </div>
 {:else}
   <TodoList 
-    todos={todoStore.todos}
+    rows={visibleTodos.rows}
     inputElements={inputElements}
     onToggleTodo={(/** @type {string} */ id) => todoStore.toggleTodo(id)}
     onUpdateText={(/** @type {string} */ id, /** @type {string} */ text) => todoStore.updateText(id, text)}
     onMoveTodoUp={(/** @type {number} */ index) => todoStore.moveTodoUp(index)}
     onMoveTodoDown={(/** @type {number} */ index) => todoStore.moveTodoDown(index)}
     onDeleteTodo={(/** @type {number} */ index) => todoStore.deleteTodo(index)}
+    onToggleFold={(/** @type {string} */ id) => todoFoldStore.toggleTodo(id)}
     onFocus={(/** @type {string} */ id, /** @type {string} */ text) => {
       focusedTodoId = id;
       originalTexts[id] = text;
