@@ -1,6 +1,6 @@
 use std::fs;
 
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub struct AppConfig {
     pub file_path: String,
     #[serde(default)]
@@ -60,4 +60,17 @@ pub fn write_config(config: AppConfig) -> Result<(), String> {
     let json = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
     fs::write(&path, json).map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn example_config_matches_first_run_defaults() {
+        let example: AppConfig =
+            serde_json::from_str(include_str!("../../../config.example.json")).unwrap();
+
+        assert_eq!(example, AppConfig::default());
+    }
 }
