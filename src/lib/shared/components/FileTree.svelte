@@ -1,8 +1,15 @@
 <script>
   // @ts-nocheck
   import { ChevronDown, ChevronRight, FileText, CalendarDays } from "@lucide/svelte";
-  let { weeks = [], selectedPath = "", onSelectWeek, onSelectDay } = $props();
+  let { weeks = [], selectedPath = "", onSelectWeek, onSelectDay, expansionCommand = null } = $props();
   let expanded = $state({});
+  let handledExpansionCommandId = $state(null);
+
+  $effect(() => {
+    if (!expansionCommand || expansionCommand.id === handledExpansionCommandId) return;
+    handledExpansionCommandId = expansionCommand.id;
+    expanded = Object.fromEntries(weeks.map((week) => [week.path, expansionCommand.expanded]));
+  });
 </script>
 
 <nav class="file-tree" aria-label="Log files">

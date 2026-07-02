@@ -240,6 +240,19 @@ describe("unavailable logs folder", () => {
 });
 
 describe("sidebar sorting", () => {
+  it("keeps workspace selection out of the sidebar and creates week files from one action", async () => {
+    const createCurrentWeekFiles = vi.spyOn(workspaceStore, "createCurrentWeekFiles").mockResolvedValue(true);
+    render(AppSidebar, { selectedPath: "", onSelectWeek: vi.fn(), onSelectDay: vi.fn() });
+
+    expect(screen.queryByRole("button", { name: "Select workspace folder" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Initialize current week/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Fill in missing files/ })).toBeNull();
+
+    await fireEvent.click(screen.getByRole("button", { name: "Create week files" }));
+
+    expect(createCurrentWeekFiles).toHaveBeenCalledOnce();
+  });
+
   it("toggles between newest-first and oldest-first", async () => {
     workspaceStore.weeks = [
       { path: "new", name: "2026w25", indexPath: null, days: [] },
@@ -270,6 +283,29 @@ describe("sidebar sorting", () => {
 
     expect(labels()).toEqual(["2025w52", "2026w25"]);
     expect(screen.getByRole("button", { name: "2025w52" }).getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("collapses and expands all week folders without disabling per-week toggles", async () => {
+    workspaceStore.weeks = [
+      { path: "week", name: "2026w25", indexPath: "week/index.md", days: [{ path: "week/day.md", date: "2026-06-22" }] }
+    ];
+    render(AppSidebar, { selectedPath: "", onSelectWeek: vi.fn(), onSelectDay: vi.fn() });
+
+    expect(screen.getByText("Weekly index")).toBeTruthy();
+    expect(screen.getByText("2026-06-22")).toBeTruthy();
+
+    await fireEvent.click(screen.getByRole("button", { name: "Collapse all weeks" }));
+    expect(screen.queryByText("Weekly index")).toBeNull();
+    expect(screen.queryByText("2026-06-22")).toBeNull();
+    expect(screen.getByRole("button", { name: "2026w25" }).getAttribute("aria-expanded")).toBe("false");
+
+    await fireEvent.click(screen.getByRole("button", { name: "Expand all weeks" }));
+    expect(screen.getByText("Weekly index")).toBeTruthy();
+    expect(screen.getByText("2026-06-22")).toBeTruthy();
+
+    await fireEvent.click(screen.getByRole("button", { name: "2026w25" }));
+    expect(screen.queryByText("Weekly index")).toBeNull();
+    expect(screen.getByRole("button", { name: "2026w25" }).getAttribute("aria-expanded")).toBe("false");
   });
 
 });

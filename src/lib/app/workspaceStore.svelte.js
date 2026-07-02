@@ -122,10 +122,10 @@ class WorkspaceStore {
     }
   }
 
-  async createCurrentWeek(missingOnly = false) {
+  async createCurrentWeekFiles() {
     if (!appStore.logsRootPath) return false;
     try {
-      const created = await workspaceService.createWeek(appStore.logsRootPath, new Date(), missingOnly);
+      const created = await workspaceService.createWeek(appStore.logsRootPath, new Date());
       appStore.showStatus(created.length ? `Created ${created.length} files` : "Nothing missing");
       await this.refresh();
       return true;
