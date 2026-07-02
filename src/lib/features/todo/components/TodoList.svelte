@@ -18,7 +18,7 @@
 
 <div class="todo-list">
   {#each todos as todo, index (todo.id)}
-    {#if todo.isTask}
+    {#if todo.isTodo}
       <TodoRow 
         todo={todo} 
         index={index} 

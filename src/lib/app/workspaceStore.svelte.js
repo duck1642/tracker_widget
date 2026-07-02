@@ -3,7 +3,7 @@ import { appStore } from "./appStore.svelte.js";
 import * as workspaceService from "$lib/shared/services/logWorkspaceService.js";
 import * as fileService from "$lib/shared/services/fileService.js";
 import { confirm } from "@tauri-apps/plugin-dialog";
-import { todoStore } from "$lib/features/tasks/todoStore.svelte.js";
+import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
 
 class WorkspaceStore {
   weeks = $state([]);
@@ -42,7 +42,7 @@ class WorkspaceStore {
     } else {
       todoStore.fileMissing = true;
       todoStore.loadedPath = "";
-      todoStore.tasks = [];
+      todoStore.todos = [];
       todoStore.resetHistory();
     }
     return ok;

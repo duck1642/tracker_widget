@@ -10,8 +10,8 @@ import FileTree from "$lib/shared/components/FileTree.svelte";
 import ActivityRow from "$lib/features/daily/components/ActivityRow.svelte";
 import PlanSection from "$lib/features/weekly/components/PlanSection.svelte";
 import ObjectiveRow from "$lib/features/weekly/components/ObjectiveRow.svelte";
-import TodoPanel from "$lib/features/tasks/components/TodoPanel.svelte";
-import { todoStore } from "$lib/features/tasks/todoStore.svelte.js";
+import TodoPanel from "$lib/features/todo/components/TodoPanel.svelte";
+import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
 import { workspaceStore } from "./workspaceStore.svelte.js";
 import { appStore } from "./appStore.svelte.js";
 
@@ -29,7 +29,7 @@ afterEach(() => {
 describe("application navigation", () => {
   it("changes the main view from the tab bar", async () => {
     const onSelect = vi.fn();
-    render(MainTabs, { currentView: "tasks", onSelect });
+    render(MainTabs, { currentView: "todo", onSelect });
     await fireEvent.click(screen.getByRole("button", { name: "Day" }));
     expect(onSelect).toHaveBeenCalledWith("day");
   });
@@ -150,7 +150,7 @@ describe("todo actions", () => {
       font: "",
       measureText: (text) => ({ width: text.length * 7 })
     });
-    const { default: TodoRow } = await import("$lib/features/tasks/components/TodoRow.svelte");
+    const { default: TodoRow } = await import("$lib/features/todo/components/TodoRow.svelte");
     const onDeleteTodo = vi.fn();
     render(TodoRow, {
       todo: { id: "todo-1", text: "Delete me", checked: false, indent: 0 },
@@ -169,12 +169,12 @@ describe("todo actions", () => {
       font: "",
       measureText: (text) => ({ width: text.length * 7 })
     });
-    const originalTodos = todoStore.tasks;
+    const originalTodos = todoStore.todos;
     const originalUndoStack = todoStore.undoStack;
     const originalRedoStack = todoStore.redoStack;
-    todoStore.tasks = [
-      { id: "todo-1", isTask: true, text: "Keep", checked: false, indent: 0 },
-      { id: "todo-2", isTask: true, text: "Delete", checked: false, indent: 0 }
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "Keep", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Delete", checked: false, indent: 0 }
     ];
     todoStore.undoStack = [];
     todoStore.redoStack = [];
@@ -190,9 +190,9 @@ describe("todo actions", () => {
       await fireEvent.click(trash);
 
       expect(deleteTodo).toHaveBeenCalledWith(1);
-      expect(todoStore.tasks.map((todo) => todo.id)).toEqual(["todo-1"]);
+      expect(todoStore.todos.map((todo) => todo.id)).toEqual(["todo-1"]);
     } finally {
-      todoStore.tasks = originalTodos;
+      todoStore.todos = originalTodos;
       todoStore.undoStack = originalUndoStack;
       todoStore.redoStack = originalRedoStack;
     }
@@ -203,22 +203,22 @@ describe("todo actions", () => {
       font: "",
       measureText: (text) => ({ width: text.length * 7 })
     });
-    const originalTodos = todoStore.tasks;
-    todoStore.tasks = [
-      { id: "todo-1", isTask: true, text: "Previous", checked: false, indent: 0 },
-      { id: "todo-2", isTask: true, text: "", checked: false, indent: 0 }
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "Previous", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "", checked: false, indent: 0 }
     ];
-    const deleteTodo = vi.spyOn(todoStore, "deleteTodo").mockImplementation((index) => todoStore.tasks.splice(index, 1));
+    const deleteTodo = vi.spyOn(todoStore, "deleteTodo").mockImplementation((index) => todoStore.todos.splice(index, 1));
     try {
       render(TodoPanel);
-      const emptyTask = screen.getAllByPlaceholderText("New todo")[1];
-      emptyTask.focus();
-      await fireEvent.keyDown(emptyTask, { key: "Backspace" });
+      const emptyTodo = screen.getAllByPlaceholderText("New todo")[1];
+      emptyTodo.focus();
+      await fireEvent.keyDown(emptyTodo, { key: "Backspace" });
 
       expect(deleteTodo).toHaveBeenCalledWith(1);
       expect(document.activeElement).toBe(screen.getByDisplayValue("Previous"));
     } finally {
-      todoStore.tasks = originalTodos;
+      todoStore.todos = originalTodos;
     }
   });
 
@@ -342,14 +342,14 @@ describe("NotesEditor interactions", () => {
   it("renders preview mode by default and shows help on hover", async () => {
     const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
     const onChange = vi.fn();
-    render(NotesEditor, { value: "- [ ] Buy milk\n- Task 2", onChange, label: "Daily Notes" });
+    render(NotesEditor, { value: "- [ ] Buy milk\n- todo 2", onChange, label: "Daily Notes" });
 
     // Expect label to be correct
     expect(screen.getByText("Daily Notes")).toBeTruthy();
 
     // Check preview items
     expect(screen.getByText("Buy milk")).toBeTruthy();
-    expect(screen.getByText("Task 2")).toBeTruthy();
+    expect(screen.getByText("todo 2")).toBeTruthy();
 
     // Trigger help popover hover
     const helpBtn = screen.getByRole("button", { name: "Formatting help" });

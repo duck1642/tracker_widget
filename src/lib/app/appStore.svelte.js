@@ -11,7 +11,7 @@ export class AppStore {
   layerMode = $state("normal");
   dragEnabled = $state(true);
   autostartEnabled = $state(false);
-  currentView = $state("tasks");
+  currentView = $state("todo");
   statusMessage = $state("");
 
   /** @param {{applyLayerMode?: Function, configService?: any, autostartService?: any}} [dependencies] */

@@ -49,8 +49,8 @@ describe("TodoStore persistence", () => {
     const { store, writes } = createHarness();
     await store.loadFile();
 
-    store.updateText(store.tasks[0].id, "first");
-    store.updateText(store.tasks[0].id, "second");
+    store.updateText(store.todos[0].id, "first");
+    store.updateText(store.todos[0].id, "second");
     expect(writes).toHaveLength(0);
 
     await vi.advanceTimersByTimeAsync(250);
@@ -72,10 +72,10 @@ describe("TodoStore persistence", () => {
       };
     }));
 
-    store.updateText(store.tasks[0].id, "first");
+    store.updateText(store.todos[0].id, "first");
     const firstFlush = store.flushSave();
     await vi.waitFor(() => expect(releaseFirst).toBeTypeOf("function"));
-    store.updateText(store.tasks[0].id, "second");
+    store.updateText(store.todos[0].id, "second");
     releaseFirst();
     await firstFlush;
     await store.flushSave();
@@ -90,7 +90,7 @@ describe("TodoStore persistence", () => {
     const { store, fileService, files } = createHarness();
     await store.loadFile();
     fileService.writeFile.mockRejectedValueOnce(new Error("locked"));
-    store.updateText(store.tasks[0].id, "retry me");
+    store.updateText(store.todos[0].id, "retry me");
 
     await store.flushSave();
 
@@ -104,18 +104,18 @@ describe("TodoStore persistence", () => {
       "B.md": "- [ ] B\n"
     });
     await store.loadFile();
-    store.updateText(store.tasks[0].id, "changed A");
+    store.updateText(store.todos[0].id, "changed A");
 
     await store.loadFile({ path: "B.md" });
 
     expect(writes).toContainEqual({ path: "A.md", content: "- [ ] changed A\n" });
-    expect(store.tasks[0].text).toBe("B");
+    expect(store.todos[0].text).toBe("B");
   });
 
   it("blocks an overwrite when disk content changed externally", async () => {
     const { store, files, writes } = createHarness();
     await store.loadFile();
-    store.updateText(store.tasks[0].id, "local");
+    store.updateText(store.todos[0].id, "local");
     files.set("A.md", "- [ ] external\n");
 
     expect(await store.flushSave()).toBe(false);
@@ -123,14 +123,14 @@ describe("TodoStore persistence", () => {
     expect(store.conflict).not.toBeNull();
 
     await store.resolveConflict("reload");
-    expect(store.tasks[0].text).toBe("external");
+    expect(store.todos[0].text).toBe("external");
     expect(store.dirty).toBe(false);
   });
 
   it("overwrites external content only after keep-local is chosen", async () => {
     const { store, files } = createHarness();
     await store.loadFile();
-    store.updateText(store.tasks[0].id, "local");
+    store.updateText(store.todos[0].id, "local");
     files.set("A.md", "- [ ] external\n");
     await store.flushSave();
 
@@ -145,7 +145,7 @@ describe("TodoStore persistence", () => {
     files.set("A.md", "- [x] external\n");
 
     expect(await store.checkExternalChanges()).toBe(true);
-    expect(store.tasks[0]).toMatchObject({ text: "external", checked: true });
+    expect(store.todos[0]).toMatchObject({ text: "external", checked: true });
   });
 
   it("uses clean external content as the base for the next save", async () => {
@@ -154,7 +154,7 @@ describe("TodoStore persistence", () => {
     files.set("A.md", "- [ ] external\n");
     await store.checkExternalChanges();
 
-    store.updateText(store.tasks[0].id, "local after reload");
+    store.updateText(store.todos[0].id, "local after reload");
     await store.flushSave();
 
     expect(store.conflict).toBeNull();
@@ -168,7 +168,7 @@ describe("TodoStore session history", () => {
   it("clears undo and redo when the document reloads", async () => {
     const { store } = createHarness();
     await store.loadFile();
-    store.toggleTodo(store.tasks[0].id);
+    store.toggleTodo(store.todos[0].id);
     await store.undo();
     expect(store.redoStack).toHaveLength(1);
 
@@ -182,22 +182,22 @@ describe("TodoStore session history", () => {
     const { store } = createHarness({ "A.md": "- [ ] A\n- [x] B\n" });
     await store.loadFile();
 
-    const original = store.tasks.map((todo) => ({ ...todo }));
-    store.toggleTodo(store.tasks[0].id);
-    store.indentTodo(store.tasks[0].id);
+    const original = store.todos.map((todo) => ({ ...todo }));
+    store.toggleTodo(store.todos[0].id);
+    store.indentTodo(store.todos[0].id);
     store.moveTodoDown(0);
     const addedId = store.addTodo(1, 0);
     store.updateText(addedId, "new");
     store.commitTextEdit(addedId, "", "new");
     store.deleteTodo(0);
     store.clearCompleted();
-    const finalState = store.tasks.map((todo) => ({ ...todo }));
+    const finalState = store.todos.map((todo) => ({ ...todo }));
 
     while (store.undoStack.length) await store.undo();
-    expect(store.tasks).toEqual(original);
+    expect(store.todos).toEqual(original);
 
     while (store.redoStack.length) await store.redo();
-    expect(store.tasks).toEqual(finalState);
+    expect(store.todos).toEqual(finalState);
     expect(store.redoStack).toHaveLength(0);
   });
 
@@ -208,7 +208,7 @@ describe("TodoStore session history", () => {
     expect(appStore.showStatus).toHaveBeenLastCalledWith("No completed todos to clear");
   });
 
-  it("allows selecting a file and reloading tasks from it", async () => {
+  it("allows selecting a file and reloading todos from it", async () => {
     const { store, appStore } = createHarness({ "B.md": "- [ ] Select\n" });
     const { selectTodoFile } = await import("$lib/shared/services/logWorkspaceService.js");
     
@@ -221,7 +221,7 @@ describe("TodoStore session history", () => {
     expect(await store.chooseFile()).toBe(true);
     expect(store.loadedPath).toBe("B.md");
     expect(appStore.filePath).toBe("B.md");
-    expect(store.tasks[0].text).toBe("Select");
+    expect(store.todos[0].text).toBe("Select");
     expect(appStore.saveConfig).toHaveBeenCalled();
   });
 });

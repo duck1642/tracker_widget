@@ -1,6 +1,6 @@
 <script>
   import { tick } from "svelte";
-  import { todoStore } from "$lib/features/tasks/todoStore.svelte.js";
+  import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
   import { workspaceStore } from "$lib/app/workspaceStore.svelte.js";
   import TodoList from "./TodoList.svelte";
 
@@ -23,15 +23,15 @@
       event.preventDefault();
       let nextFocusId = "";
       for (let i = index - 1; i >= 0; i--) {
-        if (todoStore.tasks[i].isTask) {
-          nextFocusId = todoStore.tasks[i].id;
+        if (todoStore.todos[i].isTodo) {
+          nextFocusId = todoStore.todos[i].id;
           break;
         }
       }
       if (!nextFocusId) {
-        for (let i = index + 1; i < todoStore.tasks.length; i++) {
-          if (todoStore.tasks[i].isTask) {
-            nextFocusId = todoStore.tasks[i].id;
+        for (let i = index + 1; i < todoStore.todos.length; i++) {
+          if (todoStore.todos[i].isTodo) {
+            nextFocusId = todoStore.todos[i].id;
             break;
           }
         }
@@ -61,21 +61,21 @@
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       for (let i = index - 1; i >= 0; i--) {
-        if (todoStore.tasks[i].isTask) {
-          focusedTodoId = todoStore.tasks[i].id;
-          if (inputElements[todoStore.tasks[i].id]) {
-            inputElements[todoStore.tasks[i].id].focus();
+        if (todoStore.todos[i].isTodo) {
+          focusedTodoId = todoStore.todos[i].id;
+          if (inputElements[todoStore.todos[i].id]) {
+            inputElements[todoStore.todos[i].id].focus();
           }
           break;
         }
       }
     } else if (event.key === "ArrowDown") {
       event.preventDefault();
-      for (let i = index + 1; i < todoStore.tasks.length; i++) {
-        if (todoStore.tasks[i].isTask) {
-          focusedTodoId = todoStore.tasks[i].id;
-          if (inputElements[todoStore.tasks[i].id]) {
-            inputElements[todoStore.tasks[i].id].focus();
+      for (let i = index + 1; i < todoStore.todos.length; i++) {
+        if (todoStore.todos[i].isTodo) {
+          focusedTodoId = todoStore.todos[i].id;
+          if (inputElements[todoStore.todos[i].id]) {
+            inputElements[todoStore.todos[i].id].focus();
           }
           break;
         }
@@ -104,7 +104,7 @@
   </div>
 {:else}
   <TodoList 
-    todos={todoStore.tasks}
+    todos={todoStore.todos}
     inputElements={inputElements}
     onToggleTodo={(/** @type {string} */ id) => todoStore.toggleTodo(id)}
     onUpdateText={(/** @type {string} */ id, /** @type {string} */ text) => todoStore.updateText(id, text)}

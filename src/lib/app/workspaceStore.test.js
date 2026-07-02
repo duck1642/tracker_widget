@@ -5,11 +5,11 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
   confirm: vi.fn(async () => true)
 }));
 
-vi.mock("$lib/features/tasks/todoStore.svelte.js", () => ({
+vi.mock("$lib/features/todo/todoStore.svelte.js", () => ({
   todoStore: {
     fileMissing: false,
     loadedPath: "",
-    tasks: [],
+    todos: [],
     resetHistory: vi.fn(),
     loadFile: vi.fn(async () => true)
   }
@@ -33,7 +33,7 @@ vi.mock("$lib/shared/services/logWorkspaceService.js", () => ({
 import { appStore } from "./appStore.svelte.js";
 import { workspaceStore } from "./workspaceStore.svelte.js";
 import * as workspaceService from "$lib/shared/services/logWorkspaceService.js";
-import { todoStore } from "$lib/features/tasks/todoStore.svelte.js";
+import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
 
 describe("WorkspaceStore workspace status", () => {
   beforeEach(() => {

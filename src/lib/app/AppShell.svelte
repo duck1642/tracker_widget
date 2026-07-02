@@ -7,7 +7,7 @@
   import { appStore } from "./appStore.svelte.js";
   import { workspaceStore } from "./workspaceStore.svelte.js";
   import { persistenceRegistry } from "./persistenceRegistry.js";
-  import { todoStore } from "$lib/features/tasks/todoStore.svelte.js";
+  import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
@@ -15,8 +15,8 @@
   import SettingsPanel from "./SettingsPanel.svelte";
   import MainTabs from "./MainTabs.svelte";
   import AppSidebar from "./AppSidebar.svelte";
-  import TodoPanel from "$lib/features/tasks/components/TodoPanel.svelte";
-  import TodoToolbar from "$lib/features/tasks/components/TodoToolbar.svelte";
+  import TodoPanel from "$lib/features/todo/components/TodoPanel.svelte";
+  import TodoToolbar from "$lib/features/todo/components/TodoToolbar.svelte";
   import DailyPanel from "$lib/features/daily/components/DailyPanel.svelte";
   import WeekPanel from "$lib/features/weekly/components/WeekPanel.svelte";
   import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
@@ -27,7 +27,7 @@
   let isMaximized = $state(false);
 
   const viewSizeConstraints = {
-    tasks: { width: 480, height: 360 },
+    todo: { width: 480, height: 360 },
     day: { width: 900, height: 620 },
     week: { width: 1280, height: 700 }
   };
@@ -67,7 +67,7 @@
   }
 
   async function applyViewSizeConstraints(view) {
-    const constraints = viewSizeConstraints[view] ?? viewSizeConstraints.tasks;
+    const constraints = viewSizeConstraints[view] ?? viewSizeConstraints.todo;
     try {
       const appWindow = getCurrentWindow();
       await appWindow.setMinSize(new LogicalSize(constraints.width, constraints.height));
@@ -141,7 +141,7 @@
       });
       if (disposed) { unlistenClose?.(); unlistenQuit?.(); }
     })();
-    const handleFocus = async () => { await persistenceRegistry.checkActive(appStore.currentView); if (appStore.currentView !== "tasks") await workspaceStore.refresh(); };
+    const handleFocus = async () => { await persistenceRegistry.checkActive(appStore.currentView); if (appStore.currentView !== "todo") await workspaceStore.refresh(); };
     window.addEventListener("focus", handleFocus);
     return () => { disposed = true; unlistenClose?.(); unlistenQuit?.(); unlistenResized?.(); window.removeEventListener("focus", handleFocus); window.removeEventListener("resize", handleResize); };
   });
@@ -177,7 +177,7 @@
 </script>
 
 <main class="app-container" class:desktop-mode={appStore.layerMode === "desktop"}>
-  <AppHeader title={workspaceStore.needsFirstSetup ? "Workspace setup" : appStore.currentView === "tasks" ? "Todo" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} {showModeMenu} {isMaximized} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onDismissModeMenu={() => showModeMenu = false} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onMaximizeApp={toggleMaximizeApp} onCloseApp={closeApp} />
+  <AppHeader title={workspaceStore.needsFirstSetup ? "Workspace setup" : appStore.currentView === "todo" ? "Todo" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} {showModeMenu} {isMaximized} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onDismissModeMenu={() => showModeMenu = false} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onMaximizeApp={toggleMaximizeApp} onCloseApp={closeApp} />
   {#if workspaceStore.needsFirstSetup}
     <section class="setup-screen">
       <div>
@@ -194,10 +194,10 @@
         {#if editingSettings}
           <SettingsPanel dragEnabled={appStore.dragEnabled} autostartEnabled={appStore.autostartEnabled} onToggleDrag={() => appStore.toggleDrag()} onToggleAutostart={() => appStore.toggleAutostart()} />
         {:else}
-          <MainTabs currentView={appStore.currentView} onSelect={(view) => view === "tasks" ? appStore.currentView = "tasks" : openCurrent(view)} />
-          {#if appStore.currentView === "tasks" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
-          <div class="panel-scroll" class:todo-scroll={appStore.currentView === "tasks"}>{#if appStore.currentView === "tasks"}<TodoPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
-          {#if appStore.currentView === "tasks" && !todoStore.fileMissing}<TodoToolbar undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTodo={() => todoStore.addTodo(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={() => todoStore.loadFile()} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
+          <MainTabs currentView={appStore.currentView} onSelect={(view) => view === "todo" ? appStore.currentView = "todo" : openCurrent(view)} />
+          {#if appStore.currentView === "todo" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
+          <div class="panel-scroll" class:todo-scroll={appStore.currentView === "todo"}>{#if appStore.currentView === "todo"}<TodoPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
+          {#if appStore.currentView === "todo" && !todoStore.fileMissing}<TodoToolbar undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTodo={() => todoStore.addTodo(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={() => todoStore.loadFile()} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
         {/if}
       </section>
     </div>

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { markdownToTasks, tasksToMarkdown } from "./todoParser.js";
+import { markdownToTodos, todosToMarkdown } from "./todoParser.js";
 import { createTodoItem } from "./todoItems.js";
 import { applyAction } from "./todoActions.js";
 import * as defaultFileService from "$lib/shared/services/fileService.js";
@@ -13,8 +13,8 @@ function cloneAction(action) {
 }
 
 export class TodoStore {
-  view = "tasks";
-  tasks = $state([]);
+  view = "todo";
+  todos = $state([]);
   undoStack = $state([]);
   redoStack = $state([]);
   dirty = $state(false);
@@ -65,7 +65,7 @@ export class TodoStore {
       const content = await this.fileService.readFile(targetPath);
       this.loadedPath = targetPath;
       this.appStore.filePath = targetPath;
-      this.tasks = markdownToTasks(content);
+      this.todos = markdownToTodos(content);
       this.resetHistory();
       this.persistence.reset(targetPath, content);
       this.fileMissing = false;
@@ -90,7 +90,7 @@ export class TodoStore {
   }
 
   scheduleSave({ immediate = false } = {}) {
-    return this.persistence.schedule(tasksToMarkdown(this.tasks), immediate);
+    return this.persistence.schedule(todosToMarkdown(this.todos), immediate);
   }
 
   saveFile() {
@@ -104,7 +104,7 @@ export class TodoStore {
   async checkExternalChanges() {
     const content = await this.persistence.checkExternal();
     if (typeof content === "string") {
-      this.tasks = markdownToTasks(content);
+      this.todos = markdownToTodos(content);
       this.resetHistory();
       this.persistence.reset(this.loadedPath, content);
       this.appStore.showStatus("Reloaded");
@@ -115,24 +115,24 @@ export class TodoStore {
   async resolveConflict(choice) {
     const content = await this.persistence.resolve(choice);
     if (choice === "reload" && typeof content === "string") {
-      this.tasks = markdownToTasks(content);
+      this.todos = markdownToTodos(content);
       this.resetHistory();
     }
     return content !== null;
   }
 
   toggleTodo(id) {
-    const task = this.tasks.find((item) => item.id === id);
-    if (!task) return;
-    this.record({ type: "toggle", id, oldChecked: task.checked, newChecked: !task.checked });
-    task.checked = !task.checked;
+    const todo = this.todos.find((item) => item.id === id);
+    if (!todo) return;
+    this.record({ type: "toggle", id, oldChecked: todo.checked, newChecked: !todo.checked });
+    todo.checked = !todo.checked;
     void this.scheduleSave({ immediate: true });
   }
 
   updateText(id, text) {
-    const task = this.tasks.find((item) => item.id === id);
-    if (task && task.text !== text) {
-      task.text = text;
+    const todo = this.todos.find((item) => item.id === id);
+    if (todo && todo.text !== text) {
+      todo.text = text;
       void this.scheduleSave();
     }
   }
@@ -144,67 +144,67 @@ export class TodoStore {
   moveTodoUp(index) {
     if (index <= 0) return;
     this.record({ type: "move", fromIndex: index, toIndex: index - 1 });
-    [this.tasks[index - 1], this.tasks[index]] = [this.tasks[index], this.tasks[index - 1]];
+    [this.todos[index - 1], this.todos[index]] = [this.todos[index], this.todos[index - 1]];
     void this.scheduleSave({ immediate: true });
   }
 
   moveTodoDown(index) {
-    if (index >= this.tasks.length - 1) return;
+    if (index >= this.todos.length - 1) return;
     this.record({ type: "move", fromIndex: index, toIndex: index + 1 });
-    [this.tasks[index], this.tasks[index + 1]] = [this.tasks[index + 1], this.tasks[index]];
+    [this.todos[index], this.todos[index + 1]] = [this.todos[index + 1], this.todos[index]];
     void this.scheduleSave({ immediate: true });
   }
 
   deleteTodo(index) {
-    const task = this.tasks[index];
-    if (!task) return;
-    this.record({ type: "delete", index, task });
-    this.tasks.splice(index, 1);
+    const todo = this.todos[index];
+    if (!todo) return;
+    this.record({ type: "delete", index, todo });
+    this.todos.splice(index, 1);
     void this.scheduleSave({ immediate: true });
   }
 
   indentTodo(id) {
-    const task = this.tasks.find((item) => item.id === id);
-    if (!task) return;
-    this.record({ type: "indent", id, oldIndent: task.indent, newIndent: task.indent + 1 });
-    task.indent += 1;
+    const todo = this.todos.find((item) => item.id === id);
+    if (!todo) return;
+    this.record({ type: "indent", id, oldIndent: todo.indent, newIndent: todo.indent + 1 });
+    todo.indent += 1;
     void this.scheduleSave({ immediate: true });
   }
 
   outdentTodo(id) {
-    const task = this.tasks.find((item) => item.id === id);
-    if (!task || task.indent <= 0) return;
-    this.record({ type: "indent", id, oldIndent: task.indent, newIndent: task.indent - 1 });
-    task.indent -= 1;
+    const todo = this.todos.find((item) => item.id === id);
+    if (!todo || todo.indent <= 0) return;
+    this.record({ type: "indent", id, oldIndent: todo.indent, newIndent: todo.indent - 1 });
+    todo.indent -= 1;
     void this.scheduleSave({ immediate: true });
   }
 
   addTodo(index, indent = 0) {
-    const task = createTodoItem(indent);
-    const insertIndex = index === -1 ? this.tasks.length : index + 1;
-    this.record({ type: "add", index: insertIndex, task });
-    this.tasks.splice(insertIndex, 0, task);
+    const todo = createTodoItem(indent);
+    const insertIndex = index === -1 ? this.todos.length : index + 1;
+    this.record({ type: "add", index: insertIndex, todo });
+    this.todos.splice(insertIndex, 0, todo);
     void this.scheduleSave({ immediate: true });
-    return task.id;
+    return todo.id;
   }
 
   clearCompleted() {
-    const deletedTasks = this.tasks.map((task, index) => ({ task, index })).filter(({ task }) => task.isTask && task.checked);
-    if (!deletedTasks.length) {
+    const deletedTodos = this.todos.map((todo, index) => ({ todo, index })).filter(({ todo }) => todo.isTodo && todo.checked);
+    if (!deletedTodos.length) {
       this.appStore.showStatus("No completed todos to clear");
       return false;
     }
-    this.record({ type: "clear_completed", deletedTasks });
-    this.tasks = this.tasks.filter((task) => !task.isTask || !task.checked);
+    this.record({ type: "clear_completed", deletedTodos });
+    this.todos = this.todos.filter((todo) => !todo.isTodo || !todo.checked);
     void this.scheduleSave({ immediate: true });
-    this.appStore.showStatus(`Cleared ${deletedTasks.length} completed ${deletedTasks.length === 1 ? "todo" : "todos"}`);
+    this.appStore.showStatus(`Cleared ${deletedTodos.length} completed ${deletedTodos.length === 1 ? "todo" : "todos"}`);
     return true;
   }
 
   async undo() {
     if (!this.undoStack.length || !(await this.flushSave())) return;
     const action = this.undoStack.pop();
-    this.tasks = applyAction(this.tasks, action, true);
+    this.todos = applyAction(this.todos, action, true);
     this.redoStack.push(action);
     await this.scheduleSave({ immediate: true });
     this.appStore.showStatus("Undone");
@@ -213,7 +213,7 @@ export class TodoStore {
   async redo() {
     if (!this.redoStack.length || !(await this.flushSave())) return;
     const action = this.redoStack.pop();
-    this.tasks = applyAction(this.tasks, action, false);
+    this.todos = applyAction(this.todos, action, false);
     this.undoStack.push(action);
     await this.scheduleSave({ immediate: true });
     this.appStore.showStatus("Redone");

@@ -7,7 +7,7 @@
   import { appStore } from "$lib/app/appStore.svelte.js";
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
-  import { todoStore } from "$lib/features/tasks/todoStore.svelte.js";
+  import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
 
   let { open = true, selectedPath = "", onSelectWeek, onSelectDay } = $props();
   let sortAscending = $state(false);
@@ -23,7 +23,7 @@
 
   async function openActiveMarkdown() {
     let targetPath = "";
-    if (appStore.currentView === "tasks") {
+    if (appStore.currentView === "todo") {
       targetPath = todoStore.loadedPath || appStore.filePath;
     } else if (appStore.currentView === "week") {
       targetPath = weekStore.path;

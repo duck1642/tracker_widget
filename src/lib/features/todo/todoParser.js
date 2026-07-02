@@ -1,12 +1,12 @@
 /**
- * Parses a markdown string into a flat list of task objects and raw lines.
- * Handles tasks (lines starting with "- [ ]" or "- [x]") and their indentation.
- * Preserves non-task lines (headers, notes, empty lines) to avoid data loss.
+ * Parses a markdown string into a flat list of todo objects and raw lines.
+ * Handles todos (lines starting with "- [ ]" or "- [x]") and their indentation.
+ * Preserves non-todo lines (headers, notes, empty lines) to avoid data loss.
  *
  * @param {string} markdown - The markdown content.
  * @returns {any[]} List of line objects.
  */
-export function markdownToTasks(markdown) {
+export function markdownToTodos(markdown) {
   if (!markdown) return [];
   const lines = markdown.split(/\r?\n/);
   
@@ -36,7 +36,7 @@ export function markdownToTasks(markdown) {
       
       return {
         id,
-        isTask: true,
+        isTodo: true,
         checked: checkChar.toLowerCase() === "x",
         text: text,
         indent: indent
@@ -44,7 +44,7 @@ export function markdownToTasks(markdown) {
     } else {
       return {
         id,
-        isTask: false,
+        isTodo: false,
         raw: line
       };
     }
@@ -54,18 +54,18 @@ export function markdownToTasks(markdown) {
 /**
  * Converts a list of line objects back to a markdown string.
  *
- * @param {any[]} tasks - The line objects.
+ * @param {any[]} todos - The line objects.
  * @returns {string} The markdown content.
  */
-export function tasksToMarkdown(tasks) {
-  if (!tasks || tasks.length === 0) return "";
-  return tasks.map((task) => {
-    if (task.isTask) {
-      const indentSpaces = "  ".repeat(task.indent);
-      const checkChar = task.checked ? "x" : " ";
-      return `${indentSpaces}- [${checkChar}] ${task.text}`;
+export function todosToMarkdown(todos) {
+  if (!todos || todos.length === 0) return "";
+  return todos.map((todo) => {
+    if (todo.isTodo) {
+      const indentSpaces = "  ".repeat(todo.indent);
+      const checkChar = todo.checked ? "x" : " ";
+      return `${indentSpaces}- [${checkChar}] ${todo.text}`;
     } else {
-      return task.raw;
+      return todo.raw;
     }
   }).join("\n") + "\n";
 }
