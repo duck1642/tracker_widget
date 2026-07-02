@@ -1,49 +1,49 @@
 <script>
-  import TaskRow from "./TaskRow.svelte";
+  import TodoRow from "./TodoRow.svelte";
   import RawRow from "./RawRow.svelte";
 
   let { 
-    tasks, 
+    todos, 
     inputElements, 
-    onToggleTask, 
+    onToggleTodo, 
     onUpdateText, 
-    onMoveTaskUp, 
-    onMoveTaskDown, 
-    onDeleteTask, 
+    onMoveTodoUp, 
+    onMoveTodoDown, 
+    onDeleteTodo, 
     onFocus, 
     onBlur, 
     onKeyDown 
   } = $props();
 </script>
 
-<div class="task-list">
-  {#each tasks as task, index (task.id)}
-    {#if task.isTask}
-      <TaskRow 
-        task={task} 
+<div class="todo-list">
+  {#each todos as todo, index (todo.id)}
+    {#if todo.isTask}
+      <TodoRow 
+        todo={todo} 
         index={index} 
         inputElements={inputElements}
-        onToggleTask={onToggleTask}
+        onToggleTodo={onToggleTodo}
         onUpdateText={onUpdateText}
-        onMoveTaskUp={onMoveTaskUp}
-        onMoveTaskDown={onMoveTaskDown}
-        onDeleteTask={onDeleteTask}
+        onMoveTodoUp={onMoveTodoUp}
+        onMoveTodoDown={onMoveTodoDown}
+        onDeleteTodo={onDeleteTodo}
         onFocus={onFocus}
         onBlur={onBlur}
         onKeyDown={onKeyDown}
       />
     {:else}
-      {#if task.raw.trim().length > 0}
+      {#if todo.raw.trim().length > 0}
         <RawRow 
-          task={task} 
+          rawLine={todo} 
           index={index} 
-          onDeleteTask={onDeleteTask} 
+          onDeleteTodo={onDeleteTodo} 
         />
       {/if}
     {/if}
   {/each}
 
-  {#if tasks.length === 0}
+  {#if todos.length === 0}
     <div class="empty">
       <strong>No todos</strong>
       <span>Press [+] below to start.</span>

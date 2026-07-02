@@ -4,7 +4,7 @@
   let { 
     undoStackLength = 0,
     redoStackLength = 0,
-    onAddTask, 
+    onAddTodo, 
     onUndo, 
     onRedo, 
     onReload, 
@@ -13,7 +13,7 @@
 </script>
 
 <footer class="bottom-bar">
-  <button class="action-btn" onclick={onAddTask} title="Add todo">
+  <button class="action-btn" onclick={onAddTodo} title="Add todo">
     <Plus size={13} />
   </button>
   <div class="footer-right">

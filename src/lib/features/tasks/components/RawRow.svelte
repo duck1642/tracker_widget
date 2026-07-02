@@ -1,13 +1,13 @@
 <script>
   import { Trash2 } from "@lucide/svelte";
 
-  let { task, index, onDeleteTask } = $props();
+  let { rawLine, index, onDeleteTodo } = $props();
 </script>
 
 <div class="raw-row">
-  <span class="raw-text">{task.raw}</span>
+  <span class="raw-text">{rawLine.raw}</span>
   <div class="row-actions">
-    <button class="row-btn del" onclick={() => onDeleteTask(index)} title="Delete">
+    <button class="row-btn del" onclick={() => onDeleteTodo(index)} title="Delete">
       <Trash2 size={13} />
     </button>
   </div>

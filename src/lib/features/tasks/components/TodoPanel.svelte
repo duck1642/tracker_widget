@@ -2,9 +2,9 @@
   import { tick } from "svelte";
   import { todoStore } from "$lib/features/tasks/todoStore.svelte.js";
   import { workspaceStore } from "$lib/app/workspaceStore.svelte.js";
-  import TaskList from "./TaskList.svelte";
+  import TodoList from "./TodoList.svelte";
 
-  let focusedTaskId = $state("");
+  let focusedTodoId = $state("");
   /** @type {Record<string, string>} */
   let originalTexts = {};
 
@@ -12,14 +12,14 @@
   /** @type {Record<string, HTMLInputElement>} */
   let inputElements = {};
 
-  // Keyboard navigation & editing handlers
+  // Todo keyboard navigation and editing handlers
   /**
    * @param {KeyboardEvent} event
    * @param {number} index
-   * @param {any} task
+   * @param {any} todo
    */
-  async function handleKeyDown(event, index, task) {
-    if (event.key === "Backspace" && task.text === "") {
+  async function handleKeyDown(event, index, todo) {
+    if (event.key === "Backspace" && todo.text === "") {
       event.preventDefault();
       let nextFocusId = "";
       for (let i = index - 1; i >= 0; i--) {
@@ -36,24 +36,24 @@
           }
         }
       }
-      delete originalTexts[task.id];
-      todoStore.deleteTask(index);
+      delete originalTexts[todo.id];
+      todoStore.deleteTodo(index);
       await tick();
-      focusedTaskId = nextFocusId;
+      focusedTodoId = nextFocusId;
       inputElements[nextFocusId]?.focus();
     } else if (event.key === "Tab") {
       event.preventDefault();
       if (event.shiftKey) {
-        todoStore.outdentTask(task.id);
+        todoStore.outdentTodo(todo.id);
       } else {
-        todoStore.indentTask(task.id);
+        todoStore.indentTodo(todo.id);
       }
     } else if (event.key === "Enter") {
       event.preventDefault();
-      const newId = todoStore.addTask(index, task.indent);
-      focusedTaskId = newId;
+      const newId = todoStore.addTodo(index, todo.indent);
+      focusedTodoId = newId;
       
-      // Auto focus the input element
+      // Focus the newly inserted todo input.
       await tick();
       if (inputElements[newId]) {
         inputElements[newId].focus();
@@ -62,7 +62,7 @@
       event.preventDefault();
       for (let i = index - 1; i >= 0; i--) {
         if (todoStore.tasks[i].isTask) {
-          focusedTaskId = todoStore.tasks[i].id;
+          focusedTodoId = todoStore.tasks[i].id;
           if (inputElements[todoStore.tasks[i].id]) {
             inputElements[todoStore.tasks[i].id].focus();
           }
@@ -73,7 +73,7 @@
       event.preventDefault();
       for (let i = index + 1; i < todoStore.tasks.length; i++) {
         if (todoStore.tasks[i].isTask) {
-          focusedTaskId = todoStore.tasks[i].id;
+          focusedTodoId = todoStore.tasks[i].id;
           if (inputElements[todoStore.tasks[i].id]) {
             inputElements[todoStore.tasks[i].id].focus();
           }
@@ -103,21 +103,21 @@
     {/if}
   </div>
 {:else}
-  <TaskList 
-    tasks={todoStore.tasks}
+  <TodoList 
+    todos={todoStore.tasks}
     inputElements={inputElements}
-    onToggleTask={(/** @type {string} */ id) => todoStore.toggleTask(id)}
+    onToggleTodo={(/** @type {string} */ id) => todoStore.toggleTodo(id)}
     onUpdateText={(/** @type {string} */ id, /** @type {string} */ text) => todoStore.updateText(id, text)}
-    onMoveTaskUp={(/** @type {number} */ index) => todoStore.moveTaskUp(index)}
-    onMoveTaskDown={(/** @type {number} */ index) => todoStore.moveTaskDown(index)}
-    onDeleteTask={(/** @type {number} */ index) => todoStore.deleteTask(index)}
+    onMoveTodoUp={(/** @type {number} */ index) => todoStore.moveTodoUp(index)}
+    onMoveTodoDown={(/** @type {number} */ index) => todoStore.moveTodoDown(index)}
+    onDeleteTodo={(/** @type {number} */ index) => todoStore.deleteTodo(index)}
     onFocus={(/** @type {string} */ id, /** @type {string} */ text) => {
-      focusedTaskId = id;
+      focusedTodoId = id;
       originalTexts[id] = text;
     }}
     onBlur={(/** @type {string} */ id, /** @type {string} */ text) => {
-      if (focusedTaskId === id) {
-        focusedTaskId = "";
+      if (focusedTodoId === id) {
+        focusedTodoId = "";
       }
       const oldText = originalTexts[id];
       if (oldText !== undefined && oldText !== text) {

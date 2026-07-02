@@ -250,7 +250,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 
 /* Todo view */
-.task-list {
+.todo-list {
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -260,7 +260,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   box-sizing: border-box;
 }
 
-.task-row {
+.todo-row {
   display: flex;
   align-items: center;
   min-height: 26px;
@@ -314,7 +314,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 
 
-.task-text {
+.todo-text {
   flex: 1;
   background: transparent;
   border: none;
@@ -327,14 +327,14 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   min-width: 0;
 }
 
-.task-text:focus,
-.task-text:focus-visible {
+.todo-text:focus,
+.todo-text:focus-visible {
   border-color: transparent;
   box-shadow: none;
   outline: none;
 }
 
-.task-text.completed {
+.todo-text.completed {
   text-decoration: line-through;
   color: var(--text-muted);
   opacity: 0.6;
@@ -388,8 +388,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   visibility: hidden;
 }
 
-.task-row:hover .row-actions,
-.task-row:focus-within .row-actions,
+.todo-row:hover .row-actions,
+.todo-row:focus-within .row-actions,
 .raw-row:hover .row-actions,
 .raw-row:focus-within .row-actions {
   visibility: visible;

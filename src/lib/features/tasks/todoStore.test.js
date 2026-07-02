@@ -168,7 +168,7 @@ describe("TodoStore session history", () => {
   it("clears undo and redo when the document reloads", async () => {
     const { store } = createHarness();
     await store.loadFile();
-    store.toggleTask(store.tasks[0].id);
+    store.toggleTodo(store.tasks[0].id);
     await store.undo();
     expect(store.redoStack).toHaveLength(1);
 
@@ -182,16 +182,16 @@ describe("TodoStore session history", () => {
     const { store } = createHarness({ "A.md": "- [ ] A\n- [x] B\n" });
     await store.loadFile();
 
-    const original = store.tasks.map((task) => ({ ...task }));
-    store.toggleTask(store.tasks[0].id);
-    store.indentTask(store.tasks[0].id);
-    store.moveTaskDown(0);
-    const addedId = store.addTask(1, 0);
+    const original = store.tasks.map((todo) => ({ ...todo }));
+    store.toggleTodo(store.tasks[0].id);
+    store.indentTodo(store.tasks[0].id);
+    store.moveTodoDown(0);
+    const addedId = store.addTodo(1, 0);
     store.updateText(addedId, "new");
     store.commitTextEdit(addedId, "", "new");
-    store.deleteTask(0);
+    store.deleteTodo(0);
     store.clearCompleted();
-    const finalState = store.tasks.map((task) => ({ ...task }));
+    const finalState = store.tasks.map((todo) => ({ ...todo }));
 
     while (store.undoStack.length) await store.undo();
     expect(store.tasks).toEqual(original);

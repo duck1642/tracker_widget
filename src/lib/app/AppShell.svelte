@@ -15,7 +15,7 @@
   import SettingsPanel from "./SettingsPanel.svelte";
   import MainTabs from "./MainTabs.svelte";
   import AppSidebar from "./AppSidebar.svelte";
-  import TasksPanel from "$lib/features/tasks/components/TasksPanel.svelte";
+  import TodoPanel from "$lib/features/tasks/components/TodoPanel.svelte";
   import TodoToolbar from "$lib/features/tasks/components/TodoToolbar.svelte";
   import DailyPanel from "$lib/features/daily/components/DailyPanel.svelte";
   import WeekPanel from "$lib/features/weekly/components/WeekPanel.svelte";
@@ -196,8 +196,8 @@
         {:else}
           <MainTabs currentView={appStore.currentView} onSelect={(view) => view === "tasks" ? appStore.currentView = "tasks" : openCurrent(view)} />
           {#if appStore.currentView === "tasks" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
-          <div class="panel-scroll" class:todo-scroll={appStore.currentView === "tasks"}>{#if appStore.currentView === "tasks"}<TasksPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
-          {#if appStore.currentView === "tasks" && !todoStore.fileMissing}<TodoToolbar undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTask={() => todoStore.addTask(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={() => todoStore.loadFile()} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
+          <div class="panel-scroll" class:todo-scroll={appStore.currentView === "tasks"}>{#if appStore.currentView === "tasks"}<TodoPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
+          {#if appStore.currentView === "tasks" && !todoStore.fileMissing}<TodoToolbar undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTodo={() => todoStore.addTodo(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={() => todoStore.loadFile()} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
         {/if}
       </section>
     </div>

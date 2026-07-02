@@ -10,7 +10,7 @@ import FileTree from "$lib/shared/components/FileTree.svelte";
 import ActivityRow from "$lib/features/daily/components/ActivityRow.svelte";
 import PlanSection from "$lib/features/weekly/components/PlanSection.svelte";
 import ObjectiveRow from "$lib/features/weekly/components/ObjectiveRow.svelte";
-import TasksPanel from "$lib/features/tasks/components/TasksPanel.svelte";
+import TodoPanel from "$lib/features/tasks/components/TodoPanel.svelte";
 import { todoStore } from "$lib/features/tasks/todoStore.svelte.js";
 import { workspaceStore } from "./workspaceStore.svelte.js";
 import { appStore } from "./appStore.svelte.js";
@@ -144,44 +144,44 @@ describe("logger editing", () => {
   });
 });
 
-describe("task actions", () => {
-  it("emits row deletion for the selected task index", async () => {
+describe("todo actions", () => {
+  it("emits row deletion for the selected todo index", async () => {
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
       font: "",
       measureText: (text) => ({ width: text.length * 7 })
     });
-    const { default: TaskRow } = await import("$lib/features/tasks/components/TaskRow.svelte");
-    const onDeleteTask = vi.fn();
-    render(TaskRow, {
-      task: { id: "task-1", text: "Delete me", checked: false, indent: 0 },
+    const { default: TodoRow } = await import("$lib/features/tasks/components/TodoRow.svelte");
+    const onDeleteTodo = vi.fn();
+    render(TodoRow, {
+      todo: { id: "todo-1", text: "Delete me", checked: false, indent: 0 },
       index: 2,
       inputElements: {},
-      onToggleTask: vi.fn(), onUpdateText: vi.fn(), onMoveTaskUp: vi.fn(), onMoveTaskDown: vi.fn(),
-      onDeleteTask, onFocus: vi.fn(), onBlur: vi.fn(), onKeyDown: vi.fn()
+      onToggleTodo: vi.fn(), onUpdateText: vi.fn(), onMoveTodoUp: vi.fn(), onMoveTodoDown: vi.fn(),
+      onDeleteTodo, onFocus: vi.fn(), onBlur: vi.fn(), onKeyDown: vi.fn()
     });
     await fireEvent.click(screen.getByTitle("Delete"));
-    expect(onDeleteTask).toHaveBeenCalledWith(2);
+    expect(onDeleteTodo).toHaveBeenCalledWith(2);
     expect(screen.getByPlaceholderText("New todo").getAttribute("spellcheck")).toBeNull();
   });
 
-  it("deletes the focused row from the task store through its trash button", async () => {
+  it("deletes the focused row from the todo store through its trash button", async () => {
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
       font: "",
       measureText: (text) => ({ width: text.length * 7 })
     });
-    const originalTasks = todoStore.tasks;
+    const originalTodos = todoStore.tasks;
     const originalUndoStack = todoStore.undoStack;
     const originalRedoStack = todoStore.redoStack;
     todoStore.tasks = [
-      { id: "task-1", isTask: true, text: "Keep", checked: false, indent: 0 },
-      { id: "task-2", isTask: true, text: "Delete", checked: false, indent: 0 }
+      { id: "todo-1", isTask: true, text: "Keep", checked: false, indent: 0 },
+      { id: "todo-2", isTask: true, text: "Delete", checked: false, indent: 0 }
     ];
     todoStore.undoStack = [];
     todoStore.redoStack = [];
     vi.spyOn(todoStore, "scheduleSave").mockResolvedValue(true);
-    const deleteTask = vi.spyOn(todoStore, "deleteTask");
+    const deleteTodo = vi.spyOn(todoStore, "deleteTodo");
     try {
-      render(TasksPanel);
+      render(TodoPanel);
       const input = screen.getByDisplayValue("Delete");
       const trash = screen.getAllByRole("button", { name: "Delete todo" })[1];
       input.focus();
@@ -189,36 +189,36 @@ describe("task actions", () => {
       expect(document.activeElement).toBe(input);
       await fireEvent.click(trash);
 
-      expect(deleteTask).toHaveBeenCalledWith(1);
-      expect(todoStore.tasks.map((task) => task.id)).toEqual(["task-1"]);
+      expect(deleteTodo).toHaveBeenCalledWith(1);
+      expect(todoStore.tasks.map((todo) => todo.id)).toEqual(["todo-1"]);
     } finally {
-      todoStore.tasks = originalTasks;
+      todoStore.tasks = originalTodos;
       todoStore.undoStack = originalUndoStack;
       todoStore.redoStack = originalRedoStack;
     }
   });
 
-  it("deletes an empty task with Backspace and focuses the previous task", async () => {
+  it("deletes an empty todo with Backspace and focuses the previous todo", async () => {
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
       font: "",
       measureText: (text) => ({ width: text.length * 7 })
     });
-    const originalTasks = todoStore.tasks;
+    const originalTodos = todoStore.tasks;
     todoStore.tasks = [
-      { id: "task-1", isTask: true, text: "Previous", checked: false, indent: 0 },
-      { id: "task-2", isTask: true, text: "", checked: false, indent: 0 }
+      { id: "todo-1", isTask: true, text: "Previous", checked: false, indent: 0 },
+      { id: "todo-2", isTask: true, text: "", checked: false, indent: 0 }
     ];
-    const deleteTask = vi.spyOn(todoStore, "deleteTask").mockImplementation((index) => todoStore.tasks.splice(index, 1));
+    const deleteTodo = vi.spyOn(todoStore, "deleteTodo").mockImplementation((index) => todoStore.tasks.splice(index, 1));
     try {
-      render(TasksPanel);
+      render(TodoPanel);
       const emptyTask = screen.getAllByPlaceholderText("New todo")[1];
       emptyTask.focus();
       await fireEvent.keyDown(emptyTask, { key: "Backspace" });
 
-      expect(deleteTask).toHaveBeenCalledWith(1);
+      expect(deleteTodo).toHaveBeenCalledWith(1);
       expect(document.activeElement).toBe(screen.getByDisplayValue("Previous"));
     } finally {
-      todoStore.tasks = originalTasks;
+      todoStore.tasks = originalTodos;
     }
   });
 
@@ -330,7 +330,7 @@ describe("workspace settings and todo recovery", () => {
     workspaceStore.unavailable = false;
     workspaceStore.todoExists = false;
     todoStore.fileMissing = true;
-    render(TasksPanel);
+    render(TodoPanel);
 
     expect(screen.getByText("No todo.md found")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Create todo.md" })).toBeTruthy();

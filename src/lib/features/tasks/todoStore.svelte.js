@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { markdownToTasks, tasksToMarkdown } from "./todoParser.js";
-import { createTask } from "./todoTasks.js";
+import { createTodoItem } from "./todoItems.js";
 import { applyAction } from "./todoActions.js";
 import * as defaultFileService from "$lib/shared/services/fileService.js";
 import { PersistenceCoordinator } from "$lib/shared/persistence/persistenceCoordinator.js";
@@ -121,7 +121,7 @@ export class TodoStore {
     return content !== null;
   }
 
-  toggleTask(id) {
+  toggleTodo(id) {
     const task = this.tasks.find((item) => item.id === id);
     if (!task) return;
     this.record({ type: "toggle", id, oldChecked: task.checked, newChecked: !task.checked });
@@ -141,21 +141,21 @@ export class TodoStore {
     if (oldText !== newText) this.record({ type: "edit", id, oldText, newText });
   }
 
-  moveTaskUp(index) {
+  moveTodoUp(index) {
     if (index <= 0) return;
     this.record({ type: "move", fromIndex: index, toIndex: index - 1 });
     [this.tasks[index - 1], this.tasks[index]] = [this.tasks[index], this.tasks[index - 1]];
     void this.scheduleSave({ immediate: true });
   }
 
-  moveTaskDown(index) {
+  moveTodoDown(index) {
     if (index >= this.tasks.length - 1) return;
     this.record({ type: "move", fromIndex: index, toIndex: index + 1 });
     [this.tasks[index], this.tasks[index + 1]] = [this.tasks[index + 1], this.tasks[index]];
     void this.scheduleSave({ immediate: true });
   }
 
-  deleteTask(index) {
+  deleteTodo(index) {
     const task = this.tasks[index];
     if (!task) return;
     this.record({ type: "delete", index, task });
@@ -163,7 +163,7 @@ export class TodoStore {
     void this.scheduleSave({ immediate: true });
   }
 
-  indentTask(id) {
+  indentTodo(id) {
     const task = this.tasks.find((item) => item.id === id);
     if (!task) return;
     this.record({ type: "indent", id, oldIndent: task.indent, newIndent: task.indent + 1 });
@@ -171,7 +171,7 @@ export class TodoStore {
     void this.scheduleSave({ immediate: true });
   }
 
-  outdentTask(id) {
+  outdentTodo(id) {
     const task = this.tasks.find((item) => item.id === id);
     if (!task || task.indent <= 0) return;
     this.record({ type: "indent", id, oldIndent: task.indent, newIndent: task.indent - 1 });
@@ -179,8 +179,8 @@ export class TodoStore {
     void this.scheduleSave({ immediate: true });
   }
 
-  addTask(index, indent = 0) {
-    const task = createTask(indent);
+  addTodo(index, indent = 0) {
+    const task = createTodoItem(indent);
     const insertIndex = index === -1 ? this.tasks.length : index + 1;
     this.record({ type: "add", index: insertIndex, task });
     this.tasks.splice(insertIndex, 0, task);
