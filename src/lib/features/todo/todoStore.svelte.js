@@ -142,17 +142,21 @@ export class TodoStore {
   }
 
   moveTodoUp(index) {
-    if (index <= 0) return;
-    this.record({ type: "move", fromIndex: index, toIndex: index - 1 });
-    [this.todos[index - 1], this.todos[index]] = [this.todos[index], this.todos[index - 1]];
-    void this.scheduleSave({ immediate: true });
+    this.moveTodoTo(index, index - 1);
   }
 
   moveTodoDown(index) {
-    if (index >= this.todos.length - 1) return;
-    this.record({ type: "move", fromIndex: index, toIndex: index + 1 });
-    [this.todos[index], this.todos[index + 1]] = [this.todos[index + 1], this.todos[index]];
+    this.moveTodoTo(index, index + 1);
+  }
+
+  moveTodoTo(fromIndex, toIndex) {
+    if (fromIndex === toIndex) return false;
+    if (fromIndex < 0 || fromIndex >= this.todos.length || toIndex < 0 || toIndex >= this.todos.length) return false;
+    const [todo] = this.todos.splice(fromIndex, 1);
+    this.todos.splice(toIndex, 0, todo);
+    this.record({ type: "move_to", fromIndex, toIndex });
     void this.scheduleSave({ immediate: true });
+    return true;
   }
 
   deleteTodo(index) {

@@ -2,6 +2,7 @@
   import { tick } from "svelte";
   import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
   import { buildVisibleTodoRows, todoFoldStore } from "$lib/features/todo/todoFolding.svelte.js";
+  import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
   import { workspaceStore } from "$lib/app/workspaceStore.svelte.js";
   import TodoList from "./TodoList.svelte";
 
@@ -13,6 +14,7 @@
   /** @type {Record<string, HTMLInputElement>} */
   let inputElements = {};
   let visibleTodos = $derived(buildVisibleTodoRows(todoStore.todos, todoFoldStore.foldedTodoIds));
+  let visibleTodoRows = $derived(visibleTodos.rows.filter((row) => row.todo.isTodo));
 
   $effect(() => {
     todoFoldStore.setFoldableTodoIds(visibleTodos.foldableIds);
@@ -23,6 +25,39 @@
     return visibleTodos.rows.some((row) => row.storeIndex === index);
   }
 
+  /** @param {number} index */
+  function visiblePositionForStoreIndex(index) {
+    return visibleTodoRows.findIndex((row) => row.storeIndex === index) + 1;
+  }
+
+  /**
+   * @param {number} fromIndex
+   * @param {number} targetPosition
+   */
+  function canMoveTodoToVisiblePosition(fromIndex, targetPosition) {
+    const sourcePosition = visiblePositionForStoreIndex(fromIndex);
+    return Number.isInteger(targetPosition)
+      && sourcePosition >= 1
+      && targetPosition >= 1
+      && targetPosition <= visibleTodoRows.length
+      && targetPosition !== sourcePosition;
+  }
+
+  /**
+   * @param {number} fromIndex
+   * @param {number} targetPosition
+   */
+  async function moveTodoToVisiblePosition(fromIndex, targetPosition) {
+    if (!canMoveTodoToVisiblePosition(fromIndex, targetPosition)) return false;
+    const targetIndex = visibleTodoRows[targetPosition - 1]?.storeIndex;
+    const todoId = todoStore.todos[fromIndex]?.id;
+    if (typeof targetIndex !== "number" || !todoStore.moveTodoTo(fromIndex, targetIndex)) return false;
+    await tick();
+    focusedTodoId = todoId;
+    inputElements[todoId]?.focus();
+    return true;
+  }
+
   // Todo keyboard navigation and editing handlers
   /**
    * @param {KeyboardEvent} event
@@ -30,7 +65,14 @@
    * @param {any} todo
    */
   async function handleKeyDown(event, index, todo) {
-    if (event.key === "Backspace" && todo.text === "") {
+    if (event.altKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+      const sourcePosition = visiblePositionForStoreIndex(index);
+      const targetPosition = event.key === "ArrowUp" ? sourcePosition - 1 : sourcePosition + 1;
+      if (canMoveTodoToVisiblePosition(index, targetPosition)) {
+        event.preventDefault();
+        await moveTodoToVisiblePosition(index, targetPosition);
+      }
+    } else if (event.key === "Backspace" && todo.text === "") {
       event.preventDefault();
       let nextFocusId = "";
       for (let i = index - 1; i >= 0; i--) {
@@ -116,11 +158,14 @@
 {:else}
   <TodoList 
     rows={visibleTodos.rows}
+    showTodoNumbers={todoUiState.showTodoNumbers}
+    visiblePositionForStoreIndex={visiblePositionForStoreIndex}
     inputElements={inputElements}
     onToggleTodo={(/** @type {string} */ id) => todoStore.toggleTodo(id)}
     onUpdateText={(/** @type {string} */ id, /** @type {string} */ text) => todoStore.updateText(id, text)}
     onMoveTodoUp={(/** @type {number} */ index) => todoStore.moveTodoUp(index)}
     onMoveTodoDown={(/** @type {number} */ index) => todoStore.moveTodoDown(index)}
+    onMoveTodoToVisiblePosition={moveTodoToVisiblePosition}
     onDeleteTodo={(/** @type {number} */ index) => todoStore.deleteTodo(index)}
     onToggleFold={(/** @type {string} */ id) => todoFoldStore.toggleTodo(id)}
     onFocus={(/** @type {string} */ id, /** @type {string} */ text) => {

@@ -1,9 +1,12 @@
 <script>
+  import { tick } from "svelte";
   import { Check, ChevronDown, ChevronRight, ChevronUp, Trash2 } from "@lucide/svelte";
 
   let { 
     todo, 
     index, 
+    showNumber = false,
+    visiblePosition = 0,
     hasChildren = false,
     isFolded = false,
     inputElements, 
@@ -12,6 +15,7 @@
     onUpdateText, 
     onMoveTodoUp, 
     onMoveTodoDown, 
+    onMoveTodoToVisiblePosition,
     onDeleteTodo, 
     onFocus, 
     onBlur, 
@@ -19,6 +23,9 @@
   } = $props();
 
   let inputEl = $state();
+  let targetInputEl = $state();
+  let editingMoveTarget = $state(false);
+  let moveTargetValue = $state("");
 
 
   $effect(() => {
@@ -31,9 +38,58 @@
       }
     };
   });
+
+  async function openMoveTarget() {
+    editingMoveTarget = true;
+    moveTargetValue = String(visiblePosition);
+    await tick();
+    targetInputEl?.focus();
+    targetInputEl?.select();
+  }
+
+  async function commitMoveTarget() {
+    const targetPosition = Number(moveTargetValue);
+    editingMoveTarget = false;
+    await onMoveTodoToVisiblePosition(index, targetPosition);
+  }
 </script>
 
 <div class="todo-row" style="padding-left: {todo.indent * 16}px">
+  {#if showNumber}
+    {#if editingMoveTarget}
+      <input
+        bind:this={targetInputEl}
+        class="todo-index-input"
+        type="text"
+        inputmode="numeric"
+        value={moveTargetValue}
+        oninput={(event) => moveTargetValue = event.currentTarget.value}
+        onblur={() => editingMoveTarget = false}
+        onkeydown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            event.stopPropagation();
+            commitMoveTarget();
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            editingMoveTarget = false;
+          }
+        }}
+        aria-label="Todo target position"
+      />
+    {:else}
+      <button
+        type="button"
+        class="todo-index-btn"
+        onclick={openMoveTarget}
+        aria-label={`Move todo ${visiblePosition}`}
+        title="Move todo to position"
+      >
+        {visiblePosition}
+      </button>
+    {/if}
+  {/if}
   {#if hasChildren}
     <button
       type="button"

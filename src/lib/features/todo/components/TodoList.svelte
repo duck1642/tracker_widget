@@ -4,20 +4,25 @@
 
   let { 
     rows, 
+    showTodoNumbers = false,
+    visiblePositionForStoreIndex,
     inputElements, 
     onToggleTodo, 
     onUpdateText, 
     onMoveTodoUp, 
     onMoveTodoDown, 
+    onMoveTodoToVisiblePosition,
     onDeleteTodo, 
     onFocus, 
     onBlur, 
     onKeyDown,
     onToggleFold
   } = $props();
+
+  let numberDigits = $derived(String(Math.max(1, rows.filter((/** @type {any} */ row) => row.todo.isTodo).length)).length);
 </script>
 
-<div class="todo-list">
+<div class="todo-list" class:numbered={showTodoNumbers} style:--todo-gutter-digits={numberDigits}>
   {#each rows as row (row.todo.id)}
     {@const todo = row.todo}
     {@const index = row.storeIndex}
@@ -25,6 +30,8 @@
       <TodoRow 
         todo={todo} 
         index={index} 
+        showNumber={showTodoNumbers}
+        visiblePosition={visiblePositionForStoreIndex(index)}
         hasChildren={row.hasChildren}
         isFolded={row.isFolded}
         inputElements={inputElements}
@@ -33,6 +40,7 @@
         onUpdateText={onUpdateText}
         onMoveTodoUp={onMoveTodoUp}
         onMoveTodoDown={onMoveTodoDown}
+        onMoveTodoToVisiblePosition={onMoveTodoToVisiblePosition}
         onDeleteTodo={onDeleteTodo}
         onFocus={onFocus}
         onBlur={onBlur}

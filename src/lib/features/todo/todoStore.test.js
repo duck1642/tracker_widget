@@ -201,6 +201,32 @@ describe("TodoStore session history", () => {
     expect(store.redoStack).toHaveLength(0);
   });
 
+  it("moves one todo to an arbitrary index with one undo step", async () => {
+    const { store } = createHarness({ "A.md": "- [ ] A\n- [ ] B\n- [ ] C\n- [ ] D\n" });
+    await store.loadFile();
+
+    expect(store.moveTodoTo(0, 2)).toBe(true);
+    expect(store.todos.map((todo) => todo.text)).toEqual(["B", "C", "A", "D"]);
+    expect(store.undoStack.at(-1)).toMatchObject({ type: "move_to", fromIndex: 0, toIndex: 2 });
+
+    await store.undo();
+    expect(store.todos.map((todo) => todo.text)).toEqual(["A", "B", "C", "D"]);
+
+    await store.redo();
+    expect(store.todos.map((todo) => todo.text)).toEqual(["B", "C", "A", "D"]);
+  });
+
+  it("does not record no-op or out-of-range direct moves", async () => {
+    const { store } = createHarness({ "A.md": "- [ ] A\n- [ ] B\n" });
+    await store.loadFile();
+
+    expect(store.moveTodoTo(0, 0)).toBe(false);
+    expect(store.moveTodoTo(-1, 1)).toBe(false);
+    expect(store.moveTodoTo(0, 5)).toBe(false);
+    expect(store.todos.map((todo) => todo.text)).toEqual(["A", "B"]);
+    expect(store.undoStack).toHaveLength(0);
+  });
+
   it("reports when clear-completed has nothing to remove", async () => {
     const { store, appStore } = createHarness({ "A.md": "- [ ] Active\n" });
     await store.loadFile();

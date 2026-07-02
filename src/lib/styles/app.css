@@ -254,21 +254,79 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0;
+  position: relative;
+  --todo-gutter-width: max(34px, calc((var(--todo-gutter-digits, 2) * 7px) + 18px));
   width: 100%;
   min-width: 100%;
   padding: 7px 10px;
   box-sizing: border-box;
 }
 
+.todo-list.numbered {
+  padding-left: calc(var(--todo-gutter-width) + 10px);
+}
+
+.todo-list.numbered::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--todo-gutter-width) + 6px);
+  width: 1px;
+  background: var(--border-color);
+}
+
 .todo-row {
   display: flex;
   align-items: center;
+  position: relative;
   min-height: 26px;
   padding: 1px 3px;
   border-radius: 2px;
   min-width: 100%;
   width: 100%;
   box-sizing: border-box;
+}
+
+.todo-index-btn,
+.todo-index-input {
+  position: absolute;
+  left: calc((var(--todo-gutter-width) + 8px) * -1);
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--todo-gutter-width);
+  height: 22px;
+  box-sizing: border-box;
+  border-radius: 3px;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  z-index: 1;
+}
+
+.todo-index-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: center;
+}
+
+.todo-index-btn:hover {
+  color: var(--text-color);
+}
+
+.todo-index-input {
+  padding: 0 2px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-dark);
+  color: var(--text-color);
+  text-align: center;
+  outline: none;
+}
+
+.todo-index-input:focus {
+  border-color: var(--accent);
 }
 
 .fold-btn,

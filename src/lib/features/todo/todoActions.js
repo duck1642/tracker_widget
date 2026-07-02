@@ -1,5 +1,19 @@
 /**
  * @param {any[]} todos
+ * @param {number} fromIndex
+ * @param {number} toIndex
+ */
+function moveOne(todos, fromIndex, toIndex) {
+  if (fromIndex === toIndex) return todos;
+  if (fromIndex < 0 || fromIndex >= todos.length || toIndex < 0 || toIndex >= todos.length) return todos;
+  const updated = [...todos];
+  const [todo] = updated.splice(fromIndex, 1);
+  updated.splice(toIndex, 0, todo);
+  return updated;
+}
+
+/**
+ * @param {any[]} todos
  * @param {any} action
  * @param {boolean} isInverse
  */
@@ -37,6 +51,10 @@ export function applyAction(todos, action, isInverse) {
       updatedTodos[from] = updatedTodos[to];
       updatedTodos[to] = temp;
     }
+  } else if (action.type === "move_to") {
+    const from = isInverse ? action.toIndex : action.fromIndex;
+    const to = isInverse ? action.fromIndex : action.toIndex;
+    updatedTodos = moveOne(updatedTodos, from, to);
   } else if (action.type === "indent") {
     const todo = updatedTodos.find(t => t.id === action.id);
     if (todo) {

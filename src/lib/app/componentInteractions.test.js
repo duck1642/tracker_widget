@@ -13,6 +13,7 @@ import ObjectiveRow from "$lib/features/weekly/components/ObjectiveRow.svelte";
 import TodoPanel from "$lib/features/todo/components/TodoPanel.svelte";
 import TodoToolbar from "$lib/features/todo/components/TodoToolbar.svelte";
 import { todoFoldStore } from "$lib/features/todo/todoFolding.svelte.js";
+import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
 import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
 import { workspaceStore } from "./workspaceStore.svelte.js";
 import { appStore } from "./appStore.svelte.js";
@@ -28,6 +29,7 @@ afterEach(() => {
   todoStore.fileMissing = false;
   todoFoldStore.expandAll();
   todoFoldStore.setFoldableTodoIds([]);
+  todoUiState.showTodoNumbers = false;
 });
 
 describe("application navigation", () => {
@@ -338,6 +340,147 @@ describe("todo actions", () => {
 
       await fireEvent.click(screen.getByRole("button", { name: "Expand all todos" }));
       expect(screen.getByDisplayValue("Child")).toBeTruthy();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("toggles visible todo numbers from the toolbar and skips raw rows", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "raw-1", isTodo: false, raw: "# Notes" },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      render(TodoToolbar, {
+        undoStackLength: 0,
+        redoStackLength: 0,
+        onAddTodo: vi.fn(),
+        onUndo: vi.fn(),
+        onRedo: vi.fn(),
+        onReload: vi.fn(),
+        onClearCompleted: vi.fn()
+      });
+
+      expect(screen.queryByRole("button", { name: "Move todo 1" })).toBeNull();
+      await fireEvent.click(screen.getByRole("button", { name: "Show todo numbers" }));
+      expect(screen.getByRole("button", { name: "Move todo 1" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Move todo 2" })).toBeTruthy();
+      expect(screen.getByText("# Notes")).toBeTruthy();
+
+      await fireEvent.click(screen.getByRole("button", { name: "Hide todo numbers" }));
+      expect(screen.queryByRole("button", { name: "Move todo 1" })).toBeNull();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("moves a todo to a valid visible position from the row number input", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 },
+      { id: "todo-3", isTodo: true, text: "Third", checked: false, indent: 0 }
+    ];
+    try {
+      vi.spyOn(todoStore, "scheduleSave").mockResolvedValue(true);
+      todoUiState.showTodoNumbers = true;
+      render(TodoPanel);
+      await fireEvent.click(screen.getByRole("button", { name: "Move todo 1" }));
+      const target = screen.getByRole("textbox", { name: "Todo target position" });
+      await fireEvent.input(target, { target: { value: "3" } });
+      await fireEvent.keyDown(target, { key: "Enter" });
+
+      expect(todoStore.todos.map((todo) => todo.text)).toEqual(["Second", "Third", "First"]);
+      expect(document.activeElement).toBe(screen.getByDisplayValue("First"));
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("cancels invalid, out-of-range, same-position, blur, and Escape number edits", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 }
+    ];
+    try {
+      vi.spyOn(todoStore, "scheduleSave").mockResolvedValue(true);
+      todoUiState.showTodoNumbers = true;
+      render(TodoPanel);
+
+      await fireEvent.click(screen.getByRole("button", { name: "Move todo 1" }));
+      let target = screen.getByRole("textbox", { name: "Todo target position" });
+      await fireEvent.input(target, { target: { value: "9" } });
+      await fireEvent.keyDown(target, { key: "Enter" });
+      expect(todoStore.todos.map((todo) => todo.text)).toEqual(["First", "Second"]);
+
+      await fireEvent.click(screen.getByRole("button", { name: "Move todo 1" }));
+      target = screen.getByRole("textbox", { name: "Todo target position" });
+      await fireEvent.input(target, { target: { value: "abc" } });
+      await fireEvent.keyDown(target, { key: "Enter" });
+      expect(todoStore.todos.map((todo) => todo.text)).toEqual(["First", "Second"]);
+
+      await fireEvent.click(screen.getByRole("button", { name: "Move todo 1" }));
+      target = screen.getByRole("textbox", { name: "Todo target position" });
+      await fireEvent.keyDown(target, { key: "Escape" });
+      expect(screen.queryByRole("textbox", { name: "Todo target position" })).toBeNull();
+
+      await fireEvent.click(screen.getByRole("button", { name: "Move todo 1" }));
+      target = screen.getByRole("textbox", { name: "Todo target position" });
+      await fireEvent.blur(target);
+      expect(screen.queryByRole("textbox", { name: "Todo target position" })).toBeNull();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("maps visible number movement through folded rows and moves only the selected row", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "Parent", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Child", checked: false, indent: 1 },
+      { id: "todo-3", isTodo: true, text: "Peer", checked: false, indent: 0 }
+    ];
+    try {
+      vi.spyOn(todoStore, "scheduleSave").mockResolvedValue(true);
+      todoUiState.showTodoNumbers = true;
+      render(TodoPanel);
+      await fireEvent.click(screen.getByRole("button", { name: "Collapse todo" }));
+      expect(screen.queryByDisplayValue("Child")).toBeNull();
+
+      await fireEvent.click(screen.getByRole("button", { name: "Move todo 1" }));
+      const target = screen.getByRole("textbox", { name: "Todo target position" });
+      await fireEvent.input(target, { target: { value: "2" } });
+      await fireEvent.keyDown(target, { key: "Enter" });
+
+      expect(todoStore.todos.map((todo) => todo.text)).toEqual(["Child", "Peer", "Parent"]);
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("moves the focused todo by visible position with Alt+Arrow", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 },
+      { id: "todo-3", isTodo: true, text: "Third", checked: false, indent: 0 }
+    ];
+    try {
+      vi.spyOn(todoStore, "scheduleSave").mockResolvedValue(true);
+      render(TodoPanel);
+      const second = screen.getByDisplayValue("Second");
+      second.focus();
+      await fireEvent.keyDown(second, { key: "ArrowUp", altKey: true });
+      expect(todoStore.todos.map((todo) => todo.text)).toEqual(["Second", "First", "Third"]);
+      expect(document.activeElement).toBe(screen.getByDisplayValue("Second"));
+
+      await fireEvent.keyDown(screen.getByDisplayValue("Second"), { key: "ArrowDown", altKey: true });
+      expect(todoStore.todos.map((todo) => todo.text)).toEqual(["First", "Second", "Third"]);
+      expect(document.activeElement).toBe(screen.getByDisplayValue("Second"));
     } finally {
       todoStore.todos = originalTodos;
     }

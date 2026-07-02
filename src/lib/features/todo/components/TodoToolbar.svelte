@@ -1,6 +1,7 @@
 <script>
-  import { ChevronsDownUp, ChevronsUpDown, Plus, Undo2, Redo2, RotateCw, ListX } from "@lucide/svelte";
+  import { ChevronsDownUp, ChevronsUpDown, ListOrdered, Plus, Undo2, Redo2, RotateCw, ListX } from "@lucide/svelte";
   import { todoFoldStore } from "$lib/features/todo/todoFolding.svelte.js";
+  import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
 
   let { 
     undoStackLength = 0,
@@ -18,6 +19,14 @@
     <Plus size={13} />
   </button>
   <div class="footer-right">
+    <button
+      class="action-btn"
+      onclick={() => todoUiState.toggleTodoNumbers()}
+      aria-label={todoUiState.showTodoNumbers ? "Hide todo numbers" : "Show todo numbers"}
+      title={todoUiState.showTodoNumbers ? "Hide todo numbers" : "Show todo numbers"}
+    >
+      <ListOrdered size={13} />
+    </button>
     <button
       class="action-btn"
       onclick={() => todoFoldStore.hasCollapsedTodos ? todoFoldStore.expandAll() : todoFoldStore.collapseAll()}
