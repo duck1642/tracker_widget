@@ -8,6 +8,7 @@ import AppSidebar from "./AppSidebar.svelte";
 import SettingsPanel from "./SettingsPanel.svelte";
 import FileTree from "$lib/shared/components/FileTree.svelte";
 import ActivityRow from "$lib/features/daily/components/ActivityRow.svelte";
+import AddSessionForm from "$lib/features/daily/components/AddSessionForm.svelte";
 import PlanSection from "$lib/features/weekly/components/PlanSection.svelte";
 import ObjectiveRow from "$lib/features/weekly/components/ObjectiveRow.svelte";
 import TodoPanel from "$lib/features/todo/components/TodoPanel.svelte";
@@ -138,6 +139,43 @@ describe("logger editing", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Development" }));
     await fireEvent.input(screen.getByPlaceholderText("What session?"), { target: { value: "Review" } });
     expect(onUpdate).toHaveBeenCalledWith("plan-1", { session: "Review" });
+  });
+
+  it("shows filtered weekly session suggestions when adding a daily session", async () => {
+    const onAdd = vi.fn(() => true);
+    render(AddSessionForm, {
+      suggestions: ["Deep Work", "Long planned session name that should be visible on hover", "Review"],
+      existingSessions: ["Review"],
+      onAdd
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Add session" }));
+    expect(screen.getByRole("option", { name: "Deep Work" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Long planned session name that should be visible on hover" }).getAttribute("title")).toBe("Long planned session name that should be visible on hover");
+    expect(screen.queryByRole("option", { name: "Review" })).toBeNull();
+
+    await fireEvent.input(screen.getByPlaceholderText("Session name..."), { target: { value: "long" } });
+    expect(screen.queryByRole("option", { name: "Deep Work" })).toBeNull();
+    expect(screen.getByRole("option", { name: "Long planned session name that should be visible on hover" })).toBeTruthy();
+  });
+
+  it("preserves suggestion casing for exact typed session matches", async () => {
+    const onAdd = vi.fn(() => true);
+    render(AddSessionForm, { suggestions: ["Deep Work"], existingSessions: [], onAdd });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Add session" }));
+    await fireEvent.input(screen.getByPlaceholderText("Session name..."), { target: { value: "deep work" } });
+    await fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(onAdd).toHaveBeenCalledWith("Deep Work");
+  });
+
+  it("does not show a suggestions dropdown when no suggestions are available", async () => {
+    render(AddSessionForm, { suggestions: [], existingSessions: [], onAdd: vi.fn(() => true) });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Add session" }));
+
+    expect(screen.queryByRole("option")).toBeNull();
   });
 
   it("emits objective origin and status independently", async () => {

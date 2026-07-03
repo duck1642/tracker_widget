@@ -127,8 +127,18 @@ export class WeekStore {
     void this.save();
   }
 
-  suggestionsFor(day) {
-    return this.plan.filter((entry) => entry.day.toLowerCase() === day.toLowerCase()).map((entry) => entry.session);
+  suggestionsFor() {
+    const seen = new Set();
+    return this.plan
+      .map((entry) => entry.session.trim())
+      .filter((session) => {
+        if (!session) return false;
+        const key = session.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
   }
 
   async refreshActual(days = this.dayEntries || []) {

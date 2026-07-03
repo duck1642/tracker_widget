@@ -1,8 +1,7 @@
 <script>
   import { Plus } from "@lucide/svelte";
-  import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
 
-  let { suggestions = [], onAdd } = $props();
+  let { suggestions = [], existingSessions = [], onAdd } = $props();
   let name = $state("");
   let editing = $state(false);
   let showDropdown = $state(false);
@@ -11,11 +10,13 @@
   /** @type {HTMLInputElement | null} */
   let inputEl = $state(null);
 
-  // Filter suggestions: match text AND filter out sessions already added today
+  /** @param {string} value */
+  const normalize = (value) => value.trim().toLowerCase();
+
   let filteredSuggestions = $derived(
     suggestions.filter(s => {
-      const match = s.toLowerCase().includes(name.toLowerCase());
-      const alreadyExists = dailyStore.sessions.some(session => session.name.toLowerCase() === s.toLowerCase());
+      const match = s.toLowerCase().includes(name.trim().toLowerCase());
+      const alreadyExists = existingSessions.some(session => normalize(session) === normalize(s));
       return match && !alreadyExists;
     })
   );
@@ -33,16 +34,32 @@
     }
   });
 
+  function openEditor() {
+    editing = true;
+    showDropdown = suggestions.length > 0;
+    highlightedIndex = -1;
+  }
+
+  /** @param {string} value */
+  function submitName(value) {
+    if (onAdd(value)) {
+      name = "";
+      editing = false;
+      showDropdown = false;
+      highlightedIndex = -1;
+    }
+  }
+
+  function resolveSubmittedName() {
+    const trimmed = name.trim();
+    return filteredSuggestions.find((suggestion) => normalize(suggestion) === normalize(trimmed)) || trimmed;
+  }
+
   /** @param {SubmitEvent} event */
   function handleSubmit(event) {
     event.preventDefault();
     if (name.trim()) {
-      if (onAdd(name)) {
-        name = "";
-        editing = false;
-        showDropdown = false;
-        highlightedIndex = -1;
-      }
+      submitName(resolveSubmittedName());
     }
   }
 
@@ -81,10 +98,7 @@
     name = suggestion;
     showDropdown = false;
     highlightedIndex = -1;
-    if (onAdd(name)) {
-      name = "";
-      editing = false;
-    }
+    submitName(name);
   }
 
   function cancelEditing() {
@@ -97,7 +111,7 @@
 
 <div class="add-session-container">
   {#if !editing}
-    <button class="add-session-trigger" onclick={() => editing = true} type="button">
+    <button class="add-session-trigger" onclick={openEditor} type="button">
       <Plus size={14} /> Add session
     </button>
   {:else}
@@ -127,6 +141,7 @@
                   onclick={() => selectSuggestion(suggestion)}
                   role="option"
                   aria-selected={index === highlightedIndex}
+                  title={suggestion}
                 >
                   {suggestion}
                 </li>
@@ -246,6 +261,9 @@
     color: var(--text-muted);
     cursor: pointer;
     text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     transition: background 0.1s ease, color 0.1s ease;
   }
   .suggestion-item:hover, .suggestion-item.highlighted {

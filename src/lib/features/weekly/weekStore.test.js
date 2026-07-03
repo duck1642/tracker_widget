@@ -48,6 +48,20 @@ describe("WeekStore editing", () => {
     expect(files.get("week.md")).toContain("| Tue | Session | general | 0 |");
   });
 
+  it("returns sorted unique session suggestions from the whole week", () => {
+    const { store } = harness();
+    store.plan = [
+      { day: "Mon", session: "  Zeta  " },
+      { day: "Mon", session: "beta" },
+      { day: "Mon", session: "Alpha" },
+      { day: "Mon", session: "BETA" },
+      { day: "Mon", session: " " },
+      { day: "Tue", session: "Other day" }
+    ];
+
+    expect(store.suggestionsFor("Mon")).toEqual(["Alpha", "beta", "Other day", "Zeta"]);
+  });
+
   it("adds multiple objectives with default metadata", async () => {
     const { store } = harness();
     await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });

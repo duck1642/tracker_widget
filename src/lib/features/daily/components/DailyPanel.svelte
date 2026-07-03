@@ -10,6 +10,7 @@
   import { dayLabel } from "$lib/shared/services/logWorkspaceService.js";
   let day = $derived(dailyStore.date ? dayLabel(new Date(`${dailyStore.date}T12:00:00`)) : "");
   let suggestions = $derived(weekStore.suggestionsFor(day));
+  let existingSessions = $derived(dailyStore.sessions.map((session) => session.name));
 </script>
 
 <main class="daily-panel">
@@ -22,7 +23,7 @@
       {#each dailyStore.sessions as session (session.id)}
         <SessionCard {session} onAddActivity={() => dailyStore.addActivity(session.id)} onUpdateActivity={(activityId, patch) => dailyStore.updateActivity(session.id, activityId, patch)} onDeleteActivity={(activityId) => dailyStore.removeActivity(session.id, activityId)} onDeleteSession={() => dailyStore.removeSession(session.id)} onRenameSession={(name) => dailyStore.renameSession(session.id, name)} />
       {/each}
-      <AddSessionForm {suggestions} onAdd={(name) => dailyStore.addSession(name)} />
+      <AddSessionForm {suggestions} {existingSessions} onAdd={(name) => dailyStore.addSession(name)} />
     </section>
     <NotesEditor value={dailyStore.notesRaw} onChange={(value) => dailyStore.updateNotes(value)} />
   {/if}
