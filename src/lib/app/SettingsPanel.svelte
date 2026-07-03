@@ -1,8 +1,9 @@
 <script>
   // @ts-nocheck
-  import { Check, FolderOpen, FileText, FilePlus, Upload } from "@lucide/svelte";
+  import { Check, FolderOpen, FilePlus, RefreshCw, Upload } from "@lucide/svelte";
   import { workspaceStore } from "./workspaceStore.svelte.js";
   import { appStore } from "./appStore.svelte.js";
+  import { subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
   let { dragEnabled, autostartEnabled, onToggleDrag, onToggleAutostart } = $props();
 </script>
 
@@ -25,6 +26,13 @@
     <h3>Window</h3>
     <button class="toggle-row" onclick={onToggleDrag}><span class:checked={dragEnabled} class="checkbox">{#if dragEnabled}<Check size={11} />{/if}</span>Window dragging</button>
     <button class="toggle-row" onclick={onToggleAutostart}><span class:checked={autostartEnabled} class="checkbox">{#if autostartEnabled}<Check size={11} />{/if}</span>Start on boot</button>
+  </section>
+  <section>
+    <h3>Subject history</h3>
+    <span class="field-label">{subjectHistoryStore.suggestions.length} {subjectHistoryStore.suggestions.length === 1 ? "subject" : "subjects"}</span>
+    <button onclick={() => subjectHistoryStore.rebuild(appStore.logsRootPath)} disabled={subjectHistoryStore.rebuilding}>
+      <RefreshCw size={14} /> {subjectHistoryStore.rebuilding ? "Rebuilding..." : "Rebuild subject history"}
+    </button>
   </section>
 </div>
 

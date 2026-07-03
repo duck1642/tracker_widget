@@ -6,6 +6,7 @@
   import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
   import { appStore } from "./appStore.svelte.js";
   import { workspaceStore } from "./workspaceStore.svelte.js";
+  import { subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
   import { persistenceRegistry } from "./persistenceRegistry.js";
   import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
   import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
@@ -133,6 +134,7 @@
       });
       await appStore.loadConfig();
       await workspaceStore.refresh();
+      await subjectHistoryStore.load(appStore.logsRootPath);
       if (appStore.filePath) await todoStore.loadFile();
       unlistenClose = await appWindow.onCloseRequested(async (event) => {
         event.preventDefault();

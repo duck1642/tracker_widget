@@ -36,8 +36,8 @@
     </button>
   </div>
   <div class="row-bottom">
-    <SubjectInput subjects={activity.subjects} onChange={(subjects) => onUpdate({ subjects })} variant="badge" />
     <TimeInput minutes={activity.minutes} onChange={(minutes) => onUpdate({ minutes })} variant="badge" />
+    <SubjectInput subjects={activity.subjects} onChange={(subjects) => onUpdate({ subjects })} variant="badge" />
   </div>
 </article>
 

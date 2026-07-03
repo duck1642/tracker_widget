@@ -8,6 +8,7 @@ import AppSidebar from "./AppSidebar.svelte";
 import SettingsPanel from "./SettingsPanel.svelte";
 import FileTree from "$lib/shared/components/FileTree.svelte";
 import ActivityRow from "$lib/features/daily/components/ActivityRow.svelte";
+import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
 import AddSessionForm from "$lib/features/daily/components/AddSessionForm.svelte";
 import PlanSection from "$lib/features/weekly/components/PlanSection.svelte";
 import ObjectiveRow from "$lib/features/weekly/components/ObjectiveRow.svelte";
@@ -20,6 +21,7 @@ import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
 import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
 import { workspaceStore } from "./workspaceStore.svelte.js";
 import { appStore } from "./appStore.svelte.js";
+import { subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
 import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
 
 afterEach(() => {
@@ -35,6 +37,9 @@ afterEach(() => {
   dailyStore.sessions = [];
   weekStore.path = "";
   weekStore.objectives = [];
+  subjectHistoryStore.history = { subjects: {} };
+  subjectHistoryStore.loaded = false;
+  subjectHistoryStore.rebuilding = false;
   todoFoldStore.expandAll();
   todoFoldStore.setFoldableTodoIds([]);
   todoUiState.showTodoNumbers = false;
@@ -108,6 +113,120 @@ describe("window controls", () => {
 });
 
 describe("logger editing", () => {
+  it("renders and edits subjects as individual pills", async () => {
+    const onChange = vi.fn();
+    render(SubjectInput, { subjects: ["rust", "programming"], onChange, variant: "badge" });
+
+    expect(screen.getByRole("button", { name: "rust" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "programming" })).toBeTruthy();
+
+    const addInput = screen.getByRole("textbox", { name: "Add subject" });
+    await fireEvent.input(addInput, { target: { value: "testing" } });
+    await fireEvent.keyDown(addInput, { key: "Enter" });
+    expect(onChange).toHaveBeenCalledWith(["rust", "programming", "testing"]);
+
+    await fireEvent.click(screen.getByRole("button", { name: "rust" }));
+    const editInput = screen.getByRole("textbox", { name: "Edit subject rust" });
+    await fireEvent.input(editInput, { target: { value: "backend" } });
+    await fireEvent.keyDown(editInput, { key: "Enter" });
+    expect(onChange).toHaveBeenCalledWith(["backend", "programming"]);
+  });
+
+  it("commits subject additions with comma and Tab", async () => {
+    const onChange = vi.fn();
+    render(SubjectInput, { subjects: ["rust"], onChange, variant: "badge" });
+    const addInput = screen.getByRole("textbox", { name: "Add subject" });
+
+    await fireEvent.input(addInput, { target: { value: "cli" } });
+    await fireEvent.keyDown(addInput, { key: "," });
+    expect(onChange).toHaveBeenCalledWith(["rust", "cli"]);
+
+    await fireEvent.input(addInput, { target: { value: "web" } });
+    await fireEvent.keyDown(addInput, { key: "Tab" });
+    expect(onChange).toHaveBeenCalledWith(["rust", "web"]);
+  });
+
+  it("rejects invalid and duplicate subject additions", async () => {
+    const onChange = vi.fn();
+    render(SubjectInput, { subjects: ["rust"], onChange, variant: "badge" });
+    const addInput = screen.getByRole("textbox", { name: "Add subject" });
+
+    await fireEvent.input(addInput, { target: { value: "bad subject" } });
+    await fireEvent.keyDown(addInput, { key: "Enter" });
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByText("Invalid or duplicate subject")).toBeTruthy();
+
+    await fireEvent.input(addInput, { target: { value: "RUST" } });
+    await fireEvent.keyDown(addInput, { key: "Enter" });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("removes subjects but prevents empty subject lists", async () => {
+    const onChange = vi.fn();
+    render(SubjectInput, { subjects: ["rust", "test"], onChange, variant: "badge" });
+    await fireEvent.click(screen.getByRole("button", { name: "Remove test" }));
+    expect(onChange).toHaveBeenCalledWith(["rust"]);
+
+    cleanup();
+    const singleChange = vi.fn();
+    render(SubjectInput, { subjects: ["rust"], onChange: singleChange, variant: "badge" });
+    expect(screen.queryByRole("button", { name: "Remove rust" })).toBeNull();
+    const addInput = screen.getByRole("textbox", { name: "Add subject" });
+    await fireEvent.keyDown(addInput, { key: "Backspace" });
+    expect(singleChange).not.toHaveBeenCalled();
+  });
+
+  it("removes the previous subject with Backspace on an empty add input", async () => {
+    const onChange = vi.fn();
+    render(SubjectInput, { subjects: ["rust", "test"], onChange, variant: "badge" });
+    const addInput = screen.getByRole("textbox", { name: "Add subject" });
+
+    await fireEvent.keyDown(addInput, { key: "Backspace" });
+
+    expect(onChange).toHaveBeenCalledWith(["rust"]);
+  });
+
+  it("cancels subject add and edit input with Escape", async () => {
+    const onChange = vi.fn();
+    render(SubjectInput, { subjects: ["rust", "test"], onChange, variant: "badge" });
+    const addInput = screen.getByRole("textbox", { name: "Add subject" });
+
+    await fireEvent.input(addInput, { target: { value: "cli" } });
+    await fireEvent.keyDown(addInput, { key: "Escape" });
+    expect(addInput.value).toBe("");
+    expect(onChange).not.toHaveBeenCalled();
+
+    await fireEvent.click(screen.getByRole("button", { name: "rust" }));
+    await fireEvent.keyDown(screen.getByRole("textbox", { name: "Edit subject rust" }), { key: "Escape" });
+    expect(screen.queryByRole("textbox", { name: "Edit subject rust" })).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("suggests subjects while adding and editing pills", async () => {
+    subjectHistoryStore.history = {
+      subjects: {
+        rust: { count: 4, last_used: "2026-07-03T00:00:00.000Z" },
+        backend: { count: 2, last_used: "2026-07-02T00:00:00.000Z" },
+        frontend: { count: 1, last_used: "2026-07-01T00:00:00.000Z" }
+      }
+    };
+    const record = vi.spyOn(subjectHistoryStore, "record").mockResolvedValue(true);
+    const onChange = vi.fn();
+    render(SubjectInput, { subjects: ["rust"], onChange, variant: "badge" });
+
+    const addInput = screen.getByRole("textbox", { name: "Add subject" });
+    await fireEvent.focus(addInput);
+    expect(screen.queryByRole("option", { name: "rust" })).toBeNull();
+    expect(screen.getByRole("option", { name: "backend" })).toBeTruthy();
+
+    await fireEvent.input(addInput, { target: { value: "front" } });
+    expect(screen.queryByRole("option", { name: "backend" })).toBeNull();
+    await fireEvent.click(screen.getByRole("option", { name: "frontend" }));
+
+    expect(onChange).toHaveBeenCalledWith(["rust", "frontend"]);
+    expect(record).toHaveBeenCalledWith(["frontend"]);
+  });
+
   it("emits Daily activity edits", async () => {
     const onUpdate = vi.fn();
     render(ActivityRow, { activity: { subjects: ["rust"], minutes: 20, description: "Old" }, onUpdate, onDelete: vi.fn() });
@@ -122,6 +241,10 @@ describe("logger editing", () => {
 
     expect(onUpdate).toHaveBeenCalledWith({ minutes: 45 });
     expect(onUpdate).toHaveBeenCalledWith({ description: "New description" });
+
+    await fireEvent.input(screen.getByRole("textbox", { name: "Add subject" }), { target: { value: "daily" } });
+    await fireEvent.keyDown(screen.getByRole("textbox", { name: "Add subject" }), { key: "Enter" });
+    expect(onUpdate).toHaveBeenCalledWith({ subjects: ["rust", "daily"] });
   });
 
   it("renders a zero-minute default when TimeInput has no minutes prop", async () => {
@@ -139,6 +262,10 @@ describe("logger editing", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Development" }));
     await fireEvent.input(screen.getByPlaceholderText("What session?"), { target: { value: "Review" } });
     expect(onUpdate).toHaveBeenCalledWith("plan-1", { session: "Review" });
+
+    await fireEvent.input(screen.getByRole("textbox", { name: "Add subject" }), { target: { value: "planning" } });
+    await fireEvent.keyDown(screen.getByRole("textbox", { name: "Add subject" }), { key: "Enter" });
+    expect(onUpdate).toHaveBeenCalledWith("plan-1", { subjects: ["rust", "planning"] });
   });
 
   it("shows filtered weekly session suggestions when adding a daily session", async () => {
@@ -193,6 +320,10 @@ describe("logger editing", () => {
 
     expect(onUpdate).toHaveBeenCalledWith({ origin: "unplanned" });
     expect(onUpdate).toHaveBeenCalledWith({ status: "partial" });
+
+    await fireEvent.input(screen.getByRole("textbox", { name: "Add subject" }), { target: { value: "weekly" } });
+    await fireEvent.keyDown(screen.getByRole("textbox", { name: "Add subject" }), { key: "Enter" });
+    expect(onUpdate).toHaveBeenCalledWith({ subjects: ["rust", "weekly"] });
   });
 });
 
@@ -1140,6 +1271,19 @@ describe("workspace settings and todo recovery", () => {
     expect(screen.getByTitle("C:\\Tracker")).toBeTruthy();
     expect(screen.getByTitle("C:\\Tracker\\todo.md")).toBeTruthy();
     expect(screen.getByText("Missing")).toBeTruthy();
+  });
+
+  it("rebuilds subject history from settings", async () => {
+    appStore.logsRootPath = "C:\\Tracker";
+    subjectHistoryStore.history = { subjects: { rust: { count: 1, last_used: "now" } } };
+    const rebuild = vi.spyOn(subjectHistoryStore, "rebuild").mockResolvedValue(true);
+    render(SettingsPanel, { dragEnabled: true, autostartEnabled: false, onToggleDrag: vi.fn(), onToggleAutostart: vi.fn() });
+
+    expect(screen.getByText("Subject history")).toBeTruthy();
+    expect(screen.getByText("1 subject")).toBeTruthy();
+    await fireEvent.click(screen.getByRole("button", { name: /Rebuild subject history/ }));
+
+    expect(rebuild).toHaveBeenCalledWith("C:\\Tracker");
   });
 
   it("offers create and import when workspace todo is missing", () => {

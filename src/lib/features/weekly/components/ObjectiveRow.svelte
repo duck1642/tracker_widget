@@ -63,8 +63,6 @@
     </button>
   </div>
   <div class="row-bottom">
-    <SubjectInput subjects={objective.subjects} onChange={(subjects) => onUpdate({ subjects })} variant="badge" />
-
     <button type="button" class="origin-badge" onclick={toggleOrigin}>
       {objective.origin === "planned" ? "Planned" : "Unplanned"}
     </button>
@@ -98,6 +96,8 @@
         </div>
       {/if}
     </div>
+
+    <SubjectInput subjects={objective.subjects} onChange={(subjects) => onUpdate({ subjects })} variant="badge" />
   </div>
 </article>
 

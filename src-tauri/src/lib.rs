@@ -2,6 +2,9 @@ mod commands;
 
 use commands::config::{read_config, write_config};
 use commands::fs::{get_file_modified_time, read_file, write_file};
+use commands::subject_history::{
+    read_subject_history, rebuild_subject_history, record_subjects,
+};
 use commands::window::{exit_app, set_always_on_top};
 use commands::workspace::{
     create_log_week, create_workspace_todo, import_workspace_todo, list_log_tree, path_exists,
@@ -91,6 +94,9 @@ pub fn run() {
             exit_app,
             read_config,
             write_config,
+            read_subject_history,
+            rebuild_subject_history,
+            record_subjects,
             path_exists,
             list_log_tree,
             create_log_week,

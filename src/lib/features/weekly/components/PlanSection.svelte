@@ -54,13 +54,13 @@
               </div>
 
               <div class="card-field">
-                <span>Subjects</span>
-                <SubjectInput subjects={entry.subjects} onChange={(subjects) => onUpdate(entry.id, { subjects })} variant="badge" />
+                <span>Time</span>
+                <TimeInput minutes={entry.targetMinutes} onChange={(targetMinutes) => onUpdate(entry.id, { targetMinutes })} variant="badge" />
               </div>
 
               <div class="card-field">
-                <span>Time</span>
-                <TimeInput minutes={entry.targetMinutes} onChange={(targetMinutes) => onUpdate(entry.id, { targetMinutes })} variant="badge" />
+                <span>Subjects</span>
+                <SubjectInput subjects={entry.subjects} onChange={(subjects) => onUpdate(entry.id, { subjects })} variant="badge" />
               </div>
             </article>
           {/each}
@@ -83,7 +83,7 @@
     display: grid;
     grid-template-columns: repeat(7, minmax(136px, 1fr));
     gap: 8px;
-    overflow-x: hidden;
+    overflow: visible;
     padding-bottom: 2px;
   }
 
@@ -95,7 +95,7 @@
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     background: var(--surface);
-    overflow: hidden;
+    overflow: visible;
   }
 
   .day-header {
