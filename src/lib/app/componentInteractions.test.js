@@ -543,6 +543,23 @@ describe("todo actions", () => {
     }
   });
 
+  it("uses a normal clicked todo as the Shift+click range anchor", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 },
+      { id: "todo-3", isTodo: true, text: "Third", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First"));
+      await fireEvent.pointerDown(screen.getByDisplayValue("Third"), { shiftKey: true });
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-1", "todo-2", "todo-3"]);
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
   it("makes inputs readonly while selection exists and clears on plain row click", async () => {
     const originalTodos = todoStore.todos;
     todoStore.todos = [
@@ -618,6 +635,140 @@ describe("todo actions", () => {
     } finally {
       todoStore.todos = originalTodos;
     }
+  });
+
+  it("opens the todo context menu for selected rows and keeps selection", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First"), { ctrlKey: true });
+      await fireEvent.pointerDown(screen.getByDisplayValue("Second"), { ctrlKey: true });
+      await fireEvent.pointerDown(screen.getByDisplayValue("First"), { button: 2 });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First"), { clientX: 10, clientY: 12 });
+
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-1", "todo-2"]);
+      expect(screen.getByRole("menu", { name: "Todo selection actions" })).toBeTruthy();
+      expect(screen.getByText("2 selected")).toBeTruthy();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("right-clicking an unselected todo replaces selection before opening the context menu", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("Second"), { clientX: 10, clientY: 12 });
+
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-2"]);
+      expect(screen.getByText("1 selected")).toBeTruthy();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("right-clicking raw or blank todo space clears selection without opening the context menu", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "raw-1", isTodo: false, raw: "# Notes" }
+    ];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByText("# Notes"));
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+      expect(screen.queryByRole("menu", { name: "Todo selection actions" })).toBeNull();
+
+      await fireEvent.pointerDown(screen.getByDisplayValue("First"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First"), { clientX: 10, clientY: 12 });
+      expect(screen.getByRole("menu", { name: "Todo selection actions" })).toBeTruthy();
+      await fireEvent.contextMenu(screen.getByDisplayValue("First").closest(".todo-list"));
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+      expect(screen.queryByRole("menu", { name: "Todo selection actions" })).toBeNull();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("deletes selected todos from the context menu and clears selection", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 },
+      { id: "todo-3", isTodo: true, text: "Third", checked: false, indent: 0 }
+    ];
+    const deleteTodosByIds = vi.spyOn(todoStore, "deleteTodosByIds");
+    try {
+      vi.spyOn(todoStore, "scheduleSave").mockResolvedValue(true);
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First"), { ctrlKey: true });
+      await fireEvent.pointerDown(screen.getByDisplayValue("Second"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Delete selected/ }));
+
+      expect(deleteTodosByIds).toHaveBeenCalledWith(["todo-1", "todo-2"]);
+      expect(todoStore.todos.map((todo) => todo.id)).toEqual(["todo-3"]);
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+      expect(screen.queryByRole("menu", { name: "Todo selection actions" })).toBeNull();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("clears selection from the context menu and closes it on outside click or Escape", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First"), { clientX: 10, clientY: 12 });
+      await fireEvent.pointerDown(document.body);
+      expect(screen.queryByRole("menu", { name: "Todo selection actions" })).toBeNull();
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-1"]);
+
+      await fireEvent.contextMenu(screen.getByDisplayValue("First"), { clientX: 10, clientY: 12 });
+      await fireEvent.keyDown(window, { key: "Escape" });
+      expect(screen.queryByRole("menu", { name: "Todo selection actions" })).toBeNull();
+
+      await fireEvent.contextMenu(screen.getByDisplayValue("First"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Clear selection/ }));
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+      expect(screen.queryByRole("menu", { name: "Todo selection actions" })).toBeNull();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("renders selected count through the header status text", () => {
+    render(AppHeader, {
+      dragEnabled: true,
+      layerMode: "normal",
+      statusMessage: "2 selected",
+      title: "Todo",
+      showModeMenu: false,
+      onToggleSidebar: vi.fn(),
+      onToggleModeMenu: vi.fn(),
+      onSelectMode: vi.fn(),
+      onToggleSettings: vi.fn(),
+      onShrinkApp: vi.fn(),
+      onMaximizeApp: vi.fn(),
+      onCloseApp: vi.fn()
+    });
+
+    expect(screen.getByText("Todo - 2 selected")).toBeTruthy();
   });
 
 });

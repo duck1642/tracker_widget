@@ -167,6 +167,20 @@ export class TodoStore {
     void this.scheduleSave({ immediate: true });
   }
 
+  deleteTodosByIds(ids) {
+    const idsToDelete = new Set(ids);
+    const deletedTodos = this.todos
+      .map((todo, index) => ({ todo, index }))
+      .filter(({ todo }) => todo.isTodo && idsToDelete.has(todo.id));
+    if (!deletedTodos.length) return false;
+    const deletedIds = new Set(deletedTodos.map(({ todo }) => todo.id));
+    this.record({ type: "delete_many", deletedTodos });
+    this.todos = this.todos.filter((todo) => !deletedIds.has(todo.id));
+    void this.scheduleSave({ immediate: true });
+    this.appStore.showStatus(`Deleted ${deletedTodos.length} ${deletedTodos.length === 1 ? "todo" : "todos"}`);
+    return true;
+  }
+
   indentTodo(id) {
     const todo = this.todos.find((item) => item.id === id);
     if (!todo) return;

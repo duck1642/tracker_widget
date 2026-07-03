@@ -60,7 +60,7 @@ export function applyAction(todos, action, isInverse) {
     if (todo) {
       todo.indent = isInverse ? action.oldIndent : action.newIndent;
     }
-  } else if (action.type === "clear_completed") {
+  } else if (action.type === "delete_many" || action.type === "clear_completed") {
     if (isInverse) {
       // Restore in ascending order of original index
       const sorted = [...action.deletedTodos].sort((a, b) => a.index - b.index);

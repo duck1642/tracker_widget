@@ -5,8 +5,11 @@
   import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
   import { workspaceStore } from "$lib/app/workspaceStore.svelte.js";
   import TodoList from "./TodoList.svelte";
+  import TodoContextMenu from "./TodoContextMenu.svelte";
 
   let focusedTodoId = $state("");
+  /** @type {{ x: number, y: number } | null} */
+  let contextMenu = $state(null);
   /** @type {Record<string, string>} */
   let originalTexts = {};
 
@@ -23,6 +26,10 @@
 
   $effect(() => {
     todoUiState.pruneSelection(todoStore.todos.filter((todo) => todo.isTodo).map((todo) => todo.id));
+  });
+
+  $effect(() => {
+    if (!todoUiState.hasSelection) closeContextMenu();
   });
 
   /** @param {number} index */
@@ -75,14 +82,61 @@
     }
   }
 
+  /** @param {string} id */
+  function setSelectionAnchor(id) {
+    todoUiState.setAnchor(id);
+  }
+
   function clearSelection() {
     todoUiState.clearSelection();
+    closeContextMenu();
   }
 
   /** @param {string} id */
   function toggleFold(id) {
-    todoUiState.clearSelection();
+    clearSelection();
     todoFoldStore.toggleTodo(id);
+  }
+
+  function closeContextMenu() {
+    contextMenu = null;
+  }
+
+  /**
+   * @param {MouseEvent} event
+   * @param {string} id
+   */
+  function openContextMenu(event, id) {
+    event.preventDefault();
+    if (!todoUiState.isSelected(id)) {
+      todoUiState.setSelection([id], id);
+    }
+    contextMenu = { x: event.clientX, y: event.clientY };
+  }
+
+  function handleClearSelectionFromMenu() {
+    clearSelection();
+  }
+
+  function handleDeleteSelected() {
+    if (todoStore.deleteTodosByIds(todoUiState.selectedTodoIds)) {
+      clearSelection();
+    } else {
+      closeContextMenu();
+    }
+  }
+
+  /** @param {MouseEvent} event */
+  function handleRawContextMenu(event) {
+    event.preventDefault();
+    clearSelection();
+  }
+
+  /** @param {MouseEvent} event */
+  function handleBlankContextMenu(event) {
+    if (event.target !== event.currentTarget) return;
+    event.preventDefault();
+    clearSelection();
   }
 
   // Todo keyboard navigation and editing handlers
@@ -161,6 +215,11 @@
         }
       }
     } else if (event.key === "Escape") {
+      if (contextMenu) {
+        event.preventDefault();
+        closeContextMenu();
+        return;
+      }
       if (todoUiState.hasSelection) {
         event.preventDefault();
         todoUiState.clearSelection();
@@ -203,7 +262,11 @@
     onDeleteTodo={(/** @type {number} */ index) => todoStore.deleteTodo(index)}
     onToggleFold={toggleFold}
     onSelectTodo={handleSelectTodo}
+    onSetSelectionAnchor={setSelectionAnchor}
     onClearSelection={clearSelection}
+    onOpenContextMenu={openContextMenu}
+    onRawContextMenu={handleRawContextMenu}
+    onBlankContextMenu={handleBlankContextMenu}
     onFocus={(/** @type {string} */ id, /** @type {string} */ text) => {
       focusedTodoId = id;
       originalTexts[id] = text;
@@ -221,7 +284,32 @@
     }}
     onKeyDown={handleKeyDown}
   />
+  {#if contextMenu}
+    <TodoContextMenu
+      x={contextMenu.x}
+      y={contextMenu.y}
+      selectedCount={todoUiState.selectedTodoIds.length}
+      onDeleteSelected={handleDeleteSelected}
+      onClearSelection={handleClearSelectionFromMenu}
+    />
+  {/if}
 {/if}
+
+<svelte:window
+  onpointerdown={(event) => {
+    if (!contextMenu) return;
+    if (event.target instanceof Element && event.target.closest(".todo-context-menu")) return;
+    closeContextMenu();
+  }}
+  onkeydown={(event) => {
+    if (contextMenu && event.key === "Escape") {
+      event.preventDefault();
+      closeContextMenu();
+    }
+  }}
+  onscrollcapture={() => closeContextMenu()}
+  onwheel={() => closeContextMenu()}
+/>
 
 <style>
   .empty button {

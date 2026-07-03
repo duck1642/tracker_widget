@@ -26,6 +26,10 @@ class TodoUiState {
     this.selectionAnchorId = anchorId;
   }
 
+  setAnchor(id) {
+    this.selectionAnchorId = id;
+  }
+
   toggleSelection(id) {
     this.selectedTodoIds = this.isSelected(id)
       ? this.selectedTodoIds.filter((item) => item !== id)

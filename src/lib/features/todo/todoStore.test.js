@@ -227,6 +227,31 @@ describe("TodoStore session history", () => {
     expect(store.undoStack).toHaveLength(0);
   });
 
+  it("deletes multiple todos by id with one undo step and ignores raw or missing ids", async () => {
+    const { store } = createHarness({ "A.md": "- [ ] A\n# Notes\n- [ ] B\n- [ ] C\n" });
+    await store.loadFile();
+    const rawId = store.todos.find((todo) => !todo.isTodo).id;
+    const ids = [store.todos[0].id, rawId, store.todos[2].id, "missing"];
+
+    expect(store.deleteTodosByIds(ids)).toBe(true);
+    expect(store.todos.map((todo) => todo.text || todo.raw)).toEqual(["# Notes", "C"]);
+    expect(store.undoStack.at(-1)).toMatchObject({ type: "delete_many" });
+
+    await store.undo();
+    expect(store.todos.map((todo) => todo.text || todo.raw)).toEqual(["A", "# Notes", "B", "C"]);
+
+    await store.redo();
+    expect(store.todos.map((todo) => todo.text || todo.raw)).toEqual(["# Notes", "C"]);
+  });
+
+  it("does not record empty bulk deletes", async () => {
+    const { store } = createHarness({ "A.md": "# Notes\n" });
+    await store.loadFile();
+
+    expect(store.deleteTodosByIds(["missing", store.todos[0].id])).toBe(false);
+    expect(store.undoStack).toHaveLength(0);
+  });
+
   it("reports when clear-completed has nothing to remove", async () => {
     const { store, appStore } = createHarness({ "A.md": "- [ ] Active\n" });
     await store.loadFile();

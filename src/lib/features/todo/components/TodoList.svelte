@@ -20,7 +20,11 @@
     onKeyDown,
     onToggleFold,
     onSelectTodo,
-    onClearSelection
+    onSetSelectionAnchor,
+    onClearSelection,
+    onOpenContextMenu,
+    onRawContextMenu,
+    onBlankContextMenu
   } = $props();
 
   let numberDigits = $derived(String(Math.max(1, rows.filter((/** @type {any} */ row) => row.todo.isTodo).length)).length);
@@ -34,6 +38,7 @@
   onpointerdown={(event) => {
     if (event.target === event.currentTarget) onClearSelection();
   }}
+  oncontextmenu={onBlankContextMenu}
 >
   {#each rows as row (row.todo.id)}
     {@const todo = row.todo}
@@ -60,7 +65,9 @@
         onBlur={onBlur}
         onKeyDown={onKeyDown}
         onSelectTodo={onSelectTodo}
+        onSetSelectionAnchor={onSetSelectionAnchor}
         onClearSelection={onClearSelection}
+        onOpenContextMenu={onOpenContextMenu}
       />
     {:else}
       {#if todo.raw.trim().length > 0}
@@ -68,6 +75,7 @@
           rawLine={todo} 
           index={index} 
           onDeleteTodo={onDeleteTodo} 
+          onRawContextMenu={onRawContextMenu}
         />
       {/if}
     {/if}

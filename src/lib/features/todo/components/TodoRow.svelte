@@ -23,7 +23,9 @@
     onBlur, 
     onKeyDown,
     onSelectTodo,
-    onClearSelection
+    onSetSelectionAnchor,
+    onClearSelection,
+    onOpenContextMenu
   } = $props();
 
   let inputEl = $state();
@@ -64,6 +66,7 @@
 
   /** @param {PointerEvent} event */
   function handleRowPointerDown(event) {
+    if (event.button === 2) return;
     if (isSelectionIgnoredTarget(event.target)) return;
     if (event.ctrlKey || event.shiftKey) {
       event.preventDefault();
@@ -71,11 +74,21 @@
       onSelectTodo(event, todo.id);
     } else if (selectionActive) {
       onClearSelection();
+      onSetSelectionAnchor(todo.id);
+    } else {
+      onSetSelectionAnchor(todo.id);
     }
   }
 </script>
 
-<div class="todo-row" class:selected={selected} style="padding-left: {todo.indent * 16}px" onpointerdown={handleRowPointerDown} role="listitem">
+<div
+  class="todo-row"
+  class:selected={selected}
+  style="padding-left: {todo.indent * 16}px"
+  onpointerdown={handleRowPointerDown}
+  oncontextmenu={(event) => onOpenContextMenu(event, todo.id)}
+  role="listitem"
+>
   {#if showNumber}
     {#if editingMoveTarget}
       <input
