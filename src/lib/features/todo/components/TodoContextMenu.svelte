@@ -1,5 +1,5 @@
 <script>
-  import { CheckSquare2, Square, Trash2, X } from "@lucide/svelte";
+  import { CheckSquare2, IndentDecrease, IndentIncrease, Square, Trash2, X } from "@lucide/svelte";
   import { clampContextMenuPosition } from "$lib/features/todo/todoContextMenuPosition.js";
 
   let {
@@ -8,6 +8,8 @@
     selectedCount = 0,
     onCheckSelected,
     onUncheckSelected,
+    onIndentSelected,
+    onOutdentSelected,
     onDeleteSelected,
     onClearSelection
   } = $props();
@@ -49,6 +51,14 @@
   <button type="button" role="menuitem" onclick={onUncheckSelected}>
     <Square size={13} />
     <span>Uncheck selected</span>
+  </button>
+  <button type="button" role="menuitem" onclick={onIndentSelected}>
+    <IndentIncrease size={13} />
+    <span>Indent selected</span>
+  </button>
+  <button type="button" role="menuitem" onclick={onOutdentSelected}>
+    <IndentDecrease size={13} />
+    <span>Outdent selected</span>
   </button>
   <button type="button" role="menuitem" onclick={onDeleteSelected}>
     <Trash2 size={13} />

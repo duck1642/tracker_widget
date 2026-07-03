@@ -295,6 +295,35 @@ describe("TodoStore session history", () => {
     expect(store.undoStack).toHaveLength(1);
   });
 
+  it("shifts selected todo indents by one level with mixed-state undo and redo", async () => {
+    const { store } = createHarness({ "A.md": "- [ ] A\n  - [ ] B\n# Notes\n    - [ ] C\n" });
+    await store.loadFile();
+    const ids = [store.todos[0].id, store.todos[1].id, store.todos[2].id, store.todos[3].id, "missing"];
+
+    expect(store.shiftTodosIndentByIds(ids, 1)).toBe(true);
+    expect(store.todos.map((todo) => todo.indent)).toEqual([1, 2, undefined, 3]);
+    expect(store.undoStack.at(-1)).toMatchObject({ type: "shift_indent_many" });
+
+    await store.undo();
+    expect(store.todos.map((todo) => todo.indent)).toEqual([0, 1, undefined, 2]);
+
+    await store.redo();
+    expect(store.todos.map((todo) => todo.indent)).toEqual([1, 2, undefined, 3]);
+  });
+
+  it("outdents selected todos with a zero floor and skips no-op outdents", async () => {
+    const { store } = createHarness({ "A.md": "- [ ] A\n  - [ ] B\n" });
+    await store.loadFile();
+    const ids = store.todos.map((todo) => todo.id);
+
+    expect(store.shiftTodosIndentByIds(ids, -1)).toBe(true);
+    expect(store.todos.map((todo) => todo.indent)).toEqual([0, 0]);
+    expect(store.undoStack).toHaveLength(1);
+
+    expect(store.shiftTodosIndentByIds(ids, -1)).toBe(false);
+    expect(store.undoStack).toHaveLength(1);
+  });
+
   it("reports when clear-completed has nothing to remove", async () => {
     const { store, appStore } = createHarness({ "A.md": "- [ ] Active\n" });
     await store.loadFile();

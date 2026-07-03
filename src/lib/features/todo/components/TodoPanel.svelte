@@ -124,6 +124,12 @@
     closeContextMenu();
   }
 
+  /** @param {number} delta */
+  function handleShiftSelectedIndent(delta) {
+    todoStore.shiftTodosIndentByIds(todoUiState.selectedTodoIds, delta);
+    closeContextMenu();
+  }
+
   function handleDeleteSelected() {
     if (todoStore.deleteTodosByIds(todoUiState.selectedTodoIds)) {
       clearSelection();
@@ -297,6 +303,8 @@
       selectedCount={todoUiState.selectedTodoIds.length}
       onCheckSelected={() => handleSetSelectedChecked(true)}
       onUncheckSelected={() => handleSetSelectedChecked(false)}
+      onIndentSelected={() => handleShiftSelectedIndent(1)}
+      onOutdentSelected={() => handleShiftSelectedIndent(-1)}
       onDeleteSelected={handleDeleteSelected}
       onClearSelection={handleClearSelectionFromMenu}
     />

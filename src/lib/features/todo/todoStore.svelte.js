@@ -213,6 +213,23 @@ export class TodoStore {
     void this.scheduleSave({ immediate: true });
   }
 
+  shiftTodosIndentByIds(ids, delta) {
+    const selectedIds = new Set(ids);
+    const changedTodos = this.todos
+      .filter((todo) => todo.isTodo && selectedIds.has(todo.id))
+      .map((todo) => ({ id: todo.id, oldIndent: todo.indent, newIndent: Math.max(0, todo.indent + delta) }))
+      .filter((todo) => todo.oldIndent !== todo.newIndent);
+    if (!changedTodos.length) return false;
+    this.record({ type: "shift_indent_many", todos: changedTodos });
+    const nextIndents = new Map(changedTodos.map((todo) => [todo.id, todo.newIndent]));
+    for (const todo of this.todos) {
+      if (nextIndents.has(todo.id)) todo.indent = nextIndents.get(todo.id);
+    }
+    void this.scheduleSave({ immediate: true });
+    this.appStore.showStatus(`${delta > 0 ? "Indented" : "Outdented"} ${changedTodos.length} ${changedTodos.length === 1 ? "todo" : "todos"}`);
+    return true;
+  }
+
   addTodo(index, indent = 0) {
     const todo = createTodoItem(indent);
     const insertIndex = index === -1 ? this.todos.length : index + 1;

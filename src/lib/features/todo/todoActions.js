@@ -67,6 +67,13 @@ export function applyAction(todos, action, isInverse) {
     if (todo) {
       todo.indent = isInverse ? action.oldIndent : action.newIndent;
     }
+  } else if (action.type === "shift_indent_many") {
+    for (const entry of action.todos) {
+      const todo = updatedTodos.find(t => t.id === entry.id);
+      if (todo) {
+        todo.indent = isInverse ? entry.oldIndent : entry.newIndent;
+      }
+    }
   } else if (action.type === "delete_many" || action.type === "clear_completed") {
     if (isInverse) {
       // Restore in ascending order of original index

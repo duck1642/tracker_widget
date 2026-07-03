@@ -760,6 +760,38 @@ describe("todo actions", () => {
     }
   });
 
+  it("indents and outdents selected todos from the context menu without clearing selection", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 1 },
+      { id: "todo-3", isTodo: true, text: "Third", checked: false, indent: 0 }
+    ];
+    try {
+      vi.spyOn(todoStore, "scheduleSave").mockResolvedValue(true);
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First"), { ctrlKey: true });
+      await fireEvent.pointerDown(screen.getByDisplayValue("Second"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First"), { clientX: 10, clientY: 12 });
+
+      expect(screen.getByRole("menuitem", { name: /Indent selected/ })).toBeTruthy();
+      expect(screen.getByRole("menuitem", { name: /Outdent selected/ })).toBeTruthy();
+
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Indent selected/ }));
+      expect(todoStore.todos.map((todo) => todo.indent)).toEqual([1, 2, 0]);
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-1", "todo-2"]);
+      expect(screen.queryByRole("menu", { name: "Todo selection actions" })).toBeNull();
+
+      await fireEvent.contextMenu(screen.getByDisplayValue("First"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Outdent selected/ }));
+      expect(todoStore.todos.map((todo) => todo.indent)).toEqual([0, 1, 0]);
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-1", "todo-2"]);
+      expect(screen.queryByRole("menu", { name: "Todo selection actions" })).toBeNull();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
   it("clears selection from the context menu and closes it on outside click or Escape", async () => {
     const originalTodos = todoStore.todos;
     todoStore.todos = [
