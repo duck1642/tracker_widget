@@ -29,7 +29,10 @@
     </button>
     <button
       class="action-btn"
-      onclick={() => todoFoldStore.hasCollapsedTodos ? todoFoldStore.expandAll() : todoFoldStore.collapseAll()}
+      onclick={() => {
+        todoUiState.clearSelection();
+        todoFoldStore.hasCollapsedTodos ? todoFoldStore.expandAll() : todoFoldStore.collapseAll();
+      }}
       disabled={!todoFoldStore.hasFoldableTodos}
       aria-label={todoFoldStore.hasCollapsedTodos ? "Expand all todos" : "Collapse all todos"}
       title={todoFoldStore.hasCollapsedTodos ? "Expand all todos" : "Collapse all todos"}

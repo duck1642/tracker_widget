@@ -4,6 +4,7 @@ import * as workspaceService from "$lib/shared/services/logWorkspaceService.js";
 import * as fileService from "$lib/shared/services/fileService.js";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
+import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
 
 class WorkspaceStore {
   weeks = $state([]);
@@ -33,6 +34,7 @@ class WorkspaceStore {
   }
 
   async applyWorkspace(path) {
+    todoUiState.clearSelection();
     appStore.logsRootPath = path;
     appStore.filePath = workspaceService.todoPathForWorkspace(path);
     await appStore.saveConfig();
@@ -79,6 +81,7 @@ class WorkspaceStore {
 
   async createTodo() {
     if (!this.workspaceAvailable) return false;
+    todoUiState.clearSelection();
     try {
       const result = await workspaceService.createWorkspaceTodo(appStore.logsRootPath);
       appStore.filePath = result.path;
@@ -95,6 +98,7 @@ class WorkspaceStore {
 
   async importTodo({ replace = false } = {}) {
     if (!this.workspaceAvailable) return false;
+    todoUiState.clearSelection();
     const selected = await workspaceService.selectTodoFile();
     if (!selected) return false;
     const destinationExists = await workspaceService.pathExists(this.todoPath);

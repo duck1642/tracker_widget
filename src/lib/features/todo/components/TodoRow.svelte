@@ -7,6 +7,8 @@
     index, 
     showNumber = false,
     visiblePosition = 0,
+    selected = false,
+    selectionActive = false,
     hasChildren = false,
     isFolded = false,
     inputElements, 
@@ -19,7 +21,9 @@
     onDeleteTodo, 
     onFocus, 
     onBlur, 
-    onKeyDown 
+    onKeyDown,
+    onSelectTodo,
+    onClearSelection
   } = $props();
 
   let inputEl = $state();
@@ -52,9 +56,26 @@
     editingMoveTarget = false;
     await onMoveTodoToVisiblePosition(index, targetPosition);
   }
+
+  /** @param {EventTarget | null} target */
+  function isSelectionIgnoredTarget(target) {
+    return target instanceof Element && Boolean(target.closest(".row-actions, .fold-btn, .todo-index-input"));
+  }
+
+  /** @param {PointerEvent} event */
+  function handleRowPointerDown(event) {
+    if (isSelectionIgnoredTarget(event.target)) return;
+    if (event.ctrlKey || event.shiftKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      onSelectTodo(event, todo.id);
+    } else if (selectionActive) {
+      onClearSelection();
+    }
+  }
 </script>
 
-<div class="todo-row" style="padding-left: {todo.indent * 16}px">
+<div class="todo-row" class:selected={selected} style="padding-left: {todo.indent * 16}px" onpointerdown={handleRowPointerDown} role="listitem">
   {#if showNumber}
     {#if editingMoveTarget}
       <input
@@ -82,7 +103,10 @@
       <button
         type="button"
         class="todo-index-btn"
-        onclick={openMoveTarget}
+        onclick={(event) => {
+          if (event.ctrlKey || event.shiftKey) return;
+          openMoveTarget();
+        }}
         aria-label={`Move todo ${visiblePosition}`}
         title="Move todo to position"
       >
@@ -106,7 +130,10 @@
   <button 
     type="button"
     class="custom-check-btn {todo.checked ? 'checked' : ''}" 
-    onclick={() => onToggleTodo(todo.id)}
+    onclick={(event) => {
+      if (event.ctrlKey || event.shiftKey) return;
+      onToggleTodo(todo.id);
+    }}
     title={todo.checked ? "Mark active" : "Mark completed"}
   >
     {#if todo.checked}
@@ -122,6 +149,7 @@
     onblur={() => onBlur(todo.id, todo.text)}
     oninput={(e) => onUpdateText(todo.id, e.currentTarget.value)}
     onkeydown={(e) => onKeyDown(e, index, todo)}
+    readonly={selectionActive}
     placeholder="New todo"
   />
   <div class="row-actions">

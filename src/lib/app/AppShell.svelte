@@ -8,6 +8,7 @@
   import { workspaceStore } from "./workspaceStore.svelte.js";
   import { persistenceRegistry } from "./persistenceRegistry.js";
   import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
+  import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
@@ -39,12 +40,14 @@
 
   async function selectWeek(week) {
     if (!week.indexPath) return;
+    todoUiState.clearSelection();
     selectedPath = week.indexPath;
     appStore.currentView = "week";
     await weekStore.loadPath(week.indexPath, descriptorFor(week), week.days);
   }
 
   async function selectDay(day, week) {
+    todoUiState.clearSelection();
     selectedPath = day.path;
     if (week.indexPath && weekStore.path !== week.indexPath) {
       await weekStore.loadPath(week.indexPath, descriptorFor(week), week.days);
@@ -54,6 +57,7 @@
   }
 
   async function openCurrent(kind) {
+    if (kind !== "todo") todoUiState.clearSelection();
     const today = formatDate(new Date());
     const weekName = getWeekDescriptor(new Date()).folderName;
     const week = workspaceStore.weeks.find((item) => item.name === weekName);
@@ -174,10 +178,20 @@
       appStore.showStatus("Maximize failed: " + error);
     }
   }
+
+  async function reloadTodo() {
+    todoUiState.clearSelection();
+    await todoStore.loadFile();
+  }
+
+  function toggleSettings() {
+    todoUiState.clearSelection();
+    editingSettings = !editingSettings;
+  }
 </script>
 
 <main class="app-container" class:desktop-mode={appStore.layerMode === "desktop"}>
-  <AppHeader title={workspaceStore.needsFirstSetup ? "Workspace setup" : appStore.currentView === "todo" ? "Todo" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} {showModeMenu} {isMaximized} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onDismissModeMenu={() => showModeMenu = false} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={() => editingSettings = !editingSettings} onShrinkApp={minimizeApp} onMaximizeApp={toggleMaximizeApp} onCloseApp={closeApp} />
+  <AppHeader title={workspaceStore.needsFirstSetup ? "Workspace setup" : appStore.currentView === "todo" ? "Todo" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={appStore.statusMessage} {showModeMenu} {isMaximized} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onDismissModeMenu={() => showModeMenu = false} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={toggleSettings} onShrinkApp={minimizeApp} onMaximizeApp={toggleMaximizeApp} onCloseApp={closeApp} />
   {#if workspaceStore.needsFirstSetup}
     <section class="setup-screen">
       <div>
@@ -197,7 +211,7 @@
           <MainTabs currentView={appStore.currentView} onSelect={(view) => view === "todo" ? appStore.currentView = "todo" : openCurrent(view)} />
           {#if appStore.currentView === "todo" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
           <div class="panel-scroll" class:todo-scroll={appStore.currentView === "todo"}>{#if appStore.currentView === "todo"}<TodoPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
-          {#if appStore.currentView === "todo" && !todoStore.fileMissing}<TodoToolbar undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTodo={() => todoStore.addTodo(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={() => todoStore.loadFile()} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
+          {#if appStore.currentView === "todo" && !todoStore.fileMissing}<TodoToolbar undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTodo={() => todoStore.addTodo(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={reloadTodo} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
         {/if}
       </section>
     </div>

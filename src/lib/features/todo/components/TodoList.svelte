@@ -5,7 +5,9 @@
   let { 
     rows, 
     showTodoNumbers = false,
+    selectionActive = false,
     visiblePositionForStoreIndex,
+    isTodoSelected,
     inputElements, 
     onToggleTodo, 
     onUpdateText, 
@@ -16,13 +18,23 @@
     onFocus, 
     onBlur, 
     onKeyDown,
-    onToggleFold
+    onToggleFold,
+    onSelectTodo,
+    onClearSelection
   } = $props();
 
   let numberDigits = $derived(String(Math.max(1, rows.filter((/** @type {any} */ row) => row.todo.isTodo).length)).length);
 </script>
 
-<div class="todo-list" class:numbered={showTodoNumbers} style:--todo-gutter-digits={numberDigits}>
+<div
+  class="todo-list"
+  class:numbered={showTodoNumbers}
+  style:--todo-gutter-digits={numberDigits}
+  role="list"
+  onpointerdown={(event) => {
+    if (event.target === event.currentTarget) onClearSelection();
+  }}
+>
   {#each rows as row (row.todo.id)}
     {@const todo = row.todo}
     {@const index = row.storeIndex}
@@ -32,6 +44,8 @@
         index={index} 
         showNumber={showTodoNumbers}
         visiblePosition={visiblePositionForStoreIndex(index)}
+        selected={isTodoSelected(todo.id)}
+        selectionActive={selectionActive}
         hasChildren={row.hasChildren}
         isFolded={row.isFolded}
         inputElements={inputElements}
@@ -45,6 +59,8 @@
         onFocus={onFocus}
         onBlur={onBlur}
         onKeyDown={onKeyDown}
+        onSelectTodo={onSelectTodo}
+        onClearSelection={onClearSelection}
       />
     {:else}
       {#if todo.raw.trim().length > 0}

@@ -30,6 +30,7 @@ afterEach(() => {
   todoFoldStore.expandAll();
   todoFoldStore.setFoldableTodoIds([]);
   todoUiState.showTodoNumbers = false;
+  todoUiState.clearSelection();
 });
 
 describe("application navigation", () => {
@@ -481,6 +482,139 @@ describe("todo actions", () => {
       await fireEvent.keyDown(screen.getByDisplayValue("Second"), { key: "ArrowDown", altKey: true });
       expect(todoStore.todos.map((todo) => todo.text)).toEqual(["First", "Second", "Third"]);
       expect(document.activeElement).toBe(screen.getByDisplayValue("Second"));
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("selects and toggles visible todos with Ctrl+click", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First"), { ctrlKey: true });
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-1"]);
+      expect(screen.getByDisplayValue("First").closest(".todo-row").classList.contains("selected")).toBe(true);
+
+      await fireEvent.pointerDown(screen.getByDisplayValue("First"), { ctrlKey: true });
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("selects a visible range with Shift+click and skips raw and folded rows", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "Parent", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Hidden child", checked: false, indent: 1 },
+      { id: "raw-1", isTodo: false, raw: "# Notes" },
+      { id: "todo-3", isTodo: true, text: "Peer", checked: false, indent: 0 },
+      { id: "todo-4", isTodo: true, text: "Last", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      await fireEvent.click(screen.getByRole("button", { name: "Collapse todo" }));
+      await fireEvent.pointerDown(screen.getByDisplayValue("Parent"), { ctrlKey: true });
+      await fireEvent.pointerDown(screen.getByDisplayValue("Last"), { shiftKey: true });
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-1", "todo-3", "todo-4"]);
+      expect(todoUiState.selectedTodoIds).not.toContain("todo-2");
+      expect(todoUiState.selectedTodoIds).not.toContain("raw-1");
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("selects only the clicked row on Shift+click without an anchor", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("Second"), { shiftKey: true });
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-2"]);
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("makes inputs readonly while selection exists and clears on plain row click", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First"), { ctrlKey: true });
+      expect(screen.getByDisplayValue("First").readOnly).toBe(true);
+
+      await fireEvent.pointerDown(screen.getByDisplayValue("Second"));
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+      expect(screen.getByDisplayValue("Second").readOnly).toBe(false);
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("clears selection with Escape, blank list clicks, row fold, and fold all", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "Parent", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Child", checked: false, indent: 1 },
+      { id: "todo-3", isTodo: true, text: "Peer", checked: false, indent: 0 }
+    ];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("Parent"), { ctrlKey: true });
+      await fireEvent.keyDown(screen.getByDisplayValue("Parent"), { key: "Escape" });
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+
+      await fireEvent.pointerDown(screen.getByDisplayValue("Parent"), { ctrlKey: true });
+      await fireEvent.click(screen.getByRole("button", { name: "Collapse todo" }));
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+
+      await fireEvent.pointerDown(screen.getByDisplayValue("Peer"), { ctrlKey: true });
+      await fireEvent.pointerDown(screen.getByDisplayValue("Peer").closest(".todo-list"));
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+
+      await fireEvent.pointerDown(screen.getByDisplayValue("Peer"), { ctrlKey: true });
+      render(TodoToolbar, {
+        undoStackLength: 0,
+        redoStackLength: 0,
+        onAddTodo: vi.fn(),
+        onUndo: vi.fn(),
+        onRedo: vi.fn(),
+        onReload: vi.fn(),
+        onClearCompleted: vi.fn()
+      });
+      await fireEvent.click(screen.getByRole("button", { name: /all todos/ }));
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("keeps normal checkbox and row number behavior when no selection is active", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 }
+    ];
+    try {
+      vi.spyOn(todoStore, "scheduleSave").mockResolvedValue(true);
+      todoUiState.showTodoNumbers = true;
+      render(TodoPanel);
+      await fireEvent.click(screen.getAllByTitle("Mark completed")[0]);
+      expect(todoStore.todos[0].checked).toBe(true);
+
+      await fireEvent.click(screen.getByRole("button", { name: "Move todo 1" }));
+      expect(screen.getByRole("textbox", { name: "Todo target position" })).toBeTruthy();
     } finally {
       todoStore.todos = originalTodos;
     }

@@ -15,9 +15,14 @@
   let inputElements = {};
   let visibleTodos = $derived(buildVisibleTodoRows(todoStore.todos, todoFoldStore.foldedTodoIds));
   let visibleTodoRows = $derived(visibleTodos.rows.filter((row) => row.todo.isTodo));
+  let visibleTodoIds = $derived(visibleTodoRows.map((row) => row.todo.id));
 
   $effect(() => {
     todoFoldStore.setFoldableTodoIds(visibleTodos.foldableIds);
+  });
+
+  $effect(() => {
+    todoUiState.pruneSelection(todoStore.todos.filter((todo) => todo.isTodo).map((todo) => todo.id));
   });
 
   /** @param {number} index */
@@ -56,6 +61,28 @@
     focusedTodoId = todoId;
     inputElements[todoId]?.focus();
     return true;
+  }
+
+  /**
+   * @param {MouseEvent} event
+   * @param {string} id
+   */
+  function handleSelectTodo(event, id) {
+    if (event.shiftKey) {
+      todoUiState.selectRange(visibleTodoIds, id);
+    } else {
+      todoUiState.toggleSelection(id);
+    }
+  }
+
+  function clearSelection() {
+    todoUiState.clearSelection();
+  }
+
+  /** @param {string} id */
+  function toggleFold(id) {
+    todoUiState.clearSelection();
+    todoFoldStore.toggleTodo(id);
   }
 
   // Todo keyboard navigation and editing handlers
@@ -134,6 +161,11 @@
         }
       }
     } else if (event.key === "Escape") {
+      if (todoUiState.hasSelection) {
+        event.preventDefault();
+        todoUiState.clearSelection();
+        return;
+      }
       if (event.target instanceof HTMLElement) {
         event.target.blur();
       }
@@ -159,7 +191,9 @@
   <TodoList 
     rows={visibleTodos.rows}
     showTodoNumbers={todoUiState.showTodoNumbers}
+    selectionActive={todoUiState.hasSelection}
     visiblePositionForStoreIndex={visiblePositionForStoreIndex}
+    isTodoSelected={(/** @type {string} */ id) => todoUiState.isSelected(id)}
     inputElements={inputElements}
     onToggleTodo={(/** @type {string} */ id) => todoStore.toggleTodo(id)}
     onUpdateText={(/** @type {string} */ id, /** @type {string} */ text) => todoStore.updateText(id, text)}
@@ -167,7 +201,9 @@
     onMoveTodoDown={(/** @type {number} */ index) => todoStore.moveTodoDown(index)}
     onMoveTodoToVisiblePosition={moveTodoToVisiblePosition}
     onDeleteTodo={(/** @type {number} */ index) => todoStore.deleteTodo(index)}
-    onToggleFold={(/** @type {string} */ id) => todoFoldStore.toggleTodo(id)}
+    onToggleFold={toggleFold}
+    onSelectTodo={handleSelectTodo}
+    onClearSelection={clearSelection}
     onFocus={(/** @type {string} */ id, /** @type {string} */ text) => {
       focusedTodoId = id;
       originalTexts[id] = text;

@@ -288,6 +288,14 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   box-sizing: border-box;
 }
 
+.todo-row.selected {
+  background: var(--accent-soft);
+}
+
+.todo-row.selected .todo-text {
+  color: var(--text-color);
+}
+
 .todo-index-btn,
 .todo-index-input {
   position: absolute;
