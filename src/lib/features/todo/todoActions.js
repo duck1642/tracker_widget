@@ -38,6 +38,13 @@ export function applyAction(todos, action, isInverse) {
     if (todo) {
       todo.checked = isInverse ? action.oldChecked : action.newChecked;
     }
+  } else if (action.type === "set_checked_many") {
+    for (const entry of action.todos) {
+      const todo = updatedTodos.find(t => t.id === entry.id);
+      if (todo) {
+        todo.checked = isInverse ? entry.oldChecked : entry.newChecked;
+      }
+    }
   } else if (action.type === "edit") {
     const todo = updatedTodos.find(t => t.id === action.id);
     if (todo) {

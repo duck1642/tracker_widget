@@ -129,6 +129,22 @@ export class TodoStore {
     void this.scheduleSave({ immediate: true });
   }
 
+  setTodosCheckedByIds(ids, checked) {
+    const selectedIds = new Set(ids);
+    const changedTodos = this.todos
+      .filter((todo) => todo.isTodo && selectedIds.has(todo.id) && todo.checked !== checked)
+      .map((todo) => ({ id: todo.id, oldChecked: todo.checked, newChecked: checked }));
+    if (!changedTodos.length) return false;
+    this.record({ type: "set_checked_many", todos: changedTodos });
+    const changedIds = new Set(changedTodos.map((todo) => todo.id));
+    for (const todo of this.todos) {
+      if (changedIds.has(todo.id)) todo.checked = checked;
+    }
+    void this.scheduleSave({ immediate: true });
+    this.appStore.showStatus(`${checked ? "Checked" : "Unchecked"} ${changedTodos.length} ${changedTodos.length === 1 ? "todo" : "todos"}`);
+    return true;
+  }
+
   updateText(id, text) {
     const todo = this.todos.find((item) => item.id === id);
     if (todo && todo.text !== text) {

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TodoStore } from "./todoStore.svelte.js";
+import { clampContextMenuPosition } from "./todoContextMenuPosition.js";
 
 vi.mock("$lib/shared/services/logWorkspaceService.js", () => ({
   selectTodoFile: vi.fn()
@@ -162,6 +163,19 @@ describe("TodoStore persistence", () => {
   });
 });
 
+describe("todo context menu positioning", () => {
+  it("keeps the menu inside the viewport near bottom and right edges", () => {
+    expect(clampContextMenuPosition({
+      x: 450,
+      y: 330,
+      width: 168,
+      height: 136,
+      viewportWidth: 480,
+      viewportHeight: 360
+    })).toEqual({ x: 306, y: 218 });
+  });
+});
+
 describe("TodoStore session history", () => {
   beforeEach(() => vi.useFakeTimers());
 
@@ -250,6 +264,35 @@ describe("TodoStore session history", () => {
 
     expect(store.deleteTodosByIds(["missing", store.todos[0].id])).toBe(false);
     expect(store.undoStack).toHaveLength(0);
+  });
+
+  it("sets selected todos checked by id with mixed-state undo and redo", async () => {
+    const { store } = createHarness({ "A.md": "- [ ] A\n# Notes\n- [x] B\n- [ ] C\n" });
+    await store.loadFile();
+    const ids = [store.todos[0].id, store.todos[1].id, store.todos[2].id, "missing"];
+
+    expect(store.setTodosCheckedByIds(ids, true)).toBe(true);
+    expect(store.todos.map((todo) => todo.checked)).toEqual([true, undefined, true, false]);
+    expect(store.undoStack.at(-1)).toMatchObject({ type: "set_checked_many" });
+
+    await store.undo();
+    expect(store.todos.map((todo) => todo.checked)).toEqual([false, undefined, true, false]);
+
+    await store.redo();
+    expect(store.todos.map((todo) => todo.checked)).toEqual([true, undefined, true, false]);
+  });
+
+  it("unchecks selected todos and skips no-op bulk checked updates", async () => {
+    const { store } = createHarness({ "A.md": "- [x] A\n- [x] B\n" });
+    await store.loadFile();
+    const ids = store.todos.map((todo) => todo.id);
+
+    expect(store.setTodosCheckedByIds(ids, false)).toBe(true);
+    expect(store.todos.map((todo) => todo.checked)).toEqual([false, false]);
+    expect(store.undoStack).toHaveLength(1);
+
+    expect(store.setTodosCheckedByIds(ids, false)).toBe(false);
+    expect(store.undoStack).toHaveLength(1);
   });
 
   it("reports when clear-completed has nothing to remove", async () => {

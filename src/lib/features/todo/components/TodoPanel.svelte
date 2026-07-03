@@ -118,6 +118,12 @@
     clearSelection();
   }
 
+  /** @param {boolean} checked */
+  function handleSetSelectedChecked(checked) {
+    todoStore.setTodosCheckedByIds(todoUiState.selectedTodoIds, checked);
+    closeContextMenu();
+  }
+
   function handleDeleteSelected() {
     if (todoStore.deleteTodosByIds(todoUiState.selectedTodoIds)) {
       clearSelection();
@@ -289,6 +295,8 @@
       x={contextMenu.x}
       y={contextMenu.y}
       selectedCount={todoUiState.selectedTodoIds.length}
+      onCheckSelected={() => handleSetSelectedChecked(true)}
+      onUncheckSelected={() => handleSetSelectedChecked(false)}
       onDeleteSelected={handleDeleteSelected}
       onClearSelection={handleClearSelectionFromMenu}
     />
