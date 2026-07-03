@@ -20,6 +20,15 @@ describe("daily log parser", () => {
     expect(serialized).toContain("120m");
   });
 
+  it("parses metadata-only activities as empty activity rows", () => {
+    const input = `# 2026-06-22\n\n## Work\n\n- {subjects: (general), time: 0m}\n\n## Notes\n\n-\n`;
+    const document = parseDailyLog(input, "2026-06-22");
+    expect(document.sessions[0].activities).toHaveLength(1);
+    expect(document.sessions[0].activities[0]).toMatchObject({ subjects: ["general"], minutes: 0, description: "" });
+    expect(document.sessions[0].rawLines).toHaveLength(0);
+    expect(serializeDailyLog(document)).toContain("- {subjects: (general), time: 0m}");
+  });
+
   it("preserves preamble and unrecognized lines inside sessions", () => {
     const input = `# 2026-06-22\n\nIntro paragraph.\n\n## Work\n\nKeep this raw line.\n- {subjects: (rust), time: 15m} Code.\n\n## Notes\n\nRaw notes.\n`;
     const serialized = serializeDailyLog(parseDailyLog(input));

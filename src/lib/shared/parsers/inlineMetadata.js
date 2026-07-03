@@ -21,7 +21,7 @@ function splitLine(line, { allowEmptyDescription = false } = {}) {
 }
 
 export function parseActivityLine(line) {
-  const parts = splitLine(line);
+  const parts = splitLine(line, { allowEmptyDescription: true });
   if (!parts) return null;
   const subjects = parseSubjects(parts.metadata);
   const time = parts.metadata.match(/(?:^|,\s*)time:\s*(\d+)m(?:$|,)/u);
@@ -30,7 +30,8 @@ export function parseActivityLine(line) {
 }
 
 export function serializeActivityLine(activity) {
-  return `- {subjects: (${activity.subjects.join(", ")}), time: ${activity.minutes}m} ${activity.description}`;
+  const metadata = `- {subjects: (${activity.subjects.join(", ")}), time: ${activity.minutes}m}`;
+  return activity.description ? `${metadata} ${activity.description}` : metadata;
 }
 
 export function parseObjectiveLine(line) {
