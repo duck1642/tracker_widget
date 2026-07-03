@@ -12,9 +12,12 @@ function parseSubjects(metadata) {
     : null;
 }
 
-function splitLine(line) {
-  const match = line.match(/^-\s+\{([^}]*)\}\s+(.+)$/u);
-  return match ? { metadata: match[1], description: match[2].normalize("NFC") } : null;
+function splitLine(line, { allowEmptyDescription = false } = {}) {
+  const pattern = allowEmptyDescription
+    ? /^-\s+\{([^}]*)\}(?:\s+(.*))?$/u
+    : /^-\s+\{([^}]*)\}\s+(.+)$/u;
+  const match = line.match(pattern);
+  return match ? { metadata: match[1], description: (match[2] || "").normalize("NFC") } : null;
 }
 
 export function parseActivityLine(line) {
@@ -31,7 +34,7 @@ export function serializeActivityLine(activity) {
 }
 
 export function parseObjectiveLine(line) {
-  const parts = splitLine(line);
+  const parts = splitLine(line, { allowEmptyDescription: true });
   if (!parts) return null;
   const subjects = parseSubjects(parts.metadata);
   const origin = parts.metadata.match(/(?:^|,\s*)origin:\s*([\p{L}-]+)(?:$|,)/u)?.[1];
@@ -41,7 +44,8 @@ export function parseObjectiveLine(line) {
 }
 
 export function serializeObjectiveLine(objective) {
-  return `- {subjects: (${objective.subjects.join(", ")}), origin: ${objective.origin}, status: ${objective.status}} ${objective.description}`;
+  const metadata = `- {subjects: (${objective.subjects.join(", ")}), origin: ${objective.origin}, status: ${objective.status}}`;
+  return objective.description ? `${metadata} ${objective.description}` : metadata;
 }
 
 export function isValidSubject(subject) {

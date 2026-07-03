@@ -11,6 +11,18 @@ describe("weekly index parser", () => {
     expect(document.plan[0].session).toBe("Dev | Review");
   });
 
+  it("parses metadata-only objectives as empty objective rows", () => {
+    const input = weekly.replace(
+      "- {subjects: (rust), origin: planned, status: open} Build parser.",
+      "- {subjects: (general), origin: planned, status: open}"
+    );
+    const document = parseWeeklyIndex(input, { year: 2026, week: 26 });
+    expect(document.objectives).toHaveLength(1);
+    expect(document.objectives[0]).toMatchObject({ subjects: ["general"], origin: "planned", status: "open", description: "" });
+    expect(document.objectiveRawLines).toHaveLength(0);
+    expect(serializeWeeklyIndex(document)).toContain("- {subjects: (general), origin: planned, status: open}");
+  });
+
   it("parses zero minute table values without dropping rows", () => {
     const input = weekly
       .replace("| Mon | Reading | reading | 60 |", "| Tue | Reading | reading | 0 |")

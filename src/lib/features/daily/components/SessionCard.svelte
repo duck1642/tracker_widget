@@ -84,7 +84,7 @@
 
 <style>
   .session-card { border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--surface); overflow: visible; box-shadow: var(--shadow-sm); }
-  header { display: flex; align-items: center; padding: 0 10px; background: linear-gradient(90deg, var(--surface-2), var(--surface)); }
+  header { display: flex; align-items: center; padding: 0 10px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: linear-gradient(90deg, var(--surface-2), var(--surface)); }
   .session-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; min-width: 0; min-height: 46px; border: 0; background: transparent; color: var(--text-color); padding: 0; text-align: left; cursor: pointer; }
   .session-name-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; flex: 1; min-width: 0; font-size: var(--text-md); font-weight: 700; line-height: 1.25; cursor: pointer; border-bottom: 1px dashed transparent; transition: border-color 0.15s ease, color 0.15s ease; }
   .session-name-text:hover { border-bottom-color: var(--accent); color: var(--accent); }
