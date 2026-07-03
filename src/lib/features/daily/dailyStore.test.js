@@ -71,4 +71,28 @@ describe("DailyStore editing", () => {
     store.addActivity(store.sessions[0].id);
     expect(store.sessions[0].activities[0]).toMatchObject({ subjects: ["general"], minutes: 0, description: "" });
   });
+
+  it("adds multiple activities with default metadata", async () => {
+    const { store } = harness("# 2026-06-22\n\n## Work\n\n## Total Time\n\n0m\n\n## Notes\n");
+    await store.loadPath("day.md", "2026-06-22");
+    const originalSessions = store.sessions;
+    const originalActivities = store.sessions[0].activities;
+    expect(store.addActivities(store.sessions[0].id, ["One", "Two"])).toBe(true);
+    expect(store.sessions).not.toBe(originalSessions);
+    expect(store.sessions[0].activities).not.toBe(originalActivities);
+    expect(store.sessions[0].activities).toHaveLength(2);
+    expect(store.sessions[0].activities[0]).toMatchObject({ subjects: ["general"], minutes: 0, description: "One" });
+    expect(store.sessions[0].activities[1]).toMatchObject({ subjects: ["general"], minutes: 0, description: "Two" });
+    await store.flushSave();
+    await store.loadPath("day.md", "2026-06-22");
+    expect(store.sessions[0].activities.map((activity) => activity.description)).toEqual(["One", "Two"]);
+  });
+
+  it("does not add activities for missing sessions or empty descriptions", async () => {
+    const { store } = harness("# 2026-06-22\n\n## Work\n\n## Total Time\n\n0m\n\n## Notes\n");
+    await store.loadPath("day.md", "2026-06-22");
+    expect(store.addActivities("missing", ["One"])).toBe(false);
+    expect(store.addActivities(store.sessions[0].id, [" ", ""])).toBe(false);
+    expect(store.sessions[0].activities).toHaveLength(0);
+  });
 });

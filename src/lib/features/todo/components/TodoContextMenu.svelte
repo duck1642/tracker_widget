@@ -1,11 +1,13 @@
 <script>
-  import { CheckSquare2, IndentDecrease, IndentIncrease, Square, Trash2, X } from "@lucide/svelte";
+  import { CheckSquare2, ClipboardList, Flag, IndentDecrease, IndentIncrease, Square, Trash2, X } from "@lucide/svelte";
   import { clampContextMenuPosition } from "$lib/features/todo/todoContextMenuPosition.js";
 
   let {
     x = 0,
     y = 0,
     selectedCount = 0,
+    onSendToTodayActivity,
+    onSendToWeeklyObjective,
     onCheckSelected,
     onUncheckSelected,
     onIndentSelected,
@@ -44,6 +46,15 @@
   oncontextmenu={(event) => event.preventDefault()}
 >
   <div class="context-count">{selectedCount} selected</div>
+  <button type="button" role="menuitem" onclick={onSendToTodayActivity}>
+    <ClipboardList size={13} />
+    <span>Send to today's activity</span>
+  </button>
+  <button type="button" role="menuitem" onclick={onSendToWeeklyObjective}>
+    <Flag size={13} />
+    <span>Send to weekly objective</span>
+  </button>
+  <div class="context-separator" aria-hidden="true"></div>
   <button type="button" role="menuitem" onclick={onCheckSelected}>
     <CheckSquare2 size={13} />
     <span>Check selected</span>
@@ -60,7 +71,8 @@
     <IndentDecrease size={13} />
     <span>Outdent selected</span>
   </button>
-  <button type="button" role="menuitem" onclick={onDeleteSelected}>
+  <div class="context-separator" aria-hidden="true"></div>
+  <button type="button" role="menuitem" class="danger-item" onclick={onDeleteSelected}>
     <Trash2 size={13} />
     <span>Delete selected</span>
   </button>

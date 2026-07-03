@@ -1,15 +1,22 @@
 <script>
   import { tick } from "svelte";
+  import { appStore } from "$lib/app/appStore.svelte.js";
+  import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
   import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
   import { buildVisibleTodoRows, todoFoldStore } from "$lib/features/todo/todoFolding.svelte.js";
   import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
+  import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { workspaceStore } from "$lib/app/workspaceStore.svelte.js";
+  import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
   import TodoList from "./TodoList.svelte";
   import TodoContextMenu from "./TodoContextMenu.svelte";
+  import TodoSendSessionMenu from "./TodoSendSessionMenu.svelte";
 
   let focusedTodoId = $state("");
   /** @type {{ x: number, y: number } | null} */
   let contextMenu = $state(null);
+  /** @type {{ x: number, y: number, sessions: any[] } | null} */
+  let sessionMenu = $state(null);
   /** @type {Record<string, string>} */
   let originalTexts = {};
 
@@ -29,7 +36,7 @@
   });
 
   $effect(() => {
-    if (!todoUiState.hasSelection) closeContextMenu();
+    if (!todoUiState.hasSelection) closeMenus();
   });
 
   /** @param {number} index */
@@ -89,7 +96,7 @@
 
   function clearSelection() {
     todoUiState.clearSelection();
-    closeContextMenu();
+    closeMenus();
   }
 
   /** @param {string} id */
@@ -102,6 +109,15 @@
     contextMenu = null;
   }
 
+  function closeSessionMenu() {
+    sessionMenu = null;
+  }
+
+  function closeMenus() {
+    contextMenu = null;
+    sessionMenu = null;
+  }
+
   /**
    * @param {MouseEvent} event
    * @param {string} id
@@ -112,10 +128,85 @@
       todoUiState.setSelection([id], id);
     }
     contextMenu = { x: event.clientX, y: event.clientY };
+    sessionMenu = null;
   }
 
   function handleClearSelectionFromMenu() {
     clearSelection();
+  }
+
+  function selectedTodoDescriptions() {
+    const selectedIds = new Set(todoUiState.selectedTodoIds);
+    return todoStore.todos
+      .filter((todo) => todo.isTodo && selectedIds.has(todo.id))
+      .map((todo) => todo.text.trim())
+      .filter(Boolean);
+  }
+
+  async function handleSendToWeeklyObjective() {
+    const descriptions = selectedTodoDescriptions();
+    const descriptor = getWeekDescriptor(new Date());
+    let week = workspaceStore.weeks.find((item) => item.name === descriptor.folderName);
+    closeContextMenu();
+    if (!descriptions.length) return;
+    if (!week?.indexPath) {
+      await workspaceStore.refresh();
+      week = workspaceStore.weeks.find((item) => item.name === descriptor.folderName);
+    }
+    if (!week?.indexPath) {
+      appStore.showStatus("Current week not found");
+      return;
+    }
+    if (weekStore.path !== week.indexPath) {
+      const loaded = await weekStore.loadPath(week.indexPath, descriptor, week.days);
+      if (!loaded) return;
+    }
+    if (weekStore.addObjectives(descriptions)) {
+      appStore.showStatus(`Sent ${descriptions.length} ${descriptions.length === 1 ? "objective" : "objectives"}`);
+      clearSelection();
+    }
+  }
+
+  async function handleOpenTodayActivitySessions() {
+    const descriptor = getWeekDescriptor(new Date());
+    const today = formatDate(new Date());
+    let week = workspaceStore.weeks.find((item) => item.name === descriptor.folderName);
+    let day = week?.days.find((/** @type {any} */ item) => item.date === today);
+    const menuPosition = contextMenu || { x: 0, y: 0 };
+    closeContextMenu();
+    if (!day?.path) {
+      await workspaceStore.refresh();
+      week = workspaceStore.weeks.find((item) => item.name === descriptor.folderName);
+      day = week?.days.find((/** @type {any} */ item) => item.date === today);
+    }
+    if (!day?.path) {
+      appStore.showStatus("Today log not found");
+      return;
+    }
+    if (dailyStore.path !== day.path) {
+      const loaded = await dailyStore.loadPath(day.path, today);
+      if (!loaded) return;
+    }
+    if (!dailyStore.sessions.length) {
+      appStore.showStatus("Create a session first");
+      return;
+    }
+    sessionMenu = {
+      x: menuPosition.x + 12,
+      y: menuPosition.y + 12,
+      sessions: dailyStore.sessions
+    };
+  }
+
+  /** @param {string} sessionId */
+  function handleSendToSession(sessionId) {
+    const descriptions = selectedTodoDescriptions();
+    if (dailyStore.addActivities(sessionId, descriptions)) {
+      appStore.showStatus(`Sent ${descriptions.length} ${descriptions.length === 1 ? "activity" : "activities"}`);
+      clearSelection();
+    } else {
+      closeSessionMenu();
+    }
   }
 
   /** @param {boolean} checked */
@@ -301,6 +392,8 @@
       x={contextMenu.x}
       y={contextMenu.y}
       selectedCount={todoUiState.selectedTodoIds.length}
+      onSendToTodayActivity={handleOpenTodayActivitySessions}
+      onSendToWeeklyObjective={handleSendToWeeklyObjective}
       onCheckSelected={() => handleSetSelectedChecked(true)}
       onUncheckSelected={() => handleSetSelectedChecked(false)}
       onIndentSelected={() => handleShiftSelectedIndent(1)}
@@ -309,22 +402,30 @@
       onClearSelection={handleClearSelectionFromMenu}
     />
   {/if}
+  {#if sessionMenu}
+    <TodoSendSessionMenu
+      x={sessionMenu.x}
+      y={sessionMenu.y}
+      sessions={sessionMenu.sessions}
+      onSelectSession={handleSendToSession}
+    />
+  {/if}
 {/if}
 
 <svelte:window
   onpointerdown={(event) => {
-    if (!contextMenu) return;
+    if (!contextMenu && !sessionMenu) return;
     if (event.target instanceof Element && event.target.closest(".todo-context-menu")) return;
-    closeContextMenu();
+    closeMenus();
   }}
   onkeydown={(event) => {
-    if (contextMenu && event.key === "Escape") {
+    if ((contextMenu || sessionMenu) && event.key === "Escape") {
       event.preventDefault();
-      closeContextMenu();
+      closeMenus();
     }
   }}
-  onscrollcapture={() => closeContextMenu()}
-  onwheel={() => closeContextMenu()}
+  onscrollcapture={() => closeMenus()}
+  onwheel={() => closeMenus()}
 />
 
 <style>

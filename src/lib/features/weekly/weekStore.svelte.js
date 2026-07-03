@@ -79,6 +79,20 @@ export class WeekStore {
     void this.save();
   }
 
+  addObjectives(descriptions) {
+    const cleaned = descriptions.map((description) => description.trim()).filter(Boolean);
+    if (!cleaned.length) return false;
+    this.objectives.push(...cleaned.map((description) => ({
+      id: id("objective"),
+      subjects: ["general"],
+      origin: "planned",
+      status: "open",
+      description
+    })));
+    void this.save();
+    return true;
+  }
+
   updateObjective(objectiveId, patch) {
     const objective = this.objectives.find((item) => item.id === objectiveId);
     if (!objective) return;

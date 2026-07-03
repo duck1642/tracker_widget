@@ -47,4 +47,21 @@ describe("WeekStore editing", () => {
     expect(store.plan[0]).toMatchObject({ day: "Tue", session: "Session", subjects: ["general"], targetMinutes: 0 });
     expect(files.get("week.md")).toContain("| Tue | Session | general | 0 |");
   });
+
+  it("adds multiple objectives with default metadata", async () => {
+    const { store } = harness();
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    expect(store.addObjectives(["One", "Two"])).toBe(true);
+    expect(store.objectives.slice(-2)).toMatchObject([
+      { subjects: ["general"], origin: "planned", status: "open", description: "One" },
+      { subjects: ["general"], origin: "planned", status: "open", description: "Two" }
+    ]);
+  });
+
+  it("does not add objectives from empty descriptions", async () => {
+    const { store } = harness();
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    expect(store.addObjectives([" ", ""])).toBe(false);
+    expect(store.objectives).toHaveLength(1);
+  });
 });

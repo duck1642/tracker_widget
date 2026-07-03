@@ -15,8 +15,11 @@ import TodoToolbar from "$lib/features/todo/components/TodoToolbar.svelte";
 import { todoFoldStore } from "$lib/features/todo/todoFolding.svelte.js";
 import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
 import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
+import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
+import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
 import { workspaceStore } from "./workspaceStore.svelte.js";
 import { appStore } from "./appStore.svelte.js";
+import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
 
 afterEach(() => {
   cleanup();
@@ -27,6 +30,10 @@ afterEach(() => {
   appStore.logsRootPath = "";
   appStore.filePath = "";
   todoStore.fileMissing = false;
+  dailyStore.path = "";
+  dailyStore.sessions = [];
+  weekStore.path = "";
+  weekStore.objectives = [];
   todoFoldStore.expandAll();
   todoFoldStore.setFoldableTodoIds([]);
   todoUiState.showTodoNumbers = false;
@@ -789,6 +796,163 @@ describe("todo actions", () => {
       expect(screen.queryByRole("menu", { name: "Todo selection actions" })).toBeNull();
     } finally {
       todoStore.todos = originalTodos;
+    }
+  });
+
+  it("sends selected todos to weekly objectives and clears selection", async () => {
+    const originalTodos = todoStore.todos;
+    const originalWeeks = workspaceStore.weeks;
+    const descriptor = getWeekDescriptor(new Date());
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First objective", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second objective", checked: false, indent: 0 }
+    ];
+    workspaceStore.weeks = [{ name: descriptor.folderName, indexPath: "week.md", days: [] }];
+    const loadPath = vi.spyOn(weekStore, "loadPath").mockResolvedValue(true);
+    const addObjectives = vi.spyOn(weekStore, "addObjectives").mockReturnValue(true);
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First objective"), { ctrlKey: true });
+      await fireEvent.pointerDown(screen.getByDisplayValue("Second objective"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First objective"), { clientX: 10, clientY: 12 });
+
+      expect(screen.getByRole("menuitem", { name: /Send to today's activity/ })).toBeTruthy();
+      expect(screen.getByRole("menuitem", { name: /Send to weekly objective/ })).toBeTruthy();
+
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Send to weekly objective/ }));
+      expect(loadPath).toHaveBeenCalledWith("week.md", descriptor, []);
+      expect(addObjectives).toHaveBeenCalledWith(["First objective", "Second objective"]);
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+    } finally {
+      todoStore.todos = originalTodos;
+      workspaceStore.weeks = originalWeeks;
+    }
+  });
+
+  it("keeps selection when weekly objective send has no current week", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [{ id: "todo-1", isTodo: true, text: "First objective", checked: false, indent: 0 }];
+    workspaceStore.weeks = [];
+    const showStatus = vi.spyOn(appStore, "showStatus");
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First objective"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First objective"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Send to weekly objective/ }));
+      expect(showStatus).toHaveBeenCalledWith("Current week not found");
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-1"]);
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("opens a today session picker and sends selected todos as activities", async () => {
+    const originalTodos = todoStore.todos;
+    const originalWeeks = workspaceStore.weeks;
+    const descriptor = getWeekDescriptor(new Date());
+    const today = formatDate(new Date());
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First activity", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second activity", checked: false, indent: 0 }
+    ];
+    workspaceStore.weeks = [{ name: descriptor.folderName, indexPath: "week.md", days: [{ path: "today.md", date: today }] }];
+    dailyStore.path = "";
+    dailyStore.sessions = [{ id: "session-1", name: "Work", activities: [] }];
+    const loadPath = vi.spyOn(dailyStore, "loadPath").mockResolvedValue(true);
+    const addActivities = vi.spyOn(dailyStore, "addActivities").mockReturnValue(true);
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First activity"), { ctrlKey: true });
+      await fireEvent.pointerDown(screen.getByDisplayValue("Second activity"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First activity"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Send to today's activity/ }));
+
+      expect(loadPath).toHaveBeenCalledWith("today.md", today);
+      expect(screen.getByRole("menu", { name: "Choose activity session" })).toBeTruthy();
+      expect(screen.getByRole("menuitem", { name: /Work/ }).getAttribute("title")).toBe("Work");
+
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Work/ }));
+      expect(addActivities).toHaveBeenCalledWith("session-1", ["First activity", "Second activity"]);
+      expect(appStore.currentView).toBe("todo");
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+      expect(screen.queryByRole("menu", { name: "Choose activity session" })).toBeNull();
+    } finally {
+      todoStore.todos = originalTodos;
+      workspaceStore.weeks = originalWeeks;
+    }
+  });
+
+  it("refreshes the workspace tree before reporting today's log missing", async () => {
+    const originalTodos = todoStore.todos;
+    const originalWeeks = workspaceStore.weeks;
+    const descriptor = getWeekDescriptor(new Date());
+    const today = formatDate(new Date());
+    todoStore.todos = [{ id: "todo-1", isTodo: true, text: "First activity", checked: false, indent: 0 }];
+    workspaceStore.weeks = [];
+    dailyStore.path = "";
+    dailyStore.sessions = [{ id: "session-1", name: "Work", activities: [] }];
+    const refresh = vi.spyOn(workspaceStore, "refresh").mockImplementation(async () => {
+      workspaceStore.weeks = [{ name: descriptor.folderName, indexPath: "week.md", days: [{ path: "today.md", date: today }] }];
+      return true;
+    });
+    const loadPath = vi.spyOn(dailyStore, "loadPath").mockResolvedValue(true);
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First activity"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First activity"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Send to today's activity/ }));
+
+      expect(refresh).toHaveBeenCalledOnce();
+      expect(loadPath).toHaveBeenCalledWith("today.md", today);
+      expect(screen.getByRole("menu", { name: "Choose activity session" })).toBeTruthy();
+    } finally {
+      todoStore.todos = originalTodos;
+      workspaceStore.weeks = originalWeeks;
+    }
+  });
+
+  it("keeps selection when today activity send cannot find a log or session", async () => {
+    const originalTodos = todoStore.todos;
+    const showStatus = vi.spyOn(appStore, "showStatus");
+    todoStore.todos = [{ id: "todo-1", isTodo: true, text: "First activity", checked: false, indent: 0 }];
+    workspaceStore.weeks = [];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First activity"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First activity"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Send to today's activity/ }));
+      expect(showStatus).toHaveBeenCalledWith("Today log not found");
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-1"]);
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("closes the today session picker with outside click and Escape", async () => {
+    const originalTodos = todoStore.todos;
+    const originalWeeks = workspaceStore.weeks;
+    const descriptor = getWeekDescriptor(new Date());
+    const today = formatDate(new Date());
+    todoStore.todos = [{ id: "todo-1", isTodo: true, text: "First activity", checked: false, indent: 0 }];
+    workspaceStore.weeks = [{ name: descriptor.folderName, indexPath: "week.md", days: [{ path: "today.md", date: today }] }];
+    dailyStore.path = "today.md";
+    dailyStore.sessions = [{ id: "session-1", name: "A very long session name that should clamp", activities: [] }];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First activity"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First activity"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Send to today's activity/ }));
+      expect(screen.getByRole("menu", { name: "Choose activity session" })).toBeTruthy();
+      await fireEvent.pointerDown(document.body);
+      expect(screen.queryByRole("menu", { name: "Choose activity session" })).toBeNull();
+
+      await fireEvent.contextMenu(screen.getByDisplayValue("First activity"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Send to today's activity/ }));
+      await fireEvent.keyDown(window, { key: "Escape" });
+      expect(screen.queryByRole("menu", { name: "Choose activity session" })).toBeNull();
+    } finally {
+      todoStore.todos = originalTodos;
+      workspaceStore.weeks = originalWeeks;
     }
   });
 

@@ -28,6 +28,7 @@
     {#if isEditing}
       <input
         type="number"
+        min="0"
         class="badge-input"
         bind:value={localValue}
         onblur={handleCommit}
@@ -45,6 +46,7 @@
     <span>Minutes</span>
     <input
       type="number"
+      min="0"
       value={minutes}
       onchange={(event) => {
         const valStr = event.currentTarget.value.trim();

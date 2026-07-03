@@ -7,6 +7,11 @@ describe("inline metadata", () => {
       .toEqual({ subjects: ["rust", "sürücü_belgesi"], minutes: 150, description: "Açıklama." });
   });
 
+  it("parses zero-minute activities", () => {
+    expect(parseActivityLine("- {subjects: (general), time: 0m} Later."))
+      .toEqual({ subjects: ["general"], minutes: 0, description: "Later." });
+  });
+
   it("rejects missing subjects and invalid identifiers", () => {
     expect(parseActivityLine("- {subjects: (), time: 30m} Empty.")).toBeNull();
     expect(parseActivityLine("- {subjects: (bad subject), time: 30m} Invalid.")).toBeNull();

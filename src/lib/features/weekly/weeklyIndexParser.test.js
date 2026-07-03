@@ -11,6 +11,30 @@ describe("weekly index parser", () => {
     expect(document.plan[0].session).toBe("Dev | Review");
   });
 
+  it("parses zero minute table values without dropping rows", () => {
+    const input = weekly
+      .replace("| Mon | Reading | reading | 60 |", "| Tue | Reading | reading | 0 |")
+      .replace(
+        "<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |",
+        "<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |\n| Tue | Reading | reading | 0 |"
+      );
+    const document = parseWeeklyIndex(input, { year: 2026, week: 26 });
+    expect(document.plan[1]).toMatchObject({ day: "Tue", session: "Reading", targetMinutes: 0 });
+    expect(document.actual[0]).toMatchObject({ day: "Tue", session: "Reading", actualMinutes: 0 });
+  });
+
+  it("clamps negative minute table values to zero", () => {
+    const input = weekly
+      .replace("| Mon | Reading | reading | 60 |", "| Tue | Reading | reading | -15 |")
+      .replace(
+        "<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |",
+        "<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |\n| Tue | Reading | reading | -5 |"
+      );
+    const document = parseWeeklyIndex(input, { year: 2026, week: 26 });
+    expect(document.plan[1]).toMatchObject({ targetMinutes: 0 });
+    expect(document.actual[0]).toMatchObject({ actualMinutes: 0 });
+  });
+
   it("serializes generated actual rows only inside markers", () => {
     const document = parseWeeklyIndex(weekly, { year: 2026, week: 26 });
     document.actual = [{ day: "Mon", session: "Dev | Review", subjects: ["rust"], actualMinutes: 90 }];

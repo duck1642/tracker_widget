@@ -96,8 +96,24 @@ export class DailyStore {
   addActivity(sessionId) {
     const session = this.sessions.find((item) => item.id === sessionId);
     if (!session) return;
-    session.activities.push({ id: id("activity"), subjects: ["general"], minutes: 0, description: "" });
+    session.activities = [...session.activities, { id: id("activity"), subjects: ["general"], minutes: 0, description: "" }];
+    this.sessions = [...this.sessions];
     void this.save();
+  }
+
+  addActivities(sessionId, descriptions) {
+    const session = this.sessions.find((item) => item.id === sessionId);
+    const cleaned = descriptions.map((description) => description.trim()).filter(Boolean);
+    if (!session || !cleaned.length) return false;
+    session.activities = [...session.activities, ...cleaned.map((description) => ({
+      id: id("activity"),
+      subjects: ["general"],
+      minutes: 0,
+      description
+    }))];
+    this.sessions = [...this.sessions];
+    void this.save();
+    return true;
   }
 
   updateActivity(sessionId, activityId, patch) {

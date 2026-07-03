@@ -26,10 +26,14 @@ function preservedMarkdown(body) {
   return { preambleRaw, unknownSectionsRaw };
 }
 
+function parseMinutesCell(value) {
+  return Math.max(0, Number(value) || 0);
+}
+
 function tableRows(content, type) {
   return content.split("\n").filter((line) => /^\|/.test(line)).slice(2).map(splitTableRow).filter((cells) => cells.length >= 4).map((cells, index) => type === "plan"
-    ? { id: createId("plan", index), day: cells[0], session: cells[1], subjects: cells[2].split(",").map((item) => item.trim()).filter(Boolean), targetMinutes: Number(cells[3]) || 0 }
-    : { day: cells[0], session: cells[1], subjects: cells[2].split(",").map((item) => item.trim()).filter(Boolean), actualMinutes: Number(cells[3]) || 0 });
+    ? { id: createId("plan", index), day: cells[0], session: cells[1], subjects: cells[2].split(",").map((item) => item.trim()).filter(Boolean), targetMinutes: parseMinutesCell(cells[3]) }
+    : { day: cells[0], session: cells[1], subjects: cells[2].split(",").map((item) => item.trim()).filter(Boolean), actualMinutes: parseMinutesCell(cells[3]) });
 }
 
 export function parseWeeklyIndex(markdown, isoWeek) {

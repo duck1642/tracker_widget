@@ -22,7 +22,7 @@ export function parseActivityLine(line) {
   if (!parts) return null;
   const subjects = parseSubjects(parts.metadata);
   const time = parts.metadata.match(/(?:^|,\s*)time:\s*(\d+)m(?:$|,)/u);
-  if (!subjects || !time || Number(time[1]) <= 0) return null;
+  if (!subjects || !time || Number(time[1]) < 0) return null;
   return { subjects, minutes: Number(time[1]), description: parts.description };
 }
 
