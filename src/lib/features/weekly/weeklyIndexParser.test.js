@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import { parseWeeklyIndex, serializeWeeklyIndex } from "./weeklyIndexParser.js";
 import { aggregateWeeklyActual } from "./actualAggregator.js";
 
-const weekly = `---\ntitle: test\n---\n\n# 2026 - Week 26 - June 22–28\n\n## Objectives\n\n- {subjects: (rust), origin: planned, status: open} Build parser.\n\n## Weekly Plan\n\n| Day | Session | Subjects | Target Minutes |\n| --- | --- | --- | ---: |\n| Mon | Dev \\| Review | rust, test | 120 |\n| Mon | Reading | reading | 60 |\n\n## Weekly Actual\n\n<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |\n<!-- tracker:actual:end -->\n\n## Notes\n\nRaw notes.\n`;
+const weekly = `---\ntitle: test\n---\n\n# 2026 - Week 26 - June 22-28\n\n## Objectives\n\n- {subjects: (rust), origin: planned, status: open} Build parser.\n\n## Weekly Plan\n\n| ID | Day | Session | Subjects | Target Minutes |\n| --- | --- | --- | --- | ---: |\n| p1 | Mon | Dev \\| Review | rust, test | 120 |\n| p2 | Mon | Reading | reading | 60 |\n\n## Weekly Plan Details\n\n<!-- tracker:plan-details:start -->\n\n### p1\n\n- {subjects: (rust), time: 30m} Draft parser tests\n\n### orphan\n\n- {subjects: (lost), time: 10m} Ignore me\n\n<!-- tracker:plan-details:end -->\n\n## Weekly Actual\n\n<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |\n<!-- tracker:actual:end -->\n\n## Notes\n\nRaw notes.\n`;
 
 describe("weekly index parser", () => {
-  it("parses objectives and escaped table cells", () => {
+  it("parses objectives, plan IDs, details, and escaped table cells", () => {
     const document = parseWeeklyIndex(weekly, { year: 2026, week: 26 });
     expect(document.objectives[0]).toMatchObject({ origin: "planned", status: "open" });
-    expect(document.plan[0].session).toBe("Dev | Review");
+    expect(document.plan[0]).toMatchObject({ id: "p1", session: "Dev | Review" });
+    expect(document.plan[0].activities[0]).toMatchObject({ subjects: ["rust"], minutes: 30, description: "Draft parser tests" });
   });
 
   it("parses metadata-only objectives as empty objective rows", () => {
@@ -25,7 +26,7 @@ describe("weekly index parser", () => {
 
   it("parses zero minute table values without dropping rows", () => {
     const input = weekly
-      .replace("| Mon | Reading | reading | 60 |", "| Tue | Reading | reading | 0 |")
+      .replace("| p2 | Mon | Reading | reading | 60 |", "| p2 | Tue | Reading | reading | 0 |")
       .replace(
         "<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |",
         "<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |\n| Tue | Reading | reading | 0 |"
@@ -37,7 +38,7 @@ describe("weekly index parser", () => {
 
   it("clamps negative minute table values to zero", () => {
     const input = weekly
-      .replace("| Mon | Reading | reading | 60 |", "| Tue | Reading | reading | -15 |")
+      .replace("| p2 | Mon | Reading | reading | 60 |", "| p2 | Tue | Reading | reading | -15 |")
       .replace(
         "<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |",
         "<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |\n| Tue | Reading | reading | -5 |"
@@ -51,8 +52,25 @@ describe("weekly index parser", () => {
     const document = parseWeeklyIndex(weekly, { year: 2026, week: 26 });
     document.actual = [{ day: "Mon", session: "Dev | Review", subjects: ["rust"], actualMinutes: 90 }];
     const serialized = serializeWeeklyIndex(document);
+    expect(serialized).toContain("| p1 | Mon | Dev \\| Review | rust | 30 |");
+    expect(serialized).toContain("| p2 | Mon | Reading | general | 0 |");
+    expect(serialized).toContain("### p1\n\n- {subjects: (rust), time: 30m} Draft parser tests");
+    expect(serialized).not.toContain("orphan");
     expect(serialized).toContain("| Mon | Dev \\| Review | rust | 90 |");
     expect(serialized).toContain("Raw notes.");
+  });
+
+  it("derives table summaries from planned activities", () => {
+    const document = parseWeeklyIndex(weekly, { year: 2026, week: 26 });
+    document.plan[0].activities.push({ id: "extra", subjects: ["test", "rust"], minutes: 15, description: "Review" });
+    const serialized = serializeWeeklyIndex(document);
+    expect(serialized).toContain("| p1 | Mon | Dev \\| Review | rust, test | 45 |");
+  });
+
+  it("loads missing plan details as empty planned activities", () => {
+    const input = weekly.replace(/## Weekly Plan Details[\s\S]*?## Weekly Actual/, "## Weekly Actual");
+    const document = parseWeeklyIndex(input, { year: 2026, week: 26 });
+    expect(document.plan[0].activities).toEqual([]);
   });
 
   it("preserves Markdown outside app-owned sections", () => {

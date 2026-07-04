@@ -1,16 +1,73 @@
 <script>
   // @ts-nocheck
-  import { Plus, Trash2 } from "@lucide/svelte";
-  import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
-  import TimeInput from "$lib/shared/components/TimeInput.svelte";
+  import { GripVertical, ListTodo, Plus, Trash2 } from "@lucide/svelte";
+  import { sortableDragHandle, sortableDropTarget } from "$lib/shared/actions/sortableDrag.js";
+  import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
+  import { planSummary } from "../weeklyIndexParser.js";
+  import PlanDetailsModal from "./PlanDetailsModal.svelte";
 
-  let { plan, onAdd, onUpdate, onDelete } = $props();
+  let {
+    plan,
+    onAdd,
+    onUpdate,
+    onDelete,
+    onMove,
+    onAddActivity,
+    onUpdateActivity,
+    onDeleteActivity,
+    onMoveActivity
+  } = $props();
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   let editingSessionId = $state(null);
+  let selectedEntryId = $state(null);
+  let draggedEntryId = $state(null);
+  let dragOverEntryId = $state(null);
+  let dropPosition = $state("before");
+
+  let selectedEntry = $derived(plan.find((entry) => entry.id === selectedEntryId));
 
   function focus(node) {
     node.focus();
+  }
+
+  function resetDrag() {
+    draggedEntryId = null;
+    dragOverEntryId = null;
+    dropPosition = "before";
+  }
+
+  function dragState(entryId) {
+    return {
+      dragging: draggedEntryId === entryId,
+      over: dragOverEntryId === entryId && draggedEntryId !== entryId,
+      position: dropPosition
+    };
+  }
+
+  function handleDragStart(id) {
+    draggedEntryId = id;
+  }
+
+  function handleDragOver({ id, position }) {
+    if (!draggedEntryId || draggedEntryId === id) return;
+    const source = plan.find((entry) => entry.id === draggedEntryId);
+    const target = plan.find((entry) => entry.id === id);
+    if (!source || !target || source.day !== target.day) return;
+    dragOverEntryId = id;
+    dropPosition = position;
+  }
+
+  function handleDragLeave(id) {
+    if (dragOverEntryId === id) {
+      dragOverEntryId = null;
+      dropPosition = "before";
+    }
+  }
+
+  function handleDrop({ sourceId, targetId, position }) {
+    onMove?.(sourceId, targetId, position);
+    resetDrag();
   }
 </script>
 
@@ -30,8 +87,36 @@
 
         <div class="card-list">
           {#each entries as entry (entry.id)}
-            <article class="plan-card">
+            {@const summary = planSummary(entry)}
+            <article
+              class="plan-card"
+              class:dragging={dragState(entry.id).dragging}
+              class:drop-before={dragState(entry.id).over && dragState(entry.id).position === "before"}
+              class:drop-after={dragState(entry.id).over && dragState(entry.id).position === "after"}
+              use:sortableDropTarget={{
+                id: entry.id,
+                type: "weekly-plan",
+                onOver: handleDragOver,
+                onLeave: handleDragLeave,
+                onDrop: handleDrop
+              }}
+            >
               <div class="card-top">
+                <span
+                  role="button"
+                  tabindex="0"
+                  class="drag-handle"
+                  aria-label={`Reorder ${entry.session}`}
+                  title="Drag to reorder"
+                  use:sortableDragHandle={{
+                    id: entry.id,
+                    type: "weekly-plan",
+                    onStart: handleDragStart,
+                    onEnd: resetDrag
+                  }}
+                >
+                  <GripVertical size={13} />
+                </span>
                 {#if editingSessionId === entry.id}
                   <input
                     class="session-input"
@@ -41,9 +126,10 @@
                     oninput={(event) => onUpdate(entry.id, { session: event.currentTarget.value })}
                     placeholder="What session?"
                     use:focus
+                    onclick={(event) => event.stopPropagation()}
                   />
                 {:else}
-                  <button type="button" class="session-title" onclick={() => editingSessionId = entry.id}>
+                  <button type="button" class="session-title" onclick={() => editingSessionId = entry.id} title={entry.session || "Unnamed session"}>
                     {entry.session || "Unnamed session"}
                   </button>
                 {/if}
@@ -53,15 +139,12 @@
                 </button>
               </div>
 
-              <div class="card-field">
-                <span>Time</span>
-                <TimeInput minutes={entry.targetMinutes} onChange={(targetMinutes) => onUpdate(entry.id, { targetMinutes })} variant="badge" />
-              </div>
+              <ReadonlyBadges subjects={summary.subjects} minutes={summary.targetMinutes} />
 
-              <div class="card-field">
-                <span>Subjects</span>
-                <SubjectInput subjects={entry.subjects} onChange={(subjects) => onUpdate(entry.id, { subjects })} variant="badge" />
-              </div>
+              <button type="button" class="details-btn" onclick={() => selectedEntryId = entry.id} aria-label={`Open planned activities for ${entry.session}`} title="Open planned activities">
+                <ListTodo size={13} />
+                <span>{entry.activities?.length || 0} planned</span>
+              </button>
             </article>
           {/each}
 
@@ -76,6 +159,17 @@
       </section>
     {/each}
   </div>
+
+  {#if selectedEntry}
+    <PlanDetailsModal
+      entry={selectedEntry}
+      onClose={() => selectedEntryId = null}
+      onAddActivity={() => onAddActivity(selectedEntry.id)}
+      onUpdateActivity={(activityId, patch) => onUpdateActivity(selectedEntry.id, activityId, patch)}
+      onDeleteActivity={(activityId) => onDeleteActivity(selectedEntry.id, activityId)}
+      onMoveActivity={(activityId, direction) => onMoveActivity(selectedEntry.id, activityId, direction)}
+    />
+  {/if}
 </section>
 
 <style>
@@ -131,21 +225,63 @@
   .plan-card {
     display: grid;
     gap: 7px;
-    padding: 8px;
-    border: 1px solid transparent;
+    padding: 0 8px 8px;
+    border: 1px solid var(--border-subtle);
     border-radius: 6px;
     background: #161916;
+    overflow: visible;
   }
 
   .plan-card:hover {
-    border-color: var(--border-subtle);
+    border-color: var(--border-color);
+  }
+
+  .plan-card.dragging {
+    opacity: 0.58;
+  }
+
+  .plan-card.drop-before {
+    box-shadow: 0 -2px 0 var(--accent), var(--shadow-sm);
+  }
+
+  .plan-card.drop-after {
+    box-shadow: 0 2px 0 var(--accent), var(--shadow-sm);
   }
 
   .card-top {
     display: flex;
     align-items: center;
     gap: 6px;
+    min-height: 34px;
+    margin: 0 -8px;
+    padding: 0 6px;
+    border-radius: 6px 6px 0 0;
+    background: transparent;
     min-width: 0;
+  }
+
+  .drag-handle {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: grab;
+    user-select: none;
+  }
+
+  .drag-handle:hover {
+    background: var(--surface-hover);
+    color: var(--text-color);
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
   }
 
   .session-title {
@@ -210,17 +346,24 @@
     color: #ff8888;
   }
 
-  .card-field {
-    display: grid;
-    gap: 4px;
+  .details-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 26px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    cursor: pointer;
   }
 
-  .card-field > span {
-    color: var(--text-muted);
-    font-size: 9px;
-    font-weight: 750;
-    letter-spacing: .08em;
-    text-transform: uppercase;
+  .details-btn:hover {
+    background: var(--surface-hover);
+    color: var(--text-color);
+    border-color: var(--border-color);
   }
 
   .day-empty {

@@ -1,6 +1,7 @@
 <script>
   // @ts-nocheck
   import { RefreshCw } from "@lucide/svelte";
+  import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
 
   let { actual, onRefresh } = $props();
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -28,17 +29,9 @@
             <article class="actual-card">
               <div class="card-top">
                 <strong>{entry.session || "Unnamed session"}</strong>
-                <span class="time-badge">{entry.actualMinutes}m</span>
               </div>
 
-              <div class="subject-badges">
-                {#each entry.subjects as subject}
-                  <span class="subject-badge">{subject}</span>
-                {/each}
-                {#if entry.subjects.length === 0}
-                  <span class="subject-badge placeholder">-</span>
-                {/if}
-              </div>
+              <ReadonlyBadges subjects={entry.subjects} minutes={entry.actualMinutes} />
             </article>
           {/each}
 
@@ -128,43 +121,6 @@
     font-weight: 650;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .subject-badges {
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
-  }
-
-  .subject-badge,
-  .time-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: fit-content;
-    height: 24px;
-    padding: 0 8px;
-    border: 1px solid #2d2d2d;
-    border-radius: 4px;
-    background: #121212;
-    color: #b3b3b3;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-    box-sizing: border-box;
-  }
-
-  .time-badge {
-    color: var(--text-muted);
-    border-color: #3d3d3d;
-    background: transparent;
-  }
-
-  .subject-badge.placeholder {
-    color: var(--text-muted);
-    border-style: dashed;
-    background: transparent;
   }
 
   .day-empty {

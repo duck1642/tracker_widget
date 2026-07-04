@@ -104,7 +104,7 @@
             isEditingName = true;
             editNameInput = session.name;
           }}
-          title={`${session.name} - click to rename`}
+          title={session.name}
         >
           {session.name}
         </span>
@@ -137,7 +137,7 @@
   .session-card.dragging { opacity: 0.58; }
   .session-card.drop-before { box-shadow: 0 -2px 0 var(--accent), var(--shadow-sm); }
   .session-card.drop-after { box-shadow: 0 2px 0 var(--accent), var(--shadow-sm); }
-  header { display: flex; align-items: center; padding: 0 10px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: linear-gradient(90deg, var(--surface-2), var(--surface)); }
+  header { display: flex; align-items: center; padding: 0 10px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface-2); }
   .drag-handle { display: inline-grid; place-items: center; flex: 0 0 24px; width: 24px; height: 28px; margin-right: 6px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); cursor: grab; user-select: none; }
   .drag-handle:hover { background: var(--surface-hover); color: var(--text-color); }
   .drag-handle:active { cursor: grabbing; }

@@ -4,8 +4,13 @@
 
 ## Weekly Plan
 
-| Day | Session | Subjects | Target Minutes |
-| --- | --- | --- | ---: |
+| ID | Day | Session | Subjects | Target Minutes |
+| --- | --- | --- | --- | ---: |
+
+## Weekly Plan Details
+
+<!-- tracker:plan-details:start -->
+<!-- tracker:plan-details:end -->
 
 ## Weekly Actual
 
@@ -15,4 +20,3 @@
 <!-- tracker:actual:end -->
 
 ## Notes
-

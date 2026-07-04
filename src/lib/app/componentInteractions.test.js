@@ -311,16 +311,76 @@ describe("logger editing", () => {
   it("emits Weekly plan edits", async () => {
     const onUpdate = vi.fn();
     render(PlanSection, {
-      plan: [{ id: "plan-1", day: "Mon", session: "Development", subjects: ["rust"], targetMinutes: 60 }],
+      plan: [{ id: "p1", day: "Mon", session: "Development", subjects: ["stale"], targetMinutes: 99, activities: [{ id: "a1", subjects: ["rust"], minutes: 60, description: "Build" }] }],
       onAdd: vi.fn(), onUpdate, onDelete: vi.fn()
     });
     await fireEvent.click(screen.getByRole("button", { name: "Development" }));
     await fireEvent.input(screen.getByPlaceholderText("What session?"), { target: { value: "Review" } });
-    expect(onUpdate).toHaveBeenCalledWith("plan-1", { session: "Review" });
+    expect(onUpdate).toHaveBeenCalledWith("p1", { session: "Review" });
+    expect(screen.getByText("60m")).toBeTruthy();
+    expect(screen.getByText("rust")).toBeTruthy();
+    expect(screen.queryByRole("textbox", { name: "Add subject" })).toBeNull();
+  });
 
-    await fireEvent.input(screen.getByRole("textbox", { name: "Add subject" }), { target: { value: "planning" } });
-    await fireEvent.keyDown(screen.getByRole("textbox", { name: "Add subject" }), { key: "Enter" });
-    expect(onUpdate).toHaveBeenCalledWith("plan-1", { subjects: ["rust", "planning"] });
+  it("opens weekly plan details and emits planned activity actions", async () => {
+    const onAddActivity = vi.fn();
+    const onMoveActivity = vi.fn();
+    render(PlanSection, {
+      plan: [{
+        id: "p1",
+        day: "Mon",
+        session: "Development",
+        subjects: ["rust"],
+        targetMinutes: 60,
+        activities: [{ id: "a1", subjects: ["rust"], minutes: 30, description: "Draft tests" }]
+      }],
+      onAdd: vi.fn(),
+      onUpdate: vi.fn(),
+      onDelete: vi.fn(),
+      onMove: vi.fn(),
+      onAddActivity,
+      onUpdateActivity: vi.fn(),
+      onDeleteActivity: vi.fn(),
+      onMoveActivity
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Open planned activities for Development" }));
+    expect(screen.getByRole("dialog", { name: "Planned activities for Development" })).toBeTruthy();
+    await fireEvent.click(screen.getByRole("button", { name: "Add activity" }));
+    expect(onAddActivity).toHaveBeenCalledWith("p1");
+    expect(screen.getByRole("button", { name: "Move planned activity up" }).disabled).toBe(true);
+  });
+
+  it("closes weekly plan details with Escape and backdrop click", async () => {
+    const props = {
+      plan: [{
+        id: "p1",
+        day: "Mon",
+        session: "Development",
+        subjects: ["rust"],
+        targetMinutes: 60,
+        activities: [{ id: "a1", subjects: ["rust"], minutes: 30, description: "Draft tests" }]
+      }],
+      onAdd: vi.fn(),
+      onUpdate: vi.fn(),
+      onDelete: vi.fn(),
+      onMove: vi.fn(),
+      onAddActivity: vi.fn(),
+      onUpdateActivity: vi.fn(),
+      onDeleteActivity: vi.fn(),
+      onMoveActivity: vi.fn()
+    };
+    const view = render(PlanSection, props);
+
+    await fireEvent.click(screen.getByRole("button", { name: "Open planned activities for Development" }));
+    expect(screen.getByRole("dialog", { name: "Planned activities for Development" })).toBeTruthy();
+    await fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Planned activities for Development" })).toBeNull();
+
+    await view.rerender(props);
+    await fireEvent.click(screen.getByRole("button", { name: "Open planned activities for Development" }));
+    await fireEvent.click(screen.getByRole("presentation"));
+    expect(screen.queryByRole("dialog", { name: "Planned activities for Development" })).toBeNull();
   });
 
   it("shows filtered weekly session suggestions when adding a daily session", async () => {

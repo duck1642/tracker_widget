@@ -11,8 +11,13 @@ update_date:
 
 ## Weekly Plan
 
-| Day | Session | Subjects | Target Minutes |
-| --- | --- | --- | ---: |
+| ID | Day | Session | Subjects | Target Minutes |
+| --- | --- | --- | --- | ---: |
+
+## Weekly Plan Details
+
+<!-- tracker:plan-details:start -->
+<!-- tracker:plan-details:end -->
 
 ## Weekly Actual
 
@@ -22,4 +27,3 @@ update_date:
 <!-- tracker:actual:end -->
 
 ## Notes
-

@@ -194,6 +194,23 @@
               aria-invalid={invalid}
               use:focus
             />
+            {#if showSuggestions && editingIndex === index && filteredSuggestions.length > 0}
+              <div class="subject-suggestions" role="listbox" aria-label="Subject suggestions">
+                {#each filteredSuggestions as suggestion, suggestionIndex}
+                  <button
+                    type="button"
+                    class:highlighted={suggestionIndex === highlightedSuggestion}
+                    role="option"
+                    aria-selected={suggestionIndex === highlightedSuggestion}
+                    title={suggestion}
+                    onpointerdown={(event) => event.preventDefault()}
+                    onclick={(event) => { event.stopPropagation(); selectSuggestion(suggestion); }}
+                  >
+                    {suggestion}
+                  </button>
+                {/each}
+              </div>
+            {/if}
           </span>
         {:else}
           <span class="subject-badge" title={subject}>
@@ -224,24 +241,24 @@
           aria-invalid={invalid}
           placeholder="+"
         />
+        {#if showSuggestions && editingIndex === null && filteredSuggestions.length > 0}
+          <div class="subject-suggestions" role="listbox" aria-label="Subject suggestions">
+            {#each filteredSuggestions as suggestion, index}
+              <button
+                type="button"
+                class:highlighted={index === highlightedSuggestion}
+                role="option"
+                aria-selected={index === highlightedSuggestion}
+                title={suggestion}
+                onpointerdown={(event) => event.preventDefault()}
+                onclick={(event) => { event.stopPropagation(); selectSuggestion(suggestion); }}
+              >
+                {suggestion}
+              </button>
+            {/each}
+          </div>
+        {/if}
       </span>
-      {#if showSuggestions && filteredSuggestions.length > 0}
-        <div class="subject-suggestions" role="listbox" aria-label="Subject suggestions">
-          {#each filteredSuggestions as suggestion, index}
-            <button
-              type="button"
-              class:highlighted={index === highlightedSuggestion}
-              role="option"
-              aria-selected={index === highlightedSuggestion}
-              title={suggestion}
-              onpointerdown={(event) => event.preventDefault()}
-              onclick={(event) => { event.stopPropagation(); selectSuggestion(suggestion); }}
-            >
-              {suggestion}
-            </button>
-          {/each}
-        </div>
-      {/if}
     </div>
     {#if invalid}<small class="badge-error">Invalid or duplicate subject</small>{/if}
   </div>
@@ -333,7 +350,7 @@
     min-width: 5ch;
     max-width: 180px;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: visible;
   }
   .add-subject {
     width: 26px;
@@ -433,9 +450,10 @@
     display: grid;
     min-width: 126px;
     max-width: 170px;
-    max-height: 180px;
+    max-height: 156px;
     overflow-y: auto;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
     padding: 4px;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
@@ -444,7 +462,14 @@
     box-sizing: border-box;
   }
   .subject-suggestions::-webkit-scrollbar {
-    display: none;
+    width: 6px;
+  }
+  .subject-suggestions::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: var(--border-strong);
+  }
+  .subject-suggestions::-webkit-scrollbar-track {
+    background: transparent;
   }
   .subject-suggestions button {
     min-width: 0;

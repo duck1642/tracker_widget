@@ -106,11 +106,21 @@ fn collect_subjects_from_markdown(content: &str) -> Vec<String> {
         collect_inline_subjects(line, &mut subjects);
         if line.trim_start().starts_with('|') {
             let cells = split_table_row(line);
-            if cells.len() >= 4
-                && !cells[2].eq_ignore_ascii_case("subjects")
-                && !cells[2].chars().all(|ch| ch == '-')
-            {
-                collect_subject_list(&cells[2], &mut subjects);
+            let subject_cell = if cells.len() >= 5 && cells[0].eq_ignore_ascii_case("id") {
+                Some(3)
+            } else if cells.len() >= 5 && cells[0].starts_with('p') {
+                Some(3)
+            } else if cells.len() >= 4 {
+                Some(2)
+            } else {
+                None
+            };
+            if let Some(index) = subject_cell {
+                if !cells[index].eq_ignore_ascii_case("subjects")
+                    && !cells[index].chars().all(|ch| ch == '-')
+                {
+                    collect_subject_list(&cells[index], &mut subjects);
+                }
             }
         }
     }

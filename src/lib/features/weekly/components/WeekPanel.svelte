@@ -35,7 +35,17 @@
     </header>
     {#if weekStore.conflict}<ConflictBanner onReloadExternal={() => weekStore.resolveConflict("reload")} onKeepLocal={() => weekStore.resolveConflict("keep-local")} />{/if}
     <ObjectivesSection objectives={weekStore.objectives} onAdd={() => weekStore.addObjective()} onUpdate={(id, patch) => weekStore.updateObjective(id, patch)} onDelete={(id) => weekStore.removeObjective(id)} onMove={(id, direction) => weekStore.moveObjective(id, direction)} />
-    <PlanSection plan={weekStore.plan} onAdd={(day) => weekStore.addPlanEntry(day)} onUpdate={(id, patch) => weekStore.updatePlanEntry(id, patch)} onDelete={(id) => weekStore.removePlanEntry(id)} />
+    <PlanSection
+      plan={weekStore.plan}
+      onAdd={(day) => weekStore.addPlanEntry(day)}
+      onUpdate={(id, patch) => weekStore.updatePlanEntry(id, patch)}
+      onDelete={(id) => weekStore.removePlanEntry(id)}
+      onMove={(sourceId, targetId, position) => weekStore.movePlanEntryWithinDay(sourceId, targetId, position)}
+      onAddActivity={(entryId) => weekStore.addPlanActivity(entryId)}
+      onUpdateActivity={(entryId, activityId, patch) => weekStore.updatePlanActivity(entryId, activityId, patch)}
+      onDeleteActivity={(entryId, activityId) => weekStore.removePlanActivity(entryId, activityId)}
+      onMoveActivity={(entryId, activityId, direction) => weekStore.movePlanActivity(entryId, activityId, direction)}
+    />
     <ActualSection actual={weekStore.actual} onRefresh={() => weekStore.refreshActual()} />
     <section id="week-notes" class="week-section"><header><div><h2>Notes</h2></div></header><NotesEditor value={weekStore.notesRaw} onChange={(value) => weekStore.updateNotes(value)} label="Weekly notes" /></section>
   {/if}

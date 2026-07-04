@@ -13,6 +13,14 @@ function id(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+function nextPlanId(plan) {
+  const highest = plan.reduce((max, entry) => {
+    const match = String(entry.id || "").match(/^p(\d+)$/);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+  return `p${highest + 1}`;
+}
+
 export class WeekStore {
   view = "week";
   path = $state("");
@@ -115,7 +123,14 @@ export class WeekStore {
   }
 
   addPlanEntry(day = "Mon") {
-    this.plan.push({ id: id("plan"), day, session: "Session", subjects: ["general"], targetMinutes: 0 });
+    this.plan.push({
+      id: nextPlanId(this.plan),
+      day,
+      session: "Session",
+      subjects: ["general"],
+      targetMinutes: 0,
+      activities: [{ id: id("plan-activity"), subjects: ["general"], minutes: 0, description: "Session" }]
+    });
     void this.save();
   }
 
@@ -129,6 +144,56 @@ export class WeekStore {
   removePlanEntry(entryId) {
     this.plan = this.plan.filter((item) => item.id !== entryId);
     void this.save(true);
+  }
+
+  movePlanEntryWithinDay(sourceEntryId, targetEntryId, position = "before") {
+    if (sourceEntryId === targetEntryId) return false;
+    const source = this.plan.find((entry) => entry.id === sourceEntryId);
+    const target = this.plan.find((entry) => entry.id === targetEntryId);
+    if (!source || !target || source.day !== target.day) return false;
+    const withoutSource = this.plan.filter((entry) => entry.id !== sourceEntryId);
+    const targetIndex = withoutSource.findIndex((entry) => entry.id === targetEntryId);
+    if (targetIndex < 0) return false;
+    const insertIndex = position === "after" ? targetIndex + 1 : targetIndex;
+    const next = [...withoutSource.slice(0, insertIndex), source, ...withoutSource.slice(insertIndex)];
+    if (next.map((entry) => entry.id).join("\0") === this.plan.map((entry) => entry.id).join("\0")) return false;
+    this.plan = next;
+    void this.save(true);
+    return true;
+  }
+
+  addPlanActivity(entryId) {
+    const entry = this.plan.find((item) => item.id === entryId);
+    if (!entry) return;
+    entry.activities = [...(entry.activities || []), { id: id("plan-activity"), subjects: ["general"], minutes: 0, description: "" }];
+    this.plan = [...this.plan];
+    void this.save();
+  }
+
+  updatePlanActivity(entryId, activityId, patch) {
+    const activity = this.plan.find((entry) => entry.id === entryId)?.activities?.find((item) => item.id === activityId);
+    if (!activity) return;
+    Object.assign(activity, patch);
+    void this.save();
+  }
+
+  removePlanActivity(entryId, activityId) {
+    const entry = this.plan.find((item) => item.id === entryId);
+    if (!entry) return;
+    entry.activities = (entry.activities || []).filter((item) => item.id !== activityId);
+    this.plan = [...this.plan];
+    void this.save(true);
+  }
+
+  movePlanActivity(entryId, activityId, direction) {
+    const entry = this.plan.find((item) => item.id === entryId);
+    if (!entry) return false;
+    const next = movedByDirection(entry.activities || [], activityId, direction);
+    if (!next) return false;
+    entry.activities = next;
+    this.plan = [...this.plan];
+    void this.save(true);
+    return true;
   }
 
   updateNotes(value) {
