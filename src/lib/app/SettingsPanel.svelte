@@ -28,6 +28,11 @@
     <button class="toggle-row" onclick={onToggleAutostart}><span class:checked={autostartEnabled} class="checkbox">{#if autostartEnabled}<Check size={11} />{/if}</span>Start on boot</button>
   </section>
   <section>
+    <h3>Frontmatter</h3>
+    <button class="toggle-row" onclick={() => appStore.changeFrontmatterMode("off")}><span class:checked={appStore.frontmatterMode === "off"} class="checkbox">{#if appStore.frontmatterMode === "off"}<Check size={11} />{/if}</span>Off</button>
+    <button class="toggle-row" onclick={() => appStore.changeFrontmatterMode("personal")}><span class:checked={appStore.frontmatterMode === "personal"} class="checkbox">{#if appStore.frontmatterMode === "personal"}<Check size={11} />{/if}</span>Personal</button>
+  </section>
+  <section>
     <h3>Subject history</h3>
     <span class="field-label">{subjectHistoryStore.suggestions.length} {subjectHistoryStore.suggestions.length === 1 ? "subject" : "subjects"}</span>
     <button onclick={() => subjectHistoryStore.rebuild(appStore.logsRootPath)} disabled={subjectHistoryStore.rebuilding}>

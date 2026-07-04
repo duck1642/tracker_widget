@@ -1,5 +1,8 @@
 use std::fs;
 
+pub const FRONTMATTER_OFF: &str = "off";
+pub const FRONTMATTER_PERSONAL: &str = "personal";
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub struct AppConfig {
     pub file_path: String,
@@ -8,6 +11,19 @@ pub struct AppConfig {
     pub layer_mode: String,
     pub drag_enabled: bool,
     pub autostart_enabled: bool,
+    #[serde(default = "default_frontmatter_mode")]
+    pub frontmatter_mode: String,
+}
+
+pub fn default_frontmatter_mode() -> String {
+    FRONTMATTER_OFF.to_string()
+}
+
+pub fn normalize_frontmatter_mode(mode: &str) -> String {
+    match mode {
+        FRONTMATTER_PERSONAL => FRONTMATTER_PERSONAL.to_string(),
+        _ => FRONTMATTER_OFF.to_string(),
+    }
 }
 
 impl Default for AppConfig {
@@ -18,7 +34,15 @@ impl Default for AppConfig {
             layer_mode: "normal".to_string(),
             drag_enabled: true,
             autostart_enabled: false,
+            frontmatter_mode: default_frontmatter_mode(),
         }
+    }
+}
+
+impl AppConfig {
+    fn normalized(mut self) -> Self {
+        self.frontmatter_mode = normalize_frontmatter_mode(&self.frontmatter_mode);
+        self
     }
 }
 
@@ -51,13 +75,13 @@ pub fn read_config() -> Result<AppConfig, String> {
     }
     let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let config: AppConfig = serde_json::from_str(&content).map_err(|e| e.to_string())?;
-    Ok(config)
+    Ok(config.normalized())
 }
 
 #[tauri::command]
 pub fn write_config(config: AppConfig) -> Result<(), String> {
     let path = get_config_path();
-    let json = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
+    let json = serde_json::to_string_pretty(&config.normalized()).map_err(|e| e.to_string())?;
     fs::write(&path, json).map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -72,5 +96,20 @@ mod tests {
             serde_json::from_str(include_str!("../../../config.example.json")).unwrap();
 
         assert_eq!(example, AppConfig::default());
+    }
+
+    #[test]
+    fn missing_or_unknown_frontmatter_mode_defaults_off() {
+        let missing: AppConfig = serde_json::from_str(
+            r#"{"file_path":"","logs_root_path":"","layer_mode":"normal","drag_enabled":true,"autostart_enabled":false}"#,
+        )
+        .unwrap();
+        assert_eq!(missing.normalized().frontmatter_mode, FRONTMATTER_OFF);
+
+        let unknown: AppConfig = serde_json::from_str(
+            r#"{"file_path":"","logs_root_path":"","layer_mode":"normal","drag_enabled":true,"autostart_enabled":false,"frontmatter_mode":"weird"}"#,
+        )
+        .unwrap();
+        assert_eq!(unknown.normalized().frontmatter_mode, FRONTMATTER_OFF);
     }
 }

@@ -5,6 +5,12 @@ use std::path::{Path, PathBuf};
 
 const DAILY_TEMPLATE: &str = include_str!("../../../templates/daily-log.md");
 const WEEKLY_TEMPLATE: &str = include_str!("../../../templates/weekly-index.md");
+const DAILY_NO_FRONTMATTER_TEMPLATE: &str =
+    include_str!("../../../templates/daily-log.no-frontmatter.md");
+const WEEKLY_NO_FRONTMATTER_TEMPLATE: &str =
+    include_str!("../../../templates/weekly-index.no-frontmatter.md");
+const DAILY_PERSONAL_TEMPLATE: &str = include_str!("../../../templates/daily-log.personal.md");
+const WEEKLY_PERSONAL_TEMPLATE: &str = include_str!("../../../templates/weekly-index.personal.md");
 const TODO_STARTER: &str = "- [ ] Welcome to your desktop todo widget!\n- [ ] Double-click to edit this todo.\n  - [ ] Use Tab to indent.\n  - [ ] Use Shift+Tab to outdent.\n";
 
 #[derive(Serialize)]
@@ -179,18 +185,45 @@ fn template_dir() -> PathBuf {
         .join("templates")
 }
 
-fn ensure_templates() -> Result<(PathBuf, PathBuf), String> {
-    let dir = template_dir();
+fn ensure_templates_in_dir(dir: &Path) -> Result<(), String> {
     fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
-    let daily = dir.join("daily-log.md");
-    let weekly = dir.join("weekly-index.md");
-    if !daily.exists() {
-        fs::write(&daily, DAILY_TEMPLATE).map_err(|error| error.to_string())?;
+    let templates = [
+        ("daily-log.md", DAILY_TEMPLATE),
+        ("weekly-index.md", WEEKLY_TEMPLATE),
+        ("daily-log.no-frontmatter.md", DAILY_NO_FRONTMATTER_TEMPLATE),
+        (
+            "weekly-index.no-frontmatter.md",
+            WEEKLY_NO_FRONTMATTER_TEMPLATE,
+        ),
+        ("daily-log.personal.md", DAILY_PERSONAL_TEMPLATE),
+        ("weekly-index.personal.md", WEEKLY_PERSONAL_TEMPLATE),
+    ];
+    for (name, content) in templates {
+        let path = dir.join(name);
+        if !path.exists() {
+            fs::write(path, content).map_err(|error| error.to_string())?;
+        }
     }
-    if !weekly.exists() {
-        fs::write(&weekly, WEEKLY_TEMPLATE).map_err(|error| error.to_string())?;
-    }
-    Ok((daily, weekly))
+    Ok(())
+}
+
+fn ensure_templates() -> Result<(), String> {
+    ensure_templates_in_dir(&template_dir())
+}
+
+fn template_paths(frontmatter_mode: &str) -> Result<(PathBuf, PathBuf), String> {
+    ensure_templates()?;
+    let dir = template_dir();
+    let mode = super::config::normalize_frontmatter_mode(frontmatter_mode);
+    let suffix = if mode == super::config::FRONTMATTER_PERSONAL {
+        "personal"
+    } else {
+        "no-frontmatter"
+    };
+    Ok((
+        dir.join(format!("daily-log.{suffix}.md")),
+        dir.join(format!("weekly-index.{suffix}.md")),
+    ))
 }
 
 fn fill_template(template: &str, values: &[(&str, String)]) -> String {
@@ -223,6 +256,7 @@ pub fn create_log_week(
     range_label: String,
     dates: Vec<String>,
     missing_only: bool,
+    frontmatter_mode: String,
 ) -> Result<Vec<String>, String> {
     let _ = missing_only;
     if !(1..=53).contains(&week)
@@ -246,7 +280,7 @@ pub fn create_log_week(
     let folder_name = format!("{year}w{week:02}");
     let week_dir = root.join(&folder_name);
     fs::create_dir_all(&week_dir).map_err(|error| error.to_string())?;
-    let (daily_path, weekly_path) = ensure_templates()?;
+    let (daily_path, weekly_path) = template_paths(&frontmatter_mode)?;
     let daily_template = fs::read_to_string(daily_path).map_err(|error| error.to_string())?;
     let weekly_template = fs::read_to_string(weekly_path).map_err(|error| error.to_string())?;
     let mut created = Vec::new();
@@ -317,6 +351,23 @@ mod tests {
     }
 
     #[test]
+    fn template_initialization_creates_mode_templates_without_overwriting() {
+        let root = temp_directory("templates");
+        let templates = root.join("templates");
+        fs::create_dir_all(&templates).unwrap();
+        let customized = templates.join("daily-log.personal.md");
+        fs::write(&customized, "custom").unwrap();
+
+        ensure_templates_in_dir(&templates).unwrap();
+
+        assert_eq!(fs::read_to_string(customized).unwrap(), "custom");
+        assert!(templates.join("daily-log.no-frontmatter.md").exists());
+        assert!(templates.join("weekly-index.no-frontmatter.md").exists());
+        assert!(templates.join("weekly-index.personal.md").exists());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn create_new_never_overwrites() {
         let path = std::env::temp_dir().join(format!(
             "tracker-widget-{}-create-new.md",
@@ -377,6 +428,7 @@ mod tests {
             "June 22-28".into(),
             week_dates(),
             false,
+            super::super::config::FRONTMATTER_OFF.into(),
         )
         .unwrap();
         assert_eq!(created.len(), 8);
@@ -393,12 +445,59 @@ mod tests {
             "June 22-28".into(),
             week_dates(),
             true,
+            super::super::config::FRONTMATTER_OFF.into(),
         )
         .unwrap();
 
         assert_eq!(repaired, vec![display_path(&missing)]);
         assert_eq!(fs::read_to_string(index).unwrap(), "keep me");
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn frontmatter_mode_selects_week_templates() {
+        let root = temp_directory("frontmatter-mode");
+        let off_created = create_log_week(
+            display_path(&root),
+            2026,
+            26,
+            "2026-06-22".into(),
+            "June 22-28".into(),
+            week_dates(),
+            false,
+            super::super::config::FRONTMATTER_OFF.into(),
+        )
+        .unwrap();
+        assert_eq!(off_created.len(), 8);
+        let off_index = root.join("2026w26").join("2026w26_index.md");
+        assert!(!fs::read_to_string(off_index).unwrap().starts_with("---"));
+
+        let personal_root = temp_directory("frontmatter-personal");
+        let personal_created = create_log_week(
+            display_path(&personal_root),
+            2026,
+            27,
+            "2026-06-29".into(),
+            "June 29-July 5".into(),
+            (29..=30)
+                .map(|day| format!("2026-06-{day:02}"))
+                .chain((1..=5).map(|day| format!("2026-07-{day:02}")))
+                .collect(),
+            false,
+            super::super::config::FRONTMATTER_PERSONAL.into(),
+        )
+        .unwrap();
+        assert_eq!(personal_created.len(), 8);
+        let personal_index = personal_root.join("2026w27").join("2026w27_index.md");
+        let personal_day = personal_root.join("2026w27").join("20260629_log.md");
+        assert!(fs::read_to_string(personal_index)
+            .unwrap()
+            .contains("type: \"weekly_index\""));
+        assert!(fs::read_to_string(personal_day)
+            .unwrap()
+            .contains("type: \"daily_log\""));
+        fs::remove_dir_all(root).unwrap();
+        fs::remove_dir_all(personal_root).unwrap();
     }
 
     #[test]
@@ -412,6 +511,7 @@ mod tests {
             "invalid".into(),
             vec!["2026-06-22".into()],
             false,
+            super::super::config::FRONTMATTER_OFF.into(),
         );
         assert!(result.is_err());
         fs::remove_dir_all(root).unwrap();

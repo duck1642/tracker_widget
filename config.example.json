@@ -3,5 +3,6 @@
   "logs_root_path": "",
   "layer_mode": "normal",
   "drag_enabled": true,
-  "autostart_enabled": false
+  "autostart_enabled": false,
+  "frontmatter_mode": "off"
 }

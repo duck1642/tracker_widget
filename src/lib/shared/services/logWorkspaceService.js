@@ -68,7 +68,7 @@ export async function pathExists(path) {
   return await invoke("path_exists", { path });
 }
 
-export async function createWeek(rootPath, date) {
+export async function createWeek(rootPath, date, frontmatterMode = "off") {
   const descriptor = getWeekDescriptor(date);
   return await invoke("create_log_week", {
     rootPath,
@@ -77,7 +77,8 @@ export async function createWeek(rootPath, date) {
     startDate: formatDate(descriptor.start),
     rangeLabel: descriptor.rangeLabel,
     dates: descriptor.dates.map(formatDate),
-    missingOnly: true
+    missingOnly: true,
+    frontmatterMode
   });
 }
 

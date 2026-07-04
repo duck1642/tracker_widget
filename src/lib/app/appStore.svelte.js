@@ -4,6 +4,7 @@ import * as defaultAutostartService from "$lib/shared/services/autostart.js";
 import { todoPathForWorkspace } from "$lib/shared/services/logWorkspaceService.js";
 
 const VALID_LAYER_MODES = new Set(["normal", "top", "desktop"]);
+const VALID_FRONTMATTER_MODES = new Set(["off", "personal"]);
 
 export class AppStore {
   filePath = $state("");
@@ -11,6 +12,7 @@ export class AppStore {
   layerMode = $state("normal");
   dragEnabled = $state(true);
   autostartEnabled = $state(false);
+  frontmatterMode = $state("off");
   currentView = $state("todo");
   statusMessage = $state("");
 
@@ -42,6 +44,7 @@ export class AppStore {
         this.filePath = todoPathForWorkspace(this.logsRootPath);
       }
       this.dragEnabled = config.drag_enabled;
+      this.frontmatterMode = VALID_FRONTMATTER_MODES.has(config.frontmatter_mode) ? config.frontmatter_mode : "off";
 
       try {
         this.autostartEnabled = await this.autostartService.isEnabled();
@@ -72,7 +75,8 @@ export class AppStore {
         logs_root_path: this.logsRootPath,
         layer_mode: this.layerMode,
         drag_enabled: this.dragEnabled,
-        autostart_enabled: this.autostartEnabled
+        autostart_enabled: this.autostartEnabled,
+        frontmatter_mode: this.frontmatterMode
       });
     } catch (err) {
       this.showStatus("Err Config Save: " + err);
@@ -115,6 +119,17 @@ export class AppStore {
     } catch (err) {
       this.showStatus("Err Startup: " + err);
     }
+  }
+
+  /** @param {string} mode */
+  async changeFrontmatterMode(mode) {
+    if (!VALID_FRONTMATTER_MODES.has(mode)) {
+      this.showStatus("Err Frontmatter: invalid mode");
+      return;
+    }
+    this.frontmatterMode = mode;
+    await this.saveConfig();
+    this.showStatus(mode === "personal" ? "Frontmatter Personal" : "Frontmatter Off");
   }
 }
 

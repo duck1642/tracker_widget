@@ -24,6 +24,7 @@ import { workspaceStore } from "./workspaceStore.svelte.js";
 import { appStore } from "./appStore.svelte.js";
 import { subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
 import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
+import * as logWorkspaceService from "$lib/shared/services/logWorkspaceService.js";
 
 afterEach(() => {
   cleanup();
@@ -33,6 +34,7 @@ afterEach(() => {
   workspaceStore.todoExists = false;
   appStore.logsRootPath = "";
   appStore.filePath = "";
+  appStore.frontmatterMode = "off";
   todoStore.fileMissing = false;
   dailyStore.path = "";
   dailyStore.sessions = [];
@@ -1359,6 +1361,17 @@ describe("workspace settings and todo recovery", () => {
     expect(rebuild).toHaveBeenCalledWith("C:\\Tracker");
   });
 
+  it("changes frontmatter mode from settings", async () => {
+    appStore.frontmatterMode = "off";
+    const changeFrontmatterMode = vi.spyOn(appStore, "changeFrontmatterMode").mockResolvedValue(undefined);
+    render(SettingsPanel, { dragEnabled: true, autostartEnabled: false, onToggleDrag: vi.fn(), onToggleAutostart: vi.fn() });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Personal" }));
+
+    expect(screen.getByText("Frontmatter")).toBeTruthy();
+    expect(changeFrontmatterMode).toHaveBeenCalledWith("personal");
+  });
+
   it("offers create and import when workspace todo is missing", () => {
     appStore.logsRootPath = "C:\\Tracker";
     appStore.filePath = "C:\\Tracker\\todo.md";
@@ -1370,6 +1383,17 @@ describe("workspace settings and todo recovery", () => {
     expect(screen.getByText("No todo.md found")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Create todo.md" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Import Markdown" })).toBeTruthy();
+  });
+
+  it("passes frontmatter mode when creating week files", async () => {
+    appStore.logsRootPath = "C:\\Tracker";
+    appStore.frontmatterMode = "personal";
+    const createWeek = vi.spyOn(logWorkspaceService, "createWeek").mockResolvedValue([]);
+    vi.spyOn(workspaceStore, "refresh").mockResolvedValue(true);
+
+    await workspaceStore.createCurrentWeekFiles();
+
+    expect(createWeek).toHaveBeenCalledWith("C:\\Tracker", expect.any(Date), "personal");
   });
 });
 

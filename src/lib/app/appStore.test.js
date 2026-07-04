@@ -12,7 +12,8 @@ function createStore(mode) {
         logs_root_path: "",
         layer_mode: mode,
         drag_enabled: true,
-        autostart_enabled: false
+        autostart_enabled: false,
+        frontmatter_mode: "off"
       })),
       writeConfig: vi.fn(async () => {})
     },
@@ -59,7 +60,8 @@ describe("AppStore native layer restoration", () => {
           logs_root_path: "C:\\Tracker",
           layer_mode: "normal",
           drag_enabled: true,
-          autostart_enabled: false
+          autostart_enabled: false,
+          frontmatter_mode: "off"
         })),
         writeConfig: vi.fn(async () => {})
       },
@@ -69,5 +71,33 @@ describe("AppStore native layer restoration", () => {
     await store.loadConfig();
 
     expect(store.filePath).toBe("C:\\Tracker\\todo.md");
+  });
+
+  it("loads, saves, and validates frontmatter mode", async () => {
+    const writeConfig = vi.fn(async () => {});
+    const store = new AppStore({
+      applyLayerMode: vi.fn(async (_current, target) => target),
+      configService: {
+        readConfig: vi.fn(async () => ({
+          file_path: "todo.md",
+          logs_root_path: "",
+          layer_mode: "normal",
+          drag_enabled: true,
+          autostart_enabled: false,
+          frontmatter_mode: "personal"
+        })),
+        writeConfig
+      },
+      autostartService: { isEnabled: vi.fn(async () => false) }
+    });
+
+    await store.loadConfig();
+    expect(store.frontmatterMode).toBe("personal");
+
+    await store.changeFrontmatterMode("off");
+    expect(writeConfig).toHaveBeenCalledWith(expect.objectContaining({ frontmatter_mode: "off" }));
+
+    await store.changeFrontmatterMode("invalid");
+    expect(store.frontmatterMode).toBe("off");
   });
 });
