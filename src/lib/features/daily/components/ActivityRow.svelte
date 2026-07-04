@@ -1,9 +1,9 @@
 <script>
   // @ts-nocheck
-  import { Trash2 } from "@lucide/svelte";
+  import { ChevronDown, ChevronUp, Trash2 } from "@lucide/svelte";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
   import TimeInput from "$lib/shared/components/TimeInput.svelte";
-  let { activity, onUpdate, onDelete } = $props();
+  let { activity, canMoveUp = true, canMoveDown = true, onUpdate, onDelete, onMoveUp, onMoveDown } = $props();
 
   let isEditingDesc = $state(false);
 
@@ -31,9 +31,17 @@
         {activity.description || "What happened?"}
       </span>
     {/if}
-    <button class="row-btn del" onclick={onDelete} aria-label="Delete activity" title="Delete">
-      <Trash2 size={13} />
-    </button>
+    <div class="activity-actions">
+      <button type="button" class="row-btn" disabled={!canMoveUp} onclick={onMoveUp} aria-label="Move activity up" title="Move up">
+        <ChevronUp size={13} />
+      </button>
+      <button type="button" class="row-btn" disabled={!canMoveDown} onclick={onMoveDown} aria-label="Move activity down" title="Move down">
+        <ChevronDown size={13} />
+      </button>
+      <button type="button" class="row-btn del" onclick={onDelete} aria-label="Delete activity" title="Delete">
+        <Trash2 size={13} />
+      </button>
+    </div>
   </div>
   <div class="row-bottom">
     <TimeInput minutes={activity.minutes} onChange={(minutes) => onUpdate({ minutes })} variant="badge" />
@@ -54,6 +62,36 @@
     justify-content: space-between;
     align-items: center;
     gap: 12px;
+  }
+  .activity-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+    visibility: visible;
+  }
+  .row-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .row-btn:hover:not(:disabled) {
+    background: var(--surface-hover);
+    color: var(--text-color);
+  }
+  .row-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+  .row-btn.del:hover {
+    color: #ff8888;
   }
   .desc-text {
     flex: 1;

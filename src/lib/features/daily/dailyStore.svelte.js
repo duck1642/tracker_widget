@@ -4,6 +4,7 @@ import { PersistenceCoordinator } from "$lib/shared/persistence/persistenceCoord
 import { parseDailyLog, serializeDailyLog } from "./dailyLogParser.js";
 import { appStore as defaultAppStore } from "$lib/app/appStore.svelte.js";
 import { persistenceRegistry as defaultRegistry } from "$lib/app/persistenceRegistry.js";
+import { movedByDirection } from "$lib/shared/utils/orderUtils.js";
 
 function id(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -82,6 +83,21 @@ export class DailyStore {
     void this.save(true);
   }
 
+  moveSessionTo(sourceSessionId, targetSessionId, position = "before") {
+    if (sourceSessionId === targetSessionId) return false;
+    const source = this.sessions.find((session) => session.id === sourceSessionId);
+    if (!source || !this.sessions.some((session) => session.id === targetSessionId)) return false;
+    const withoutSource = this.sessions.filter((session) => session.id !== sourceSessionId);
+    const targetIndex = withoutSource.findIndex((session) => session.id === targetSessionId);
+    if (targetIndex < 0) return false;
+    const insertIndex = position === "after" ? targetIndex + 1 : targetIndex;
+    const next = [...withoutSource.slice(0, insertIndex), source, ...withoutSource.slice(insertIndex)];
+    if (next.map((session) => session.id).join("\0") === this.sessions.map((session) => session.id).join("\0")) return false;
+    this.sessions = next;
+    void this.save(true);
+    return true;
+  }
+
   renameSession(sessionId, name) {
     const normalized = name.trim().normalize("NFC");
     if (!normalized || ["notes", "total time"].includes(normalized.toLowerCase())) return false;
@@ -128,6 +144,17 @@ export class DailyStore {
     if (!session) return;
     session.activities = session.activities.filter((item) => item.id !== activityId);
     void this.save(true);
+  }
+
+  moveActivity(sessionId, activityId, direction) {
+    const session = this.sessions.find((item) => item.id === sessionId);
+    if (!session) return false;
+    const next = movedByDirection(session.activities, activityId, direction);
+    if (!next) return false;
+    session.activities = next;
+    this.sessions = [...this.sessions];
+    void this.save(true);
+    return true;
   }
 
   updateNotes(value) {

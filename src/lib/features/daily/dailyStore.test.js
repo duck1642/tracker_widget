@@ -95,4 +95,28 @@ describe("DailyStore editing", () => {
     expect(store.addActivities(store.sessions[0].id, [" ", ""])).toBe(false);
     expect(store.sessions[0].activities).toHaveLength(0);
   });
+
+  it("moves activities within a session and persists the order", async () => {
+    const { store, files } = harness("# 2026-06-22\n\n## Work\n\n- {subjects: (rust), time: 10m} One\n- {subjects: (rust), time: 20m} Two\n\n## Total Time\n\n30m\n\n## Notes\n");
+    await store.loadPath("day.md", "2026-06-22");
+    const [one, two] = store.sessions[0].activities;
+    expect(store.moveActivity(store.sessions[0].id, one.id, "down")).toBe(true);
+    expect(store.sessions[0].activities.map((activity) => activity.description)).toEqual(["Two", "One"]);
+    expect(store.moveActivity(store.sessions[0].id, two.id, "up")).toBe(false);
+    await store.flushSave();
+    expect(files.get("day.md").indexOf("Two")).toBeLessThan(files.get("day.md").indexOf("One"));
+  });
+
+  it("moves sessions before or after another session", async () => {
+    const { store, files } = harness("# 2026-06-22\n\n## Alpha\n\n## Beta\n\n## Gamma\n\n## Total Time\n\n0m\n\n## Notes\n");
+    await store.loadPath("day.md", "2026-06-22");
+    const [alpha, beta, gamma] = store.sessions;
+    expect(store.moveSessionTo(gamma.id, alpha.id, "before")).toBe(true);
+    expect(store.sessions.map((session) => session.name)).toEqual(["Gamma", "Alpha", "Beta"]);
+    expect(store.moveSessionTo(gamma.id, alpha.id, "before")).toBe(false);
+    expect(store.moveSessionTo("missing", beta.id, "after")).toBe(false);
+    expect(store.moveSessionTo(beta.id, beta.id, "after")).toBe(false);
+    await store.flushSave();
+    expect(files.get("day.md").indexOf("## Gamma")).toBeLessThan(files.get("day.md").indexOf("## Alpha"));
+  });
 });

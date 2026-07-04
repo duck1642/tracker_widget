@@ -78,4 +78,17 @@ describe("WeekStore editing", () => {
     expect(store.addObjectives([" ", ""])).toBe(false);
     expect(store.objectives).toHaveLength(1);
   });
+
+  it("moves objectives and persists their order", async () => {
+    const { store, files } = harness();
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    store.addObjectives(["Second"]);
+    const [first, second] = store.objectives;
+    expect(store.moveObjective(first.id, "down")).toBe(true);
+    expect(store.objectives.map((objective) => objective.description)).toEqual(["Second", "Ship."]);
+    expect(store.moveObjective(second.id, "up")).toBe(false);
+    expect(store.moveObjective("missing", "down")).toBe(false);
+    await store.flushSave();
+    expect(files.get("week.md").indexOf("Second")).toBeLessThan(files.get("week.md").indexOf("Ship."));
+  });
 });

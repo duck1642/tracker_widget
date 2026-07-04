@@ -7,6 +7,7 @@ import { aggregateWeeklyActual } from "./actualAggregator.js";
 import { appStore as defaultAppStore } from "$lib/app/appStore.svelte.js";
 import { persistenceRegistry as defaultRegistry } from "$lib/app/persistenceRegistry.js";
 import { dayLabel } from "$lib/shared/services/logWorkspaceService.js";
+import { movedByDirection } from "$lib/shared/utils/orderUtils.js";
 
 function id(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -103,6 +104,14 @@ export class WeekStore {
   removeObjective(objectiveId) {
     this.objectives = this.objectives.filter((item) => item.id !== objectiveId);
     void this.save(true);
+  }
+
+  moveObjective(objectiveId, direction) {
+    const next = movedByDirection(this.objectives, objectiveId, direction);
+    if (!next) return false;
+    this.objectives = next;
+    void this.save(true);
+    return true;
   }
 
   addPlanEntry(day = "Mon") {

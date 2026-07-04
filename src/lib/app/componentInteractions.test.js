@@ -8,6 +8,7 @@ import AppSidebar from "./AppSidebar.svelte";
 import SettingsPanel from "./SettingsPanel.svelte";
 import FileTree from "$lib/shared/components/FileTree.svelte";
 import ActivityRow from "$lib/features/daily/components/ActivityRow.svelte";
+import SessionCard from "$lib/features/daily/components/SessionCard.svelte";
 import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
 import AddSessionForm from "$lib/features/daily/components/AddSessionForm.svelte";
 import PlanSection from "$lib/features/weekly/components/PlanSection.svelte";
@@ -247,6 +248,58 @@ describe("logger editing", () => {
     expect(onUpdate).toHaveBeenCalledWith({ subjects: ["rust", "daily"] });
   });
 
+  it("emits Daily activity move actions", async () => {
+    const onMoveUp = vi.fn();
+    const onMoveDown = vi.fn();
+    render(ActivityRow, {
+      activity: { subjects: ["rust"], minutes: 20, description: "Move me" },
+      canMoveUp: true,
+      canMoveDown: true,
+      onUpdate: vi.fn(),
+      onDelete: vi.fn(),
+      onMoveUp,
+      onMoveDown
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Move activity up" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Move activity down" }));
+
+    expect(onMoveUp).toHaveBeenCalledOnce();
+    expect(onMoveDown).toHaveBeenCalledOnce();
+  });
+
+  it("renders a session drag handle and emits pointer drag callbacks", async () => {
+    const onDragStart = vi.fn();
+    const onDragEnd = vi.fn();
+    const onDragOver = vi.fn();
+    const onDrop = vi.fn();
+    render(SessionCard, {
+      session: { id: "session-1", name: "Work", activities: [] },
+      dragState: null,
+      onAddActivity: vi.fn(),
+      onUpdateActivity: vi.fn(),
+      onDeleteActivity: vi.fn(),
+      onMoveActivity: vi.fn(),
+      onDeleteSession: vi.fn(),
+      onRenameSession: vi.fn(),
+      onDragStart,
+      onDragOver,
+      onDragLeave: vi.fn(),
+      onDrop,
+      onDragEnd
+    });
+
+    const handle = screen.getByRole("button", { name: "Reorder Work" });
+    await fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0, clientY: 0 });
+    await fireEvent.pointerMove(window, { pointerId: 1, clientX: 0, clientY: 12 });
+    await fireEvent.pointerUp(window, { pointerId: 1, clientX: 0, clientY: 12 });
+
+    expect(onDragStart).toHaveBeenCalledWith(expect.objectContaining({ id: "session-1" }));
+    expect(onDragEnd).toHaveBeenCalledWith(expect.objectContaining({ id: "session-1" }));
+    expect(onDragOver).not.toHaveBeenCalled();
+    expect(onDrop).not.toHaveBeenCalled();
+  });
+
   it("renders a zero-minute default when TimeInput has no minutes prop", async () => {
     const { default: TimeInput } = await import("$lib/shared/components/TimeInput.svelte");
     render(TimeInput, { onChange: vi.fn(), variant: "badge" });
@@ -324,6 +377,26 @@ describe("logger editing", () => {
     await fireEvent.input(screen.getByRole("textbox", { name: "Add subject" }), { target: { value: "weekly" } });
     await fireEvent.keyDown(screen.getByRole("textbox", { name: "Add subject" }), { key: "Enter" });
     expect(onUpdate).toHaveBeenCalledWith({ subjects: ["rust", "weekly"] });
+  });
+
+  it("emits Weekly objective move actions", async () => {
+    const onMoveUp = vi.fn();
+    const onMoveDown = vi.fn();
+    render(ObjectiveRow, {
+      objective: { subjects: ["rust"], origin: "planned", status: "open", description: "Move objective" },
+      canMoveUp: true,
+      canMoveDown: true,
+      onUpdate: vi.fn(),
+      onDelete: vi.fn(),
+      onMoveUp,
+      onMoveDown
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Move objective up" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Move objective down" }));
+
+    expect(onMoveUp).toHaveBeenCalledOnce();
+    expect(onMoveDown).toHaveBeenCalledOnce();
   });
 });
 

@@ -34,7 +34,7 @@
       </nav>
     </header>
     {#if weekStore.conflict}<ConflictBanner onReloadExternal={() => weekStore.resolveConflict("reload")} onKeepLocal={() => weekStore.resolveConflict("keep-local")} />{/if}
-    <ObjectivesSection objectives={weekStore.objectives} onAdd={() => weekStore.addObjective()} onUpdate={(id, patch) => weekStore.updateObjective(id, patch)} onDelete={(id) => weekStore.removeObjective(id)} />
+    <ObjectivesSection objectives={weekStore.objectives} onAdd={() => weekStore.addObjective()} onUpdate={(id, patch) => weekStore.updateObjective(id, patch)} onDelete={(id) => weekStore.removeObjective(id)} onMove={(id, direction) => weekStore.moveObjective(id, direction)} />
     <PlanSection plan={weekStore.plan} onAdd={(day) => weekStore.addPlanEntry(day)} onUpdate={(id, patch) => weekStore.updatePlanEntry(id, patch)} onDelete={(id) => weekStore.removePlanEntry(id)} />
     <ActualSection actual={weekStore.actual} onRefresh={() => weekStore.refreshActual()} />
     <section id="week-notes" class="week-section"><header><div><h2>Notes</h2></div></header><NotesEditor value={weekStore.notesRaw} onChange={(value) => weekStore.updateNotes(value)} label="Weekly notes" /></section>

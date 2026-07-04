@@ -2,14 +2,22 @@
   // @ts-nocheck
   import { Plus } from "@lucide/svelte";
   import ObjectiveRow from "./ObjectiveRow.svelte";
-  let { objectives, onAdd, onUpdate, onDelete } = $props();
+  let { objectives, onAdd, onUpdate, onDelete, onMove } = $props();
 </script>
 
 <section id="objectives" class="week-section">
   <header><div><h2>Objectives</h2></div></header>
   <div class="objectives-list">
-    {#each objectives as objective (objective.id)}
-      <ObjectiveRow {objective} onUpdate={(patch) => onUpdate(objective.id, patch)} onDelete={() => onDelete(objective.id)} />
+    {#each objectives as objective, index (objective.id)}
+      <ObjectiveRow
+        {objective}
+        canMoveUp={index > 0}
+        canMoveDown={index < objectives.length - 1}
+        onUpdate={(patch) => onUpdate(objective.id, patch)}
+        onDelete={() => onDelete(objective.id)}
+        onMoveUp={() => onMove(objective.id, "up")}
+        onMoveDown={() => onMove(objective.id, "down")}
+      />
     {/each}
     {#if objectives.length === 0}
       <p class="empty-copy">No objectives yet.</p>
