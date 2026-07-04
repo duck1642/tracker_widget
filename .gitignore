@@ -38,6 +38,7 @@ src-tauri/gen/schemas/
 todo.md
 todo.jsonl
 config.json
+subject-history.json
 graphify-out/
 .graphifyignore
 
