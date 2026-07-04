@@ -74,7 +74,7 @@ describe("weekly index parser", () => {
 });
 
 describe("weekly actual aggregation", () => {
-  it("merges same-session activities and orders planned before custom", () => {
+  it("merges same-session activities and preserves daily session order", () => {
     const plan = [
       { day: "Mon", session: "Development", subjects: ["rust"], targetMinutes: 120 },
       { day: "Mon", session: "Reading", subjects: ["reading"], targetMinutes: 60 }
@@ -90,8 +90,8 @@ describe("weekly actual aggregation", () => {
       ]
     }];
     expect(aggregateWeeklyActual(plan, days)).toEqual([
-      { day: "Mon", session: "Development", subjects: ["rust", "test"], actualMinutes: 90 },
-      { day: "Mon", session: "Custom", subjects: ["art"], actualMinutes: 20 }
+      { day: "Mon", session: "Custom", subjects: ["art"], actualMinutes: 20 },
+      { day: "Mon", session: "Development", subjects: ["rust", "test"], actualMinutes: 90 }
     ]);
   });
 

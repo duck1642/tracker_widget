@@ -2,18 +2,20 @@
 import { describe, expect, it, vi } from "vitest";
 import { DailyStore } from "./dailyStore.svelte.js";
 
-function harness(initial) {
+function harness(initial, overrides = {}) {
   const files = new Map([["day.md", initial]]);
   const fileService = {
     readFile: vi.fn(async (path) => files.get(path)),
     writeFile: vi.fn(async (path, content) => files.set(path, content))
   };
-  const store = new DailyStore({
+  const storeOptions = {
     fileService,
     appStore: { showStatus: vi.fn() },
     registry: { register: vi.fn() },
     debounceMs: 1
-  });
+  };
+  if ("weekStore" in overrides) storeOptions.weekStore = overrides.weekStore;
+  const store = new DailyStore(storeOptions);
   return { store, files };
 }
 
@@ -118,5 +120,16 @@ describe("DailyStore editing", () => {
     expect(store.moveSessionTo(beta.id, beta.id, "after")).toBe(false);
     await store.flushSave();
     expect(files.get("day.md").indexOf("## Gamma")).toBeLessThan(files.get("day.md").indexOf("## Alpha"));
+  });
+
+  it("refreshes loaded weekly actual after daily mutations", async () => {
+    const weekStore = { loaded: true, refreshActualWithDaily: vi.fn() };
+    const { store } = harness("# 2026-06-22\n\n## Work\n\n- {subjects: (rust), time: 10m} One\n- {subjects: (rust), time: 20m} Two\n\n## Total Time\n\n30m\n\n## Notes\n", { weekStore });
+    await store.loadPath("day.md", "2026-06-22");
+    const [one] = store.sessions[0].activities;
+
+    store.updateActivity(store.sessions[0].id, one.id, { minutes: 15 });
+
+    expect(weekStore.refreshActualWithDaily).toHaveBeenCalledWith("2026-06-22", store.sessions);
   });
 });

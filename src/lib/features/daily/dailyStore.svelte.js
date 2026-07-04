@@ -4,6 +4,7 @@ import { PersistenceCoordinator } from "$lib/shared/persistence/persistenceCoord
 import { parseDailyLog, serializeDailyLog } from "./dailyLogParser.js";
 import { appStore as defaultAppStore } from "$lib/app/appStore.svelte.js";
 import { persistenceRegistry as defaultRegistry } from "$lib/app/persistenceRegistry.js";
+import { weekStore as defaultWeekStore } from "$lib/features/weekly/weekStore.svelte.js";
 import { movedByDirection } from "$lib/shared/utils/orderUtils.js";
 
 function id(prefix) {
@@ -21,9 +22,10 @@ export class DailyStore {
   saving = $state(false);
   conflict = $state(null);
 
-  constructor({ fileService = defaultFileService, appStore = defaultAppStore, registry = defaultRegistry, debounceMs = 250 } = {}) {
+  constructor({ fileService = defaultFileService, appStore = defaultAppStore, registry = defaultRegistry, weekStore = defaultWeekStore, debounceMs = 250 } = {}) {
     this.fileService = fileService;
     this.appStore = appStore;
+    this.weekStore = weekStore;
     this.persistence = new PersistenceCoordinator({
       fileService,
       debounceMs,
@@ -69,18 +71,26 @@ export class DailyStore {
     return this.persistence.schedule(serializeDailyLog(this.document()), immediate);
   }
 
+  refreshWeeklyActual() {
+    if (this.weekStore?.loaded) {
+      void this.weekStore.refreshActualWithDaily(this.date, this.sessions);
+    }
+  }
+
   addSession(name) {
     const normalized = name.trim().normalize("NFC");
     if (!normalized || ["notes", "total time"].includes(normalized.toLowerCase())) return false;
     if (this.sessions.some((session) => session.name.toLowerCase() === normalized.toLowerCase())) return false;
     this.sessions.push({ id: id("session"), name: normalized, activities: [] });
     void this.save(true);
+    this.refreshWeeklyActual();
     return true;
   }
 
   removeSession(sessionId) {
     this.sessions = this.sessions.filter((session) => session.id !== sessionId);
     void this.save(true);
+    this.refreshWeeklyActual();
   }
 
   moveSessionTo(sourceSessionId, targetSessionId, position = "before") {
@@ -95,6 +105,7 @@ export class DailyStore {
     if (next.map((session) => session.id).join("\0") === this.sessions.map((session) => session.id).join("\0")) return false;
     this.sessions = next;
     void this.save(true);
+    this.refreshWeeklyActual();
     return true;
   }
 
@@ -106,6 +117,7 @@ export class DailyStore {
     if (!session) return false;
     session.name = normalized;
     void this.save(true);
+    this.refreshWeeklyActual();
     return true;
   }
 
@@ -115,6 +127,7 @@ export class DailyStore {
     session.activities = [...session.activities, { id: id("activity"), subjects: ["general"], minutes: 0, description: "" }];
     this.sessions = [...this.sessions];
     void this.save();
+    this.refreshWeeklyActual();
   }
 
   addActivities(sessionId, descriptions) {
@@ -129,6 +142,7 @@ export class DailyStore {
     }))];
     this.sessions = [...this.sessions];
     void this.save();
+    this.refreshWeeklyActual();
     return true;
   }
 
@@ -137,6 +151,7 @@ export class DailyStore {
     if (!activity) return;
     Object.assign(activity, patch);
     void this.save();
+    this.refreshWeeklyActual();
   }
 
   removeActivity(sessionId, activityId) {
@@ -144,6 +159,7 @@ export class DailyStore {
     if (!session) return;
     session.activities = session.activities.filter((item) => item.id !== activityId);
     void this.save(true);
+    this.refreshWeeklyActual();
   }
 
   moveActivity(sessionId, activityId, direction) {
@@ -154,6 +170,7 @@ export class DailyStore {
     session.activities = next;
     this.sessions = [...this.sessions];
     void this.save(true);
+    this.refreshWeeklyActual();
     return true;
   }
 

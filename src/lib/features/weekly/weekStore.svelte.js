@@ -166,6 +166,27 @@ export class WeekStore {
     if (this.loaded) await this.save(true);
   }
 
+  async refreshActualWithDaily(date, sessions, days = this.dayEntries || []) {
+    if (!this.loaded || !date) return;
+    this.dayEntries = days;
+    const parsedDays = [];
+    for (const day of days) {
+      try {
+        if (day.date === date) {
+          parsedDays.push({ day: dayLabel(new Date(`${day.date}T12:00:00`)), sessions });
+        } else {
+          const content = await this.fileService.readFile(day.path);
+          const parsed = parseDailyLog(content, day.date);
+          parsedDays.push({ day: dayLabel(new Date(`${day.date}T12:00:00`)), sessions: parsed.sessions });
+        }
+      } catch {
+        // Missing or locked daily files are omitted from Actual.
+      }
+    }
+    this.actual = aggregateWeeklyActual(this.plan, parsedDays);
+    await this.save(true);
+  }
+
   flushSave() {
     return this.persistence.flush();
   }

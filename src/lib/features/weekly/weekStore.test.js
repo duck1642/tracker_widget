@@ -91,4 +91,17 @@ describe("WeekStore editing", () => {
     await store.flushSave();
     expect(files.get("week.md").indexOf("Second")).toBeLessThan(files.get("week.md").indexOf("Ship."));
   });
+
+  it("refreshes actual from the loaded daily document when provided", async () => {
+    const { store, files } = harness();
+    files.set("stale-day.md", "# 2026-06-22\n\n## Work\n\n- {subjects: (rust), time: 10m} Old\n\n## Total Time\n\n10m\n\n## Notes\n");
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" }, [{ date: "2026-06-22", path: "stale-day.md" }]);
+
+    await store.refreshActualWithDaily("2026-06-22", [
+      { id: "session-1", name: "Work", activities: [{ id: "activity-1", subjects: ["rust"], minutes: 25, description: "Current" }] }
+    ]);
+
+    expect(store.actual).toEqual([{ day: "Mon", session: "Work", subjects: ["rust"], actualMinutes: 25 }]);
+    expect(files.get("week.md")).toContain("| Mon | Work | rust | 25 |");
+  });
 });

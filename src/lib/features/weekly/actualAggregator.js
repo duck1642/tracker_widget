@@ -10,7 +10,7 @@ export function aggregateWeeklyActual(plan, days) {
       let row = bySession.get(key);
       if (!row) {
         const planned = plan.find((entry) => entry.day.toLowerCase() === day.day.toLowerCase() && entry.session.normalize("NFC").toLowerCase() === session.name.normalize("NFC").toLowerCase());
-        row = { day: day.day, session: planned?.session || session.name, subjects: [], actualMinutes: 0, plannedIndex: planned ? plan.indexOf(planned) : Number.MAX_SAFE_INTEGER, sourceIndex: rows.length };
+        row = { day: day.day, session: planned?.session || session.name, subjects: [], actualMinutes: 0 };
         rows.push(row);
         bySession.set(key, row);
       }
@@ -20,5 +20,5 @@ export function aggregateWeeklyActual(plan, days) {
       }
     }
   }
-  return rows.sort((a, b) => a.plannedIndex - b.plannedIndex || a.sourceIndex - b.sourceIndex).map(({ plannedIndex, sourceIndex, ...row }) => row);
+  return rows;
 }
