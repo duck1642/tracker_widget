@@ -160,6 +160,25 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   border-top-right-radius: 7px;
 }
 
+/* Maximized overrides */
+.app-container.maximized {
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 0;
+}
+
+.app-container.maximized::after {
+  border: none;
+  border-radius: 0;
+}
+
+.app-container.maximized .drag-header {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
 /* Header zone */
 .drag-header {
   display: flex;
