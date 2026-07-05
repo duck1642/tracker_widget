@@ -16,7 +16,7 @@
   <div class="row-top">
     {#if isEditingDesc}
       <input
-        class="desc-input"
+        class="desc-input quiet-edit-input"
         value={activity.description}
         oninput={(event) => onUpdate({ description: event.currentTarget.value.replace(/[\r\n]/g, " ") })}
         onblur={() => isEditingDesc = false}
@@ -104,20 +104,10 @@
   }
   .desc-input {
     flex: 1;
-    background: transparent;
-    border: none;
-    border-bottom: 1px dashed var(--border-strong);
     color: var(--text-color);
     font-size: var(--text-sm);
-    outline: none;
-    padding: 2px 0;
-  }
-  .desc-input:focus,
-  .desc-input:focus-visible {
-    border: none;
-    border-bottom: 1px dashed var(--accent);
-    box-shadow: none;
-    outline: none;
+    min-height: 28px;
+    padding: 4px 8px;
   }
   .row-bottom {
     display: flex;

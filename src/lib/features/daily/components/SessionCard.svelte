@@ -144,7 +144,7 @@
     {#if isEditingName}
       <div class="name-edit-wrapper">
         <input
-          class="name-input"
+          class="name-input quiet-edit-input"
           value={editNameInput}
           oninput={(event) => {
             editNameInput = event.currentTarget.value;
@@ -180,6 +180,7 @@
           </ul>
         {/if}
       </div>
+      <small>{subtotal}m / {session.activities.length} activities</small>
     {:else}
       <button class="session-title" onclick={() => expanded = !expanded} aria-expanded={expanded}>
         <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -194,7 +195,7 @@
         >
           {session.name}
         </span>
-        <small>{subtotal}m · {session.activities.length} activities</small>
+        <small>{subtotal}m / {session.activities.length} activities</small>
       </button>
     {/if}
     <button class="icon-button danger" onclick={onDeleteSession} aria-label="Delete session" title="Delete session"><Trash2 size={15} /></button>
@@ -228,18 +229,17 @@
   .drag-handle:hover { background: var(--surface-hover); color: var(--text-color); }
   .drag-handle:active { cursor: grabbing; }
   .session-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; min-width: 0; min-height: 46px; border: 0; background: transparent; color: var(--text-color); padding: 0; text-align: left; cursor: pointer; }
-  .session-name-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; flex: 1; min-width: 0; font-size: var(--text-md); font-weight: 700; line-height: 1.25; cursor: pointer; border-bottom: 1px dashed transparent; transition: border-color 0.15s ease, color 0.15s ease; }
-  .session-name-text:hover { border-bottom-color: var(--accent); color: var(--accent); }
-  .name-edit-wrapper { position: relative; flex: 1; min-width: 0; display: flex; }
-  .name-input { flex: 1; width: 100%; font-size: var(--text-md); font-weight: 700; min-height: 46px; background: transparent; border: none; border-bottom: 1px dashed var(--border-strong); color: var(--text-color); outline: none; padding: 0; box-sizing: border-box; }
-  .name-input:focus, .name-input:focus-visible { border: none; border-bottom: 1px dashed var(--accent); box-shadow: none; outline: none; }
+  .session-name-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; flex: 1; min-width: 0; font-size: var(--text-md); font-weight: 700; line-height: 1.25; cursor: pointer; transition: color 0.15s ease; }
+  .session-name-text:hover { color: var(--accent); }
+  .name-edit-wrapper { position: relative; flex: 1; min-width: 0; min-height: 46px; display: flex; align-items: center; margin-right: 12px; }
+  .name-input { flex: 1; width: 100%; height: 28px; min-height: 28px; font-size: var(--text-md); font-weight: 700; color: var(--text-color); padding: 3px 8px; box-sizing: border-box; }
   .suggestions-dropdown { position: absolute; top: calc(100% + 4px); left: 0; z-index: 60; width: min(260px, 100%); max-height: 156px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; margin: 0; padding: 4px 0; list-style: none; background: #181818; border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); box-sizing: border-box; }
   .suggestions-dropdown::-webkit-scrollbar { width: 6px; }
   .suggestions-dropdown::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--border-strong); }
   .suggestions-dropdown::-webkit-scrollbar-track { background: transparent; }
   .suggestion-item { padding: 8px 12px; font-size: var(--text-sm); color: var(--text-muted); cursor: pointer; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: background 0.1s ease, color 0.1s ease; }
   .suggestion-item:hover, .suggestion-item.highlighted { background: var(--surface-hover); color: var(--text-color); }
-  small { flex-shrink: 0; color: var(--text-muted); }
+  small { flex-shrink: 0; color: var(--text-muted); font-size: var(--text-sm); font-weight: 400; line-height: 1; }
   .activities p { padding: 12px 14px; color: var(--text-muted); }
   footer { padding: 8px 10px; border-top: 1px solid var(--border-subtle); }
   footer button { display: flex; align-items: center; gap: 6px; min-height: 30px; border: 0; background: transparent; color: var(--accent); cursor: pointer; }

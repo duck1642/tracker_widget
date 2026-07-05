@@ -182,7 +182,7 @@
                   </span>
                   {#if editingSessionId === entry.id}
                     <input
-                      class="session-input"
+                      class="session-input quiet-edit-input"
                       value={entry.session}
                       onblur={() => editingSessionId = null}
                       onkeydown={(e) => { if (e.key === "Enter") editingSessionId = null; }}
@@ -197,9 +197,11 @@
                     </button>
                   {/if}
 
-                  <button type="button" class="delete-btn" onpointerdown={(e) => e.preventDefault()} onclick={() => onDelete(entry.id)} aria-label="Delete plan entry" title="Delete">
-                    <Trash2 size={13} />
-                  </button>
+                  {#if editingSessionId !== entry.id}
+                    <button type="button" class="delete-btn" onpointerdown={(e) => e.preventDefault()} onclick={() => onDelete(entry.id)} aria-label="Delete plan entry" title="Delete">
+                      <Trash2 size={13} />
+                    </button>
+                  {/if}
                 </div>
 
                 <ReadonlyBadges subjects={summary.subjects} minutes={summary.targetMinutes} />
@@ -414,24 +416,11 @@
   .session-input {
     flex: 1;
     min-width: 0;
-    height: 24px;
-    padding: 0;
-    border: 0;
-    border-bottom: 1px dashed var(--border-strong);
-    border-radius: 0;
-    background: transparent;
+    height: 26px;
+    padding: 3px 6px;
     color: var(--text-color);
     font-size: var(--text-sm);
     font-weight: 650;
-    outline: none;
-  }
-
-  .session-input:focus,
-  .session-input:focus-visible {
-    border: 0;
-    border-bottom: 1px dashed var(--accent);
-    box-shadow: none;
-    outline: none;
   }
 
   .delete-btn {

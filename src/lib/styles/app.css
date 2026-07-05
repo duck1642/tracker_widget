@@ -83,6 +83,25 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
+.quiet-edit-input {
+  min-width: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--bg-dark);
+  color: var(--text-color);
+  outline: none;
+  box-shadow: none;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.quiet-edit-input:focus,
+.quiet-edit-input:focus-visible {
+  border-color: var(--accent);
+  background: #141913;
+  box-shadow: 0 0 0 1px var(--accent-soft);
+  outline: none;
+}
+
 .icon-button { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 5px; background: transparent; color: var(--text-muted); cursor: pointer; }
 .icon-button:hover { background: var(--surface-hover); color: var(--text-color); }
 .icon-button.danger:hover, .danger:hover { color: var(--danger); }
