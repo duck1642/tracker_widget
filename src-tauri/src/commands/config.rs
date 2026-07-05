@@ -13,6 +13,8 @@ pub struct AppConfig {
     pub autostart_enabled: bool,
     #[serde(default = "default_frontmatter_mode")]
     pub frontmatter_mode: String,
+    #[serde(default)]
+    pub developer_mode: bool,
 }
 
 pub fn default_frontmatter_mode() -> String {
@@ -35,6 +37,7 @@ impl Default for AppConfig {
             drag_enabled: true,
             autostart_enabled: false,
             frontmatter_mode: default_frontmatter_mode(),
+            developer_mode: false,
         }
     }
 }

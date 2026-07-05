@@ -27,6 +27,7 @@
     <h3>Window</h3>
     <button class="toggle-row" onclick={onToggleDrag}><span class:checked={dragEnabled} class="checkbox">{#if dragEnabled}<Check size={11} />{/if}</span>Window dragging</button>
     <button class="toggle-row" onclick={onToggleAutostart}><span class:checked={autostartEnabled} class="checkbox">{#if autostartEnabled}<Check size={11} />{/if}</span>Start on boot</button>
+    <button class="toggle-row" onclick={() => appStore.toggleDevMode()}><span class:checked={appStore.devMode} class="checkbox">{#if appStore.devMode}<Check size={11} />{/if}</span>Developer mode</button>
   </section>
   <section>
     <h3>Frontmatter</h3>

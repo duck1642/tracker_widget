@@ -104,6 +104,26 @@
     applyViewSizeConstraints(view);
   });
 
+  $effect(() => {
+    if (!appStore.devMode) return;
+
+    const handleKeyDown = async (e) => {
+      if (e.key === "F12" || (e.ctrlKey && e.shiftKey && (e.key === "i" || e.key === "I"))) {
+        e.preventDefault();
+        try {
+          await invoke("toggle_devtools");
+        } catch (error) {
+          appStore.showStatus("Failed to toggle devtools: " + error);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  });
+
   onMount(() => {
     const appWindow = getCurrentWindow();
     let disposed = false;

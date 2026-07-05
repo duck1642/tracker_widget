@@ -4,5 +4,6 @@
   "layer_mode": "normal",
   "drag_enabled": true,
   "autostart_enabled": false,
-  "frontmatter_mode": "off"
+  "frontmatter_mode": "off",
+  "developer_mode": false
 }

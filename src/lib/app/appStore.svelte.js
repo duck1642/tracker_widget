@@ -15,6 +15,7 @@ export class AppStore {
   frontmatterMode = $state("off");
   currentView = $state("todo");
   statusMessage = $state("");
+  devMode = $state(false);
 
   /** @param {{applyLayerMode?: Function, configService?: any, autostartService?: any}} [dependencies] */
   constructor({
@@ -45,6 +46,7 @@ export class AppStore {
       }
       this.dragEnabled = config.drag_enabled;
       this.frontmatterMode = VALID_FRONTMATTER_MODES.has(config.frontmatter_mode) ? config.frontmatter_mode : "off";
+      this.devMode = config.developer_mode || false;
 
       try {
         this.autostartEnabled = await this.autostartService.isEnabled();
@@ -76,7 +78,8 @@ export class AppStore {
         layer_mode: this.layerMode,
         drag_enabled: this.dragEnabled,
         autostart_enabled: this.autostartEnabled,
-        frontmatter_mode: this.frontmatterMode
+        frontmatter_mode: this.frontmatterMode,
+        developer_mode: this.devMode
       });
     } catch (err) {
       this.showStatus("Err Config Save: " + err);
@@ -130,6 +133,12 @@ export class AppStore {
     this.frontmatterMode = mode;
     await this.saveConfig();
     this.showStatus(mode === "personal" ? "Frontmatter Personal" : "Frontmatter Off");
+  }
+
+  async toggleDevMode() {
+    this.devMode = !this.devMode;
+    await this.saveConfig();
+    this.showStatus(this.devMode ? "Dev Mode On" : "Dev Mode Off");
   }
 }
 

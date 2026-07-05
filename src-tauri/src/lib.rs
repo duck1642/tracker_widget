@@ -4,7 +4,7 @@ use commands::config::{read_config, write_config};
 use commands::fs::{get_file_modified_time, read_file, write_file};
 use commands::session_history::{read_session_history, rebuild_session_history, record_sessions};
 use commands::subject_history::{read_subject_history, rebuild_subject_history, record_subjects};
-use commands::window::{exit_app, set_always_on_top};
+use commands::window::{exit_app, set_always_on_top, toggle_devtools};
 use commands::workspace::{
     create_log_week, create_workspace_todo, import_workspace_todo, list_log_tree, path_exists,
 };
@@ -91,6 +91,7 @@ pub fn run() {
             get_file_modified_time,
             set_always_on_top,
             exit_app,
+            toggle_devtools,
             read_config,
             write_config,
             read_subject_history,

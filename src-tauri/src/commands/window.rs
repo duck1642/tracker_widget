@@ -11,3 +11,12 @@ pub fn exit_app(app: tauri::AppHandle) {
     }
     app.exit(0);
 }
+
+#[tauri::command]
+pub fn toggle_devtools(window: tauri::WebviewWindow) {
+    if window.is_devtools_open() {
+        let _ = window.close_devtools();
+    } else {
+        let _ = window.open_devtools();
+    }
+}
