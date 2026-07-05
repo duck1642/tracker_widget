@@ -15,6 +15,7 @@ function harness(initial, overrides = {}) {
     debounceMs: 1
   };
   if ("weekStore" in overrides) storeOptions.weekStore = overrides.weekStore;
+  if ("sessionHistoryStore" in overrides) storeOptions.sessionHistoryStore = overrides.sessionHistoryStore;
   const store = new DailyStore(storeOptions);
   return { store, files };
 }
@@ -27,6 +28,18 @@ describe("DailyStore editing", () => {
     expect(store.addSession("Reading")).toBe(true);
     await store.flushSave();
     expect(store.sessions.map((session) => session.name)).toEqual(["İş", "Reading"]);
+  });
+
+  it("records successful added sessions in session history", async () => {
+    const sessionHistoryStore = { record: vi.fn(async () => true) };
+    const { store } = harness("# 2026-06-22\n\n## Total Time\n\n0m\n\n## Notes\n", { sessionHistoryStore });
+    await store.loadPath("day.md", "2026-06-22");
+
+    expect(store.addSession("Reading")).toBe(true);
+    expect(store.addSession("reading")).toBe(false);
+
+    expect(sessionHistoryStore.record).toHaveBeenCalledOnce();
+    expect(sessionHistoryStore.record).toHaveBeenCalledWith(["Reading"]);
   });
 
   it("accepts an edit after a clean external reload without a false conflict", async () => {

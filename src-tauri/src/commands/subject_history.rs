@@ -189,7 +189,10 @@ pub fn read_subject_history(root_path: String, used_at: String) -> Result<Subjec
 }
 
 #[tauri::command]
-pub fn rebuild_subject_history(root_path: String, used_at: String) -> Result<SubjectHistory, String> {
+pub fn rebuild_subject_history(
+    root_path: String,
+    used_at: String,
+) -> Result<SubjectHistory, String> {
     rebuild_from_workspace(&root_path, &used_at)
 }
 
@@ -250,7 +253,11 @@ mod tests {
             "## Work\n\n- {subjects: (daily), time: 0m} Task",
         )
         .unwrap();
-        fs::write(week.join("random.md"), "- {subjects: (ignored), time: 1m} No").unwrap();
+        fs::write(
+            week.join("random.md"),
+            "- {subjects: (ignored), time: 1m} No",
+        )
+        .unwrap();
 
         let history = rebuild_from_workspace(root.to_str().unwrap(), "now").unwrap();
 

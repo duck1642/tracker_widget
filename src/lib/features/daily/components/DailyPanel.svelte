@@ -7,9 +7,22 @@
   import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
+  import { sessionHistoryStore } from "$lib/app/sessionHistoryStore.svelte.js";
   import { dayLabel } from "$lib/shared/services/logWorkspaceService.js";
   let day = $derived(dailyStore.date ? dayLabel(new Date(`${dailyStore.date}T12:00:00`)) : "");
-  let suggestions = $derived(weekStore.suggestionsFor(day));
+  function mergedSuggestions(planned, history) {
+    const seen = new Set();
+    const merged = [];
+    for (const session of [...planned, ...history]) {
+      const trimmed = session.trim();
+      const key = trimmed.toLowerCase();
+      if (!trimmed || seen.has(key)) continue;
+      seen.add(key);
+      merged.push(trimmed);
+    }
+    return merged;
+  }
+  let suggestions = $derived(mergedSuggestions(weekStore.suggestionsFor(day), sessionHistoryStore.suggestions));
   let existingSessions = $derived(dailyStore.sessions.map((session) => session.name));
   let draggedSessionId = $state(null);
   let dragOverSessionId = $state(null);

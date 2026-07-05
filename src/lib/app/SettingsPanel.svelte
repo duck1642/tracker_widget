@@ -4,6 +4,7 @@
   import { workspaceStore } from "./workspaceStore.svelte.js";
   import { appStore } from "./appStore.svelte.js";
   import { subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
+  import { sessionHistoryStore } from "./sessionHistoryStore.svelte.js";
   let { dragEnabled, autostartEnabled, onToggleDrag, onToggleAutostart } = $props();
 </script>
 
@@ -37,6 +38,13 @@
     <span class="field-label">{subjectHistoryStore.suggestions.length} {subjectHistoryStore.suggestions.length === 1 ? "subject" : "subjects"}</span>
     <button onclick={() => subjectHistoryStore.rebuild(appStore.logsRootPath)} disabled={subjectHistoryStore.rebuilding}>
       <RefreshCw size={14} /> {subjectHistoryStore.rebuilding ? "Rebuilding..." : "Rebuild subject history"}
+    </button>
+  </section>
+  <section>
+    <h3>Session history</h3>
+    <span class="field-label">{sessionHistoryStore.suggestions.length} {sessionHistoryStore.suggestions.length === 1 ? "session" : "sessions"}</span>
+    <button onclick={() => sessionHistoryStore.rebuild(appStore.logsRootPath)} disabled={sessionHistoryStore.rebuilding}>
+      <RefreshCw size={14} /> {sessionHistoryStore.rebuilding ? "Rebuilding..." : "Rebuild session history"}
     </button>
   </section>
 </div>

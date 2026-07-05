@@ -39,6 +39,7 @@ todo.md
 todo.jsonl
 config.json
 subject-history.json
+session-history.json
 graphify-out/
 .graphifyignore
 

@@ -9,6 +9,7 @@ import SettingsPanel from "./SettingsPanel.svelte";
 import FileTree from "$lib/shared/components/FileTree.svelte";
 import ActivityRow from "$lib/features/daily/components/ActivityRow.svelte";
 import SessionCard from "$lib/features/daily/components/SessionCard.svelte";
+import DailyPanel from "$lib/features/daily/components/DailyPanel.svelte";
 import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
 import AddSessionForm from "$lib/features/daily/components/AddSessionForm.svelte";
 import PlanSection from "$lib/features/weekly/components/PlanSection.svelte";
@@ -23,6 +24,7 @@ import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
 import { workspaceStore } from "./workspaceStore.svelte.js";
 import { appStore } from "./appStore.svelte.js";
 import { subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
+import { sessionHistoryStore } from "./sessionHistoryStore.svelte.js";
 import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
 import * as logWorkspaceService from "$lib/shared/services/logWorkspaceService.js";
 
@@ -37,12 +39,17 @@ afterEach(() => {
   appStore.frontmatterMode = "off";
   todoStore.fileMissing = false;
   dailyStore.path = "";
+  dailyStore.date = "";
+  dailyStore.loaded = false;
   dailyStore.sessions = [];
   weekStore.path = "";
   weekStore.objectives = [];
   subjectHistoryStore.history = { subjects: {} };
   subjectHistoryStore.loaded = false;
   subjectHistoryStore.rebuilding = false;
+  sessionHistoryStore.history = { sessions: {} };
+  sessionHistoryStore.loaded = false;
+  sessionHistoryStore.rebuilding = false;
   todoFoldStore.expandAll();
   todoFoldStore.setFoldableTodoIds([]);
   todoUiState.showTodoNumbers = false;
@@ -410,6 +417,30 @@ describe("logger editing", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     expect(onAdd).toHaveBeenCalledWith("Deep Work");
+  });
+
+  it("merges weekly planned sessions before session history in the daily add form", async () => {
+    dailyStore.loaded = true;
+    dailyStore.date = "2026-07-05";
+    dailyStore.sessions = [{ id: "session-existing", name: "Existing", activities: [] }];
+    weekStore.plan = [
+      { id: "p1", day: "Sun", session: "Alpha", subjects: ["general"], targetMinutes: 0, activities: [] },
+      { id: "p2", day: "Sun", session: "beta", subjects: ["general"], targetMinutes: 0, activities: [] }
+    ];
+    sessionHistoryStore.history = {
+      sessions: {
+        alpha: { actual_count: 9, planned_count: 0, last_used: "2026-07-05T00:00:00.000Z" },
+        Gamma: { actual_count: 5, planned_count: 0, last_used: "2026-07-04T00:00:00.000Z" },
+        Existing: { actual_count: 4, planned_count: 0, last_used: "2026-07-04T00:00:00.000Z" }
+      }
+    };
+
+    render(DailyPanel);
+
+    await fireEvent.click(screen.getByRole("button", { name: "Add session" }));
+    const options = screen.getAllByRole("option").map((option) => option.textContent);
+
+    expect(options).toEqual(["Alpha", "beta", "Gamma"]);
   });
 
   it("does not show a suggestions dropdown when no suggestions are available", async () => {
@@ -1417,6 +1448,19 @@ describe("workspace settings and todo recovery", () => {
     expect(screen.getByText("Subject history")).toBeTruthy();
     expect(screen.getByText("1 subject")).toBeTruthy();
     await fireEvent.click(screen.getByRole("button", { name: /Rebuild subject history/ }));
+
+    expect(rebuild).toHaveBeenCalledWith("C:\\Tracker");
+  });
+
+  it("rebuilds session history from settings", async () => {
+    appStore.logsRootPath = "C:\\Tracker";
+    sessionHistoryStore.history = { sessions: { Work: { planned_count: 1, actual_count: 2, last_used: "now" } } };
+    const rebuild = vi.spyOn(sessionHistoryStore, "rebuild").mockResolvedValue(true);
+    render(SettingsPanel, { dragEnabled: true, autostartEnabled: false, onToggleDrag: vi.fn(), onToggleAutostart: vi.fn() });
+
+    expect(screen.getByText("Session history")).toBeTruthy();
+    expect(screen.getByText("1 session")).toBeTruthy();
+    await fireEvent.click(screen.getByRole("button", { name: /Rebuild session history/ }));
 
     expect(rebuild).toHaveBeenCalledWith("C:\\Tracker");
   });

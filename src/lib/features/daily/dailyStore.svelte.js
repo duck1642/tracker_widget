@@ -5,6 +5,7 @@ import { parseDailyLog, serializeDailyLog } from "./dailyLogParser.js";
 import { appStore as defaultAppStore } from "$lib/app/appStore.svelte.js";
 import { persistenceRegistry as defaultRegistry } from "$lib/app/persistenceRegistry.js";
 import { weekStore as defaultWeekStore } from "$lib/features/weekly/weekStore.svelte.js";
+import { sessionHistoryStore as defaultSessionHistoryStore } from "$lib/app/sessionHistoryStore.svelte.js";
 import { movedByDirection } from "$lib/shared/utils/orderUtils.js";
 
 function id(prefix) {
@@ -22,10 +23,11 @@ export class DailyStore {
   saving = $state(false);
   conflict = $state(null);
 
-  constructor({ fileService = defaultFileService, appStore = defaultAppStore, registry = defaultRegistry, weekStore = defaultWeekStore, debounceMs = 250 } = {}) {
+  constructor({ fileService = defaultFileService, appStore = defaultAppStore, registry = defaultRegistry, weekStore = defaultWeekStore, sessionHistoryStore = defaultSessionHistoryStore, debounceMs = 250 } = {}) {
     this.fileService = fileService;
     this.appStore = appStore;
     this.weekStore = weekStore;
+    this.sessionHistoryStore = sessionHistoryStore;
     this.persistence = new PersistenceCoordinator({
       fileService,
       debounceMs,
@@ -83,6 +85,7 @@ export class DailyStore {
     if (this.sessions.some((session) => session.name.toLowerCase() === normalized.toLowerCase())) return false;
     this.sessions.push({ id: id("session"), name: normalized, activities: [] });
     void this.save(true);
+    void this.sessionHistoryStore?.record?.([normalized]);
     this.refreshWeeklyActual();
     return true;
   }
