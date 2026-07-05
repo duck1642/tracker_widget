@@ -21,6 +21,20 @@ function nextPlanId(plan) {
   return `p${highest + 1}`;
 }
 
+const PLAN_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function dayOrder(day) {
+  const index = PLAN_DAYS.indexOf(day);
+  return index === -1 ? PLAN_DAYS.length : index;
+}
+
+function findLastPlanDayIndex(plan, day) {
+  for (let index = plan.length - 1; index >= 0; index -= 1) {
+    if (plan[index].day === day) return index;
+  }
+  return -1;
+}
+
 export class WeekStore {
   view = "week";
   path = $state("");
@@ -157,6 +171,40 @@ export class WeekStore {
     const insertIndex = position === "after" ? targetIndex + 1 : targetIndex;
     const next = [...withoutSource.slice(0, insertIndex), source, ...withoutSource.slice(insertIndex)];
     if (next.map((entry) => entry.id).join("\0") === this.plan.map((entry) => entry.id).join("\0")) return false;
+    this.plan = next;
+    void this.save(true);
+    return true;
+  }
+
+  movePlanEntry(sourceEntryId, targetEntryId, position = "before") {
+    if (sourceEntryId === targetEntryId) return false;
+    const source = this.plan.find((entry) => entry.id === sourceEntryId);
+    const target = this.plan.find((entry) => entry.id === targetEntryId);
+    if (!source || !target) return false;
+    const moved = { ...source, day: target.day };
+    const withoutSource = this.plan.filter((entry) => entry.id !== sourceEntryId);
+    const targetIndex = withoutSource.findIndex((entry) => entry.id === targetEntryId);
+    if (targetIndex < 0) return false;
+    const insertIndex = position === "after" ? targetIndex + 1 : targetIndex;
+    const next = [...withoutSource.slice(0, insertIndex), moved, ...withoutSource.slice(insertIndex)];
+    const sameOrder = next.map((entry) => `${entry.id}:${entry.day}`).join("\0") === this.plan.map((entry) => `${entry.id}:${entry.day}`).join("\0");
+    if (sameOrder) return false;
+    this.plan = next;
+    void this.save(true);
+    return true;
+  }
+
+  movePlanEntryToDay(sourceEntryId, targetDay) {
+    const source = this.plan.find((entry) => entry.id === sourceEntryId);
+    if (!source || !PLAN_DAYS.includes(targetDay)) return false;
+    const moved = { ...source, day: targetDay };
+    const withoutSource = this.plan.filter((entry) => entry.id !== sourceEntryId);
+    const lastTargetDayIndex = findLastPlanDayIndex(withoutSource, targetDay);
+    let insertIndex = lastTargetDayIndex >= 0 ? lastTargetDayIndex + 1 : withoutSource.findIndex((entry) => dayOrder(entry.day) > dayOrder(targetDay));
+    if (insertIndex < 0) insertIndex = withoutSource.length;
+    const next = [...withoutSource.slice(0, insertIndex), moved, ...withoutSource.slice(insertIndex)];
+    const sameOrder = next.map((entry) => `${entry.id}:${entry.day}`).join("\0") === this.plan.map((entry) => `${entry.id}:${entry.day}`).join("\0");
+    if (sameOrder) return false;
     this.plan = next;
     void this.save(true);
     return true;

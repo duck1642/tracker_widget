@@ -40,7 +40,8 @@
       onAdd={(day) => weekStore.addPlanEntry(day)}
       onUpdate={(id, patch) => weekStore.updatePlanEntry(id, patch)}
       onDelete={(id) => weekStore.removePlanEntry(id)}
-      onMove={(sourceId, targetId, position) => weekStore.movePlanEntryWithinDay(sourceId, targetId, position)}
+      onMove={(sourceId, targetId, position) => weekStore.movePlanEntry(sourceId, targetId, position)}
+      onMoveToDay={(sourceId, day) => weekStore.movePlanEntryToDay(sourceId, day)}
       onAddActivity={(entryId) => weekStore.addPlanActivity(entryId)}
       onUpdateActivity={(entryId, activityId, patch) => weekStore.updatePlanActivity(entryId, activityId, patch)}
       onDeleteActivity={(entryId, activityId) => weekStore.removePlanActivity(entryId, activityId)}

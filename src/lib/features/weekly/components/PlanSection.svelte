@@ -12,6 +12,7 @@
     onUpdate,
     onDelete,
     onMove,
+    onMoveToDay,
     onAddActivity,
     onUpdateActivity,
     onDeleteActivity,
@@ -23,6 +24,7 @@
   let selectedEntryId = $state(null);
   let draggedEntryId = $state(null);
   let dragOverEntryId = $state(null);
+  let dragOverDay = $state(null);
   let dropPosition = $state("before");
 
   let selectedEntry = $derived(plan.find((entry) => entry.id === selectedEntryId));
@@ -34,6 +36,7 @@
   function resetDrag() {
     draggedEntryId = null;
     dragOverEntryId = null;
+    dragOverDay = null;
     dropPosition = "before";
   }
 
@@ -45,7 +48,7 @@
     };
   }
 
-  function handleDragStart(id) {
+  function handleDragStart({ id }) {
     draggedEntryId = id;
   }
 
@@ -53,12 +56,13 @@
     if (!draggedEntryId || draggedEntryId === id) return;
     const source = plan.find((entry) => entry.id === draggedEntryId);
     const target = plan.find((entry) => entry.id === id);
-    if (!source || !target || source.day !== target.day) return;
+    if (!source || !target) return;
     dragOverEntryId = id;
+    dragOverDay = null;
     dropPosition = position;
   }
 
-  function handleDragLeave(id) {
+  function handleDragLeave({ id }) {
     if (dragOverEntryId === id) {
       dragOverEntryId = null;
       dropPosition = "before";
@@ -67,6 +71,34 @@
 
   function handleDrop({ sourceId, targetId, position }) {
     onMove?.(sourceId, targetId, position);
+    resetDrag();
+  }
+
+  function dayTargetId(day) {
+    return `day:${day}`;
+  }
+
+  function handleDayDragOver({ id }) {
+    if (!draggedEntryId) return;
+    const day = id.replace("day:", "");
+    const source = plan.find((entry) => entry.id === draggedEntryId);
+    if (!source || !days.includes(day)) return;
+    dragOverEntryId = null;
+    dragOverDay = day;
+    dropPosition = "after";
+  }
+
+  function handleDayDragLeave({ id }) {
+    const day = id.replace("day:", "");
+    if (dragOverDay === day) {
+      dragOverDay = null;
+      dropPosition = "before";
+    }
+  }
+
+  function handleDayDrop({ sourceId, targetId }) {
+    const day = targetId.replace("day:", "");
+    onMoveToDay?.(sourceId, day);
     resetDrag();
   }
 </script>
@@ -79,13 +111,43 @@
   <div class="week-board">
     {#each days as day}
       {@const entries = plan.filter((entry) => entry.day === day)}
-      <section class="day-column" aria-label={`${day} plan`}>
+      {#if entries.length === 0}
+        <section
+          class="day-column"
+          aria-label={`${day} plan`}
+          use:sortableDropTarget={{
+            id: dayTargetId(day),
+            type: "weekly-plan",
+            onOver: handleDayDragOver,
+            onLeave: handleDayDragLeave,
+            onDrop: handleDayDrop
+          }}
+        >
+          <header class="day-header">
+            <h3>{day}</h3>
+            <span>{entries.length}</span>
+          </header>
+
+          <div class="card-list empty">
+            {#if dragOverDay === day}
+              <div class="day-drop-zone active" aria-hidden="true"></div>
+            {:else}
+              <p class="day-empty">No sessions</p>
+            {/if}
+          </div>
+
+          <button type="button" class="add-day-btn" onclick={() => onAdd(day)} title={`Add planned session to ${day}`}>
+            <Plus size={13} /> Add
+          </button>
+        </section>
+      {:else}
+        <section class="day-column" aria-label={`${day} plan`}>
         <header class="day-header">
           <h3>{day}</h3>
           <span>{entries.length}</span>
         </header>
 
-        <div class="card-list">
+          <div class="card-list">
           {#each entries as entry (entry.id)}
             {@const summary = planSummary(entry)}
             <article
@@ -147,16 +209,13 @@
               </button>
             </article>
           {/each}
-
-          {#if entries.length === 0}
-            <p class="day-empty">No sessions</p>
-          {/if}
-        </div>
+          </div>
 
         <button type="button" class="add-day-btn" onclick={() => onAdd(day)} title={`Add planned session to ${day}`}>
           <Plus size={13} /> Add
         </button>
       </section>
+      {/if}
     {/each}
   </div>
 
@@ -218,11 +277,16 @@
     display: grid;
     align-content: start;
     gap: 7px;
-    flex: 1;
     padding: 7px;
   }
 
+  .card-list.empty {
+    position: relative;
+    align-content: start;
+  }
+
   .plan-card {
+    position: relative;
     display: grid;
     gap: 7px;
     padding: 0 8px 8px;
@@ -238,14 +302,48 @@
 
   .plan-card.dragging {
     opacity: 0.58;
+    border-color: var(--accent);
+    background: #192016;
   }
 
-  .plan-card.drop-before {
-    box-shadow: 0 -2px 0 var(--accent), var(--shadow-sm);
-  }
-
+  .plan-card.drop-before,
   .plan-card.drop-after {
-    box-shadow: 0 2px 0 var(--accent), var(--shadow-sm);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .plan-card.drop-before::before,
+  .plan-card.drop-after::after {
+    content: "";
+    position: absolute;
+    left: -1px;
+    right: -1px;
+    height: 5px;
+    border-color: var(--accent);
+    border-style: solid;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .plan-card.drop-before::before {
+    top: -1px;
+    border-width: 2px 1px 0;
+    border-radius: 6px 6px 0 0;
+  }
+
+  .plan-card.drop-after::after {
+    bottom: -1px;
+    border-width: 0 1px 2px;
+    border-radius: 0 0 6px 6px;
+  }
+
+  .day-drop-zone {
+    width: min(100%, 158px);
+    height: 76px;
+    justify-self: center;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    box-sizing: border-box;
   }
 
   .card-top {
@@ -377,6 +475,7 @@
     display: flex;
     align-items: center;
     gap: 5px;
+    margin-top: auto;
     min-height: 32px;
     padding: 0 9px;
     border: 0;

@@ -167,7 +167,7 @@ describe("WeekStore editing", () => {
     expect(files.get("week.md")).toContain("| p1 | Fri | Session | general | 0 |");
   });
 
-  it("reorders plan entries only within one day", async () => {
+  it("reorders plan entries across days", async () => {
     const { store } = harness();
     await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
     store.plan = [
@@ -176,9 +176,25 @@ describe("WeekStore editing", () => {
       { id: "p3", day: "Tue", session: "Third", subjects: ["general"], targetMinutes: 0, activities: [] }
     ];
 
-    expect(store.movePlanEntryWithinDay("p2", "p1", "before")).toBe(true);
-    expect(store.plan.map((entry) => entry.id)).toEqual(["p2", "p1", "p3"]);
-    expect(store.movePlanEntryWithinDay("p3", "p1", "before")).toBe(false);
+    expect(store.movePlanEntry("p3", "p1", "before")).toBe(true);
+    expect(store.plan.map((entry) => `${entry.id}:${entry.day}`)).toEqual(["p3:Mon", "p1:Mon", "p2:Mon"]);
+    expect(store.movePlanEntry("p3", "p3", "before")).toBe(false);
+    expect(store.movePlanEntry("missing", "p1", "before")).toBe(false);
+  });
+
+  it("moves plan entries to the end of a day", async () => {
+    const { store } = harness();
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    store.plan = [
+      { id: "p1", day: "Mon", session: "First", subjects: ["general"], targetMinutes: 0, activities: [] },
+      { id: "p2", day: "Wed", session: "Second", subjects: ["general"], targetMinutes: 0, activities: [] },
+      { id: "p3", day: "Wed", session: "Third", subjects: ["general"], targetMinutes: 0, activities: [] }
+    ];
+
+    expect(store.movePlanEntryToDay("p1", "Wed")).toBe(true);
+    expect(store.plan.map((entry) => `${entry.id}:${entry.day}`)).toEqual(["p2:Wed", "p3:Wed", "p1:Wed"]);
+    expect(store.movePlanEntryToDay("missing", "Wed")).toBe(false);
+    expect(store.movePlanEntryToDay("p1", "Bad")).toBe(false);
   });
 
   it("refreshes actual from the loaded daily document when provided", async () => {

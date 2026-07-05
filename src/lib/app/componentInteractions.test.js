@@ -2,6 +2,7 @@
 // @ts-nocheck
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/svelte";
+import { tick } from "svelte";
 import MainTabs from "./MainTabs.svelte";
 import AppHeader from "./AppHeader.svelte";
 import AppSidebar from "./AppSidebar.svelte";
@@ -328,6 +329,49 @@ describe("logger editing", () => {
     expect(screen.getByText("60m")).toBeTruthy();
     expect(screen.getByText("rust")).toBeTruthy();
     expect(screen.queryByRole("textbox", { name: "Add subject" })).toBeNull();
+  });
+
+  it("emits weekly plan drag moves across cards and day drop zones", async () => {
+    const onMove = vi.fn();
+    const onMoveToDay = vi.fn();
+    const { container } = render(PlanSection, {
+      plan: [
+        { id: "p1", day: "Mon", session: "Development", subjects: ["rust"], targetMinutes: 60, activities: [] },
+        { id: "p2", day: "Tue", session: "Review", subjects: ["general"], targetMinutes: 30, activities: [] }
+      ],
+      onAdd: vi.fn(),
+      onUpdate: vi.fn(),
+      onDelete: vi.fn(),
+      onMove,
+      onMoveToDay,
+      onAddActivity: vi.fn(),
+      onUpdateActivity: vi.fn(),
+      onDeleteActivity: vi.fn(),
+      onMoveActivity: vi.fn()
+    });
+
+    const reviewCard = screen.getByRole("button", { name: "Review" }).closest("article");
+    reviewCard.getBoundingClientRect = () => ({ top: 10, bottom: 50, height: 40, left: 0, right: 100, width: 100 });
+    document.elementsFromPoint = vi.fn(() => [reviewCard]);
+
+    const handle = screen.getByRole("button", { name: "Reorder Development" });
+    await fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0, clientY: 0 });
+    await fireEvent.pointerMove(window, { pointerId: 1, clientX: 0, clientY: 45 });
+    await tick();
+    expect(handle.closest("article").classList.contains("dragging")).toBe(true);
+    expect(reviewCard.classList.contains("drop-after")).toBe(true);
+    await fireEvent.pointerUp(window, { pointerId: 1, clientX: 0, clientY: 45 });
+    expect(onMove).toHaveBeenCalledWith("p1", "p2", "after");
+
+    const friColumn = [...container.querySelectorAll(".day-column")][4];
+    document.elementsFromPoint = vi.fn(() => [friColumn]);
+    await fireEvent.pointerDown(handle, { button: 0, pointerId: 2, clientX: 0, clientY: 0 });
+    await fireEvent.pointerMove(window, { pointerId: 2, clientX: 0, clientY: 20 });
+    await tick();
+    const friZone = friColumn.querySelector(".day-drop-zone");
+    expect(friZone.classList.contains("active")).toBe(true);
+    await fireEvent.pointerUp(window, { pointerId: 2, clientX: 0, clientY: 20 });
+    expect(onMoveToDay).toHaveBeenCalledWith("p1", "Fri");
   });
 
   it("opens weekly plan details and emits planned activity actions", async () => {
