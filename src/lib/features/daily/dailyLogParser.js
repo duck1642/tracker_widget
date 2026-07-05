@@ -49,6 +49,6 @@ export function serializeDailyLog(document) {
   }
   const total = document.sessions.reduce((sum, session) => sum + session.activities.reduce((inner, activity) => inner + activity.minutes, 0), 0);
   blocks.push(`## Total Time\n\n${total}m`);
-  blocks.push(`---\n\n## Notes\n\n${document.notesRaw || "-"}`);
+  blocks.push(`---\n\n## Notes\n\n${document.notesRaw || ""}`);
   return `${blocks.join("\n\n")}\n`;
 }

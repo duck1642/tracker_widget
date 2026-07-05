@@ -36,4 +36,10 @@ describe("daily log parser", () => {
     expect(serialized).toContain("Keep this raw line.");
   });
 
+  it("serializes empty daily notes without a starter bullet", () => {
+    const serialized = serializeDailyLog(parseDailyLog("# 2026-06-22\n\n## Total Time\n\n0m\n\n## Notes\n"));
+    expect(serialized).toContain("## Notes\n\n\n");
+    expect(serialized).not.toContain("## Notes\n\n-");
+  });
+
 });
