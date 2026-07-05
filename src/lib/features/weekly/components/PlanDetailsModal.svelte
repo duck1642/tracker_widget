@@ -156,11 +156,16 @@
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
+    transition: color 0.15s ease;
   }
 
-  .icon-button:hover,
-  .row-btn:hover:not(:disabled) {
+  .icon-button:hover {
     background: var(--surface-hover);
+    color: var(--text-color);
+  }
+
+  .row-btn:hover:not(:disabled) {
+    background: transparent;
     color: var(--text-color);
   }
 
@@ -170,7 +175,8 @@
   }
 
   .row-btn.del:hover {
-    color: #ff8888;
+    color: #ff5555;
+    background: transparent;
   }
 
   .activity-list {

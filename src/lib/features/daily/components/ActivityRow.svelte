@@ -81,9 +81,10 @@
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
+    transition: color 0.15s ease;
   }
   .row-btn:hover:not(:disabled) {
-    background: var(--surface-hover);
+    background: transparent;
     color: var(--text-color);
   }
   .row-btn:disabled {
@@ -91,7 +92,8 @@
     cursor: default;
   }
   .row-btn.del:hover {
-    color: #ff8888;
+    color: #ff5555;
+    background: transparent;
   }
   .desc-text {
     flex: 1;
