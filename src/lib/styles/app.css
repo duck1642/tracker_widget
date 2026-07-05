@@ -437,10 +437,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
+  transition: color 0.15s ease;
 }
 
 .fold-btn:hover {
-  background: var(--surface-hover);
+  background: transparent;
   color: var(--text-color);
 }
 
@@ -628,16 +629,17 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   align-items: center;
   justify-content: center;
   border-radius: 3px;
+  transition: color 0.15s ease;
 }
 
 .row-btn:hover {
   color: var(--text-color);
-  background-color: var(--border-color);
+  background-color: transparent;
 }
 
 .row-btn.del:hover {
   color: #ff5555;
-  background-color: rgba(255, 85, 85, 0.1);
+  background-color: transparent;
 }
 
 .action-btn {
