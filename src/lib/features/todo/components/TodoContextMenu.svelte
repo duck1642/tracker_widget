@@ -1,5 +1,5 @@
 <script>
-  import { CheckSquare2, ClipboardList, Flag, IndentDecrease, IndentIncrease, ListTodo, Square, Trash2, X } from "@lucide/svelte";
+  import { CheckSquare2, ChevronDown, ChevronUp, ClipboardList, Flag, IndentDecrease, IndentIncrease, ListTodo, Square, Trash2, X } from "@lucide/svelte";
   import { clampContextMenuPosition } from "$lib/features/todo/todoContextMenuPosition.js";
 
   let {
@@ -14,7 +14,9 @@
     onIndentSelected,
     onOutdentSelected,
     onDeleteSelected,
-    onClearSelection
+    onClearSelection,
+    onMoveUp,
+    onMoveDown
   } = $props();
 
   let menuElement = $state();
@@ -76,6 +78,16 @@
     <IndentDecrease size={13} />
     <span>Outdent selected</span>
   </button>
+  {#if selectedCount === 1}
+    <button type="button" role="menuitem" onclick={onMoveUp}>
+      <ChevronUp size={13} />
+      <span>Move Up</span>
+    </button>
+    <button type="button" role="menuitem" onclick={onMoveDown}>
+      <ChevronDown size={13} />
+      <span>Move Down</span>
+    </button>
+  {/if}
   <div class="context-separator" aria-hidden="true"></div>
   <button type="button" role="menuitem" class="danger-item" onclick={onDeleteSelected}>
     <Trash2 size={13} />

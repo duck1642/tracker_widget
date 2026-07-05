@@ -287,6 +287,40 @@
     }
   }
 
+  function handleMoveSelectedUp() {
+    if (todoUiState.selectedTodoIds.length === 1) {
+      const id = todoUiState.selectedTodoIds[0];
+      const index = todoStore.todos.findIndex((t) => t.id === id);
+      if (index > 0) {
+        todoStore.moveTodoUp(index);
+        focusedTodoId = id;
+        tick().then(() => {
+          if (inputElements[id]) {
+            inputElements[id].focus();
+          }
+        });
+      }
+    }
+    closeContextMenu();
+  }
+
+  function handleMoveSelectedDown() {
+    if (todoUiState.selectedTodoIds.length === 1) {
+      const id = todoUiState.selectedTodoIds[0];
+      const index = todoStore.todos.findIndex((t) => t.id === id);
+      if (index >= 0 && index < todoStore.todos.length - 1) {
+        todoStore.moveTodoDown(index);
+        focusedTodoId = id;
+        tick().then(() => {
+          if (inputElements[id]) {
+            inputElements[id].focus();
+          }
+        });
+      }
+    }
+    closeContextMenu();
+  }
+
   /** @param {MouseEvent} event */
   function handleRawContextMenu(event) {
     event.preventDefault();
@@ -473,6 +507,8 @@
       onOutdentSelected={() => handleShiftSelectedIndent(-1)}
       onDeleteSelected={handleDeleteSelected}
       onClearSelection={handleClearSelectionFromMenu}
+      onMoveUp={handleMoveSelectedUp}
+      onMoveDown={handleMoveSelectedDown}
     />
   {/if}
   {#if sessionMenu}

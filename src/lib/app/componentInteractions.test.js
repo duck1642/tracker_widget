@@ -579,51 +579,15 @@ describe("todo actions", () => {
       measureText: (text) => ({ width: text.length * 7 })
     });
     const { default: TodoRow } = await import("$lib/features/todo/components/TodoRow.svelte");
-    const onDeleteTodo = vi.fn();
     render(TodoRow, {
       todo: { id: "todo-1", text: "Delete me", checked: false, indent: 0 },
       index: 2,
       inputElements: {},
       onToggleTodo: vi.fn(), onUpdateText: vi.fn(), onMoveTodoUp: vi.fn(), onMoveTodoDown: vi.fn(),
-      onDeleteTodo, onFocus: vi.fn(), onBlur: vi.fn(), onKeyDown: vi.fn()
+      onDeleteTodo: vi.fn(), onFocus: vi.fn(), onBlur: vi.fn(), onKeyDown: vi.fn()
     });
-    await fireEvent.click(screen.getByTitle("Delete"));
-    expect(onDeleteTodo).toHaveBeenCalledWith(2);
+    expect(screen.queryByTitle("Delete")).toBeNull();
     expect(screen.getByPlaceholderText("New todo").getAttribute("spellcheck")).toBeNull();
-  });
-
-  it("deletes the focused row from the todo store through its trash button", async () => {
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
-      font: "",
-      measureText: (text) => ({ width: text.length * 7 })
-    });
-    const originalTodos = todoStore.todos;
-    const originalUndoStack = todoStore.undoStack;
-    const originalRedoStack = todoStore.redoStack;
-    todoStore.todos = [
-      { id: "todo-1", isTodo: true, text: "Keep", checked: false, indent: 0 },
-      { id: "todo-2", isTodo: true, text: "Delete", checked: false, indent: 0 }
-    ];
-    todoStore.undoStack = [];
-    todoStore.redoStack = [];
-    vi.spyOn(todoStore, "scheduleSave").mockResolvedValue(true);
-    const deleteTodo = vi.spyOn(todoStore, "deleteTodo");
-    try {
-      render(TodoPanel);
-      const input = screen.getByDisplayValue("Delete");
-      const trash = screen.getAllByRole("button", { name: "Delete todo" })[1];
-      input.focus();
-      await fireEvent.pointerDown(trash);
-      expect(document.activeElement).toBe(input);
-      await fireEvent.click(trash);
-
-      expect(deleteTodo).toHaveBeenCalledWith(1);
-      expect(todoStore.todos.map((todo) => todo.id)).toEqual(["todo-1"]);
-    } finally {
-      todoStore.todos = originalTodos;
-      todoStore.undoStack = originalUndoStack;
-      todoStore.redoStack = originalRedoStack;
-    }
   });
 
   it("deletes an empty todo with Backspace and focuses the previous todo", async () => {
@@ -708,12 +672,13 @@ describe("todo actions", () => {
       { id: "todo-2", isTodo: true, text: "Hidden child", checked: false, indent: 1 },
       { id: "todo-3", isTodo: true, text: "Visible peer", checked: false, indent: 0 }
     ];
-    const deleteTodo = vi.spyOn(todoStore, "deleteTodo").mockImplementation(() => {});
+    const deleteTodosByIds = vi.spyOn(todoStore, "deleteTodosByIds").mockImplementation(() => true);
     try {
       render(TodoPanel);
       await fireEvent.click(screen.getByRole("button", { name: "Collapse todo" }));
-      await fireEvent.click(screen.getAllByRole("button", { name: "Delete todo" })[1]);
-      expect(deleteTodo).toHaveBeenCalledWith(2);
+      await fireEvent.contextMenu(screen.getByDisplayValue("Visible peer"));
+      await fireEvent.click(screen.getByRole("menuitem", { name: "Delete selected" }));
+      expect(deleteTodosByIds).toHaveBeenCalledWith(["todo-3"]);
     } finally {
       todoStore.todos = originalTodos;
     }

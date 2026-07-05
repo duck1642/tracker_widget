@@ -184,15 +184,4 @@
     placeholder="New todo"
     rows="1"
   ></textarea>
-  <div class="row-actions">
-    <button type="button" class="row-btn" onpointerdown={(event) => event.preventDefault()} onclick={() => onMoveTodoUp(index)} aria-label="Move todo up" title="Move up">
-      <ChevronUp size={13} />
-    </button>
-    <button type="button" class="row-btn" onpointerdown={(event) => event.preventDefault()} onclick={() => onMoveTodoDown(index)} aria-label="Move todo down" title="Move down">
-      <ChevronDown size={13} />
-    </button>
-    <button type="button" class="row-btn del" onpointerdown={(event) => event.preventDefault()} onclick={() => onDeleteTodo(index)} aria-label="Delete todo" title="Delete">
-      <Trash2 size={13} />
-    </button>
-  </div>
 </div>
