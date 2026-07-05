@@ -311,6 +311,39 @@ describe("logger editing", () => {
     expect(onDrop).not.toHaveBeenCalled();
   });
 
+  it("shows suggestions when renaming a daily session", async () => {
+    const onRenameSession = vi.fn(() => true);
+    render(SessionCard, {
+      session: { id: "session-1", name: "Work", activities: [] },
+      suggestions: ["Deep Work", "Review", "Long renamed session"],
+      existingSessions: ["Work", "Review"],
+      dragState: null,
+      onAddActivity: vi.fn(),
+      onUpdateActivity: vi.fn(),
+      onDeleteActivity: vi.fn(),
+      onMoveActivity: vi.fn(),
+      onDeleteSession: vi.fn(),
+      onRenameSession,
+      onDragStart: vi.fn(),
+      onDragOver: vi.fn(),
+      onDragLeave: vi.fn(),
+      onDrop: vi.fn(),
+      onDragEnd: vi.fn()
+    });
+
+    await fireEvent.click(screen.getByText("Work"));
+
+    expect(screen.getByRole("option", { name: "Deep Work" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Long renamed session" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Review" })).toBeNull();
+
+    await fireEvent.input(screen.getByDisplayValue("Work"), { target: { value: "long" } });
+    expect(screen.queryByRole("option", { name: "Deep Work" })).toBeNull();
+    await fireEvent.click(screen.getByRole("option", { name: "Long renamed session" }));
+
+    expect(onRenameSession).toHaveBeenCalledWith("Long renamed session");
+  });
+
   it("renders a zero-minute default when TimeInput has no minutes prop", async () => {
     const { default: TimeInput } = await import("$lib/shared/components/TimeInput.svelte");
     render(TimeInput, { onChange: vi.fn(), variant: "badge" });

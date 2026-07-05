@@ -62,14 +62,15 @@ describe("DailyStore editing", () => {
     expect(files.get("day.md")).not.toContain("## Work");
   });
 
-  it("renames a session correctly and preserves uniqueness", async () => {
-    const { store, files } = harness("# 2026-06-22\n\n## Work\n\n## Play\n\n## Total Time\n\n0m\n\n## Notes\n");
+  it("renames a session correctly and preserves uniqueness without recording empty sessions", async () => {
+    const sessionHistoryStore = { record: vi.fn(async () => true) };
+    const { store, files } = harness("# 2026-06-22\n\n## Work\n\n## Play\n\n## Total Time\n\n0m\n\n## Notes\n", { sessionHistoryStore });
     await store.loadPath("day.md", "2026-06-22");
     const workId = store.sessions[0].id;
-    const playId = store.sessions[1].id;
     
     // Cannot rename to an existing session (case-insensitive check)
     expect(store.renameSession(workId, "play")).toBe(false);
+    expect(sessionHistoryStore.record).not.toHaveBeenCalled();
     
     // Can rename to a valid new name
     expect(store.renameSession(workId, "Coding")).toBe(true);
@@ -78,6 +79,18 @@ describe("DailyStore editing", () => {
     expect(store.sessions[0].name).toBe("Coding");
     expect(files.get("day.md")).toContain("## Coding");
     expect(files.get("day.md")).not.toContain("## Work");
+    expect(sessionHistoryStore.record).not.toHaveBeenCalled();
+  });
+
+  it("records renamed sessions in history when they have activities", async () => {
+    const sessionHistoryStore = { record: vi.fn(async () => true) };
+    const { store } = harness("# 2026-06-22\n\n## Work\n\n- {subjects: (rust), time: 10m} Code\n\n## Total Time\n\n10m\n\n## Notes\n", { sessionHistoryStore });
+    await store.loadPath("day.md", "2026-06-22");
+
+    expect(store.renameSession(store.sessions[0].id, "Coding")).toBe(true);
+
+    expect(sessionHistoryStore.record).toHaveBeenCalledOnce();
+    expect(sessionHistoryStore.record).toHaveBeenCalledWith(["Coding"]);
   });
 
   it("adds new activities with zero minutes by default", async () => {

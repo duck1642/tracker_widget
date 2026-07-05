@@ -120,6 +120,9 @@ export class DailyStore {
     if (!session) return false;
     session.name = normalized;
     void this.save(true);
+    if (session.activities.length > 0) {
+      void this.sessionHistoryStore?.record?.([normalized]);
+    }
     this.refreshWeeklyActual();
     return true;
   }

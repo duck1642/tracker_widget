@@ -76,6 +76,8 @@
         <SessionCard
           {session}
           dragState={sessionDragState(session.id)}
+          {suggestions}
+          {existingSessions}
           onAddActivity={() => dailyStore.addActivity(session.id)}
           onUpdateActivity={(activityId, patch) => dailyStore.updateActivity(session.id, activityId, patch)}
           onDeleteActivity={(activityId) => dailyStore.removeActivity(session.id, activityId)}
