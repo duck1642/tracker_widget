@@ -74,17 +74,21 @@
 
   async function applyViewSizeConstraints(view) {
     const constraints = viewSizeConstraints[view] ?? viewSizeConstraints.todo;
+    const sidebarWidth = (workspaceStore.sidebarOpen && !workspaceStore.needsFirstSetup) ? 180 : 0;
+    const targetWidth = constraints.width + sidebarWidth;
+    const targetHeight = constraints.height;
+
     try {
       const appWindow = getCurrentWindow();
-      await appWindow.setMinSize(new LogicalSize(constraints.width, constraints.height));
+      await appWindow.setMinSize(new LogicalSize(targetWidth, targetHeight));
       if (await appWindow.isMaximized()) return;
 
       const scaleFactor = await appWindow.scaleFactor();
       const logicalSize = (await appWindow.innerSize()).toLogical(scaleFactor);
-      if (logicalSize.width < constraints.width || logicalSize.height < constraints.height) {
+      if (logicalSize.width < targetWidth || logicalSize.height < targetHeight) {
         await appWindow.setSize(new LogicalSize(
-          Math.max(logicalSize.width, constraints.width),
-          Math.max(logicalSize.height, constraints.height)
+          Math.max(logicalSize.width, targetWidth),
+          Math.max(logicalSize.height, targetHeight)
         ));
       }
     } catch (error) {
@@ -94,6 +98,7 @@
 
   $effect(() => {
     const view = appStore.currentView;
+    const sidebarOpen = workspaceStore.sidebarOpen; // establish reactive dependency
     if (!view) return;
     if (isMaximized) return;
     applyViewSizeConstraints(view);
