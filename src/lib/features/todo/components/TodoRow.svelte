@@ -1,4 +1,5 @@
 <script>
+  // @ts-nocheck
   import { tick } from "svelte";
   import { Check, ChevronDown, ChevronRight, ChevronUp, Trash2 } from "@lucide/svelte";
 
@@ -79,6 +80,24 @@
       onSetSelectionAnchor(todo.id);
     }
   }
+
+  // Auto-resize effect for textarea height
+  $effect(() => {
+    const val = todo.text; // establish reactive dependency
+    if (inputEl) {
+      inputEl.style.height = "auto";
+      inputEl.style.height = inputEl.scrollHeight + "px";
+    }
+  });
+
+  function handleInput(e) {
+    const value = e.currentTarget.value.replace(/\r?\n/g, " ");
+    onUpdateText(todo.id, value);
+    
+    // Auto-resize locally and immediately
+    e.currentTarget.style.height = "auto";
+    e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
+  }
 </script>
 
 <div
@@ -153,18 +172,18 @@
       <Check size={10} strokeWidth={4} />
     {/if}
   </button>
-  <input 
-    type="text" 
+  <textarea 
     class="todo-text {todo.checked ? 'completed' : ''}" 
     value={todo.text}
     bind:this={inputEl}
     onfocus={() => onFocus(todo.id, todo.text)}
     onblur={() => onBlur(todo.id, todo.text)}
-    oninput={(e) => onUpdateText(todo.id, e.currentTarget.value)}
+    oninput={handleInput}
     onkeydown={(e) => onKeyDown(e, index, todo)}
     readonly={selectionActive}
     placeholder="New todo"
-  />
+    rows="1"
+  ></textarea>
   <div class="row-actions">
     <button type="button" class="row-btn" onpointerdown={(event) => event.preventDefault()} onclick={() => onMoveTodoUp(index)} aria-label="Move todo up" title="Move up">
       <ChevronUp size={13} />

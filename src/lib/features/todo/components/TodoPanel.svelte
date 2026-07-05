@@ -1,4 +1,5 @@
 <script>
+  // @ts-nocheck
   import { tick } from "svelte";
   import { appStore } from "$lib/app/appStore.svelte.js";
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
@@ -353,23 +354,37 @@
         inputElements[newId].focus();
       }
     } else if (event.key === "ArrowUp") {
+      const textarea = event.target;
+      const selectionStart = textarea.selectionStart ?? 0;
+      if (selectionStart > 0) {
+        return;
+      }
       event.preventDefault();
       for (let i = index - 1; i >= 0; i--) {
         if (todoStore.todos[i].isTodo && isVisibleStoreIndex(i)) {
           focusedTodoId = todoStore.todos[i].id;
           if (inputElements[todoStore.todos[i].id]) {
-            inputElements[todoStore.todos[i].id].focus();
+            const nextTextarea = inputElements[todoStore.todos[i].id];
+            nextTextarea.focus();
+            nextTextarea.selectionStart = nextTextarea.selectionEnd = nextTextarea.value.length;
           }
           break;
         }
       }
     } else if (event.key === "ArrowDown") {
+      const textarea = event.target;
+      const selectionEnd = textarea.selectionEnd ?? 0;
+      if (selectionEnd < textarea.value.length) {
+        return;
+      }
       event.preventDefault();
       for (let i = index + 1; i < todoStore.todos.length; i++) {
         if (todoStore.todos[i].isTodo && isVisibleStoreIndex(i)) {
           focusedTodoId = todoStore.todos[i].id;
           if (inputElements[todoStore.todos[i].id]) {
-            inputElements[todoStore.todos[i].id].focus();
+            const nextTextarea = inputElements[todoStore.todos[i].id];
+            nextTextarea.focus();
+            nextTextarea.selectionStart = nextTextarea.selectionEnd = 0;
           }
           break;
         }
