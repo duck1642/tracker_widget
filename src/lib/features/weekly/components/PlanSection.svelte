@@ -112,28 +112,29 @@
     {#each days as day}
       {@const entries = plan.filter((entry) => entry.day === day)}
       {#if entries.length === 0}
-        <section
-          class="day-column"
-          aria-label={`${day} plan`}
-          use:sortableDropTarget={{
-            id: dayTargetId(day),
-            type: "weekly-plan",
-            onOver: handleDayDragOver,
-            onLeave: handleDayDragLeave,
-            onDrop: handleDayDrop
-          }}
-        >
+        <section class="day-column" aria-label={`${day} plan`}>
           <header class="day-header">
             <h3>{day}</h3>
             <span>{entries.length}</span>
           </header>
 
           <div class="card-list empty">
-            {#if dragOverDay === day}
-              <div class="day-drop-zone active" aria-hidden="true"></div>
-            {:else}
-              <p class="day-empty">No sessions</p>
-            {/if}
+            <div
+              class="day-drop-target"
+              use:sortableDropTarget={{
+                id: dayTargetId(day),
+                type: "weekly-plan",
+                onOver: handleDayDragOver,
+                onLeave: handleDayDragLeave,
+                onDrop: handleDayDrop
+              }}
+            >
+              {#if dragOverDay === day}
+                <div class="day-drop-zone active" aria-hidden="true"></div>
+              {:else}
+                <p class="day-empty">No sessions</p>
+              {/if}
+            </div>
           </div>
 
           <button type="button" class="add-day-btn" onclick={() => onAdd(day)} title={`Add planned session to ${day}`}>
@@ -142,79 +143,79 @@
         </section>
       {:else}
         <section class="day-column" aria-label={`${day} plan`}>
-        <header class="day-header">
-          <h3>{day}</h3>
-          <span>{entries.length}</span>
-        </header>
+          <header class="day-header">
+            <h3>{day}</h3>
+            <span>{entries.length}</span>
+          </header>
 
           <div class="card-list">
-          {#each entries as entry (entry.id)}
-            {@const summary = planSummary(entry)}
-            <article
-              class="plan-card"
-              class:dragging={dragState(entry.id).dragging}
-              class:drop-before={dragState(entry.id).over && dragState(entry.id).position === "before"}
-              class:drop-after={dragState(entry.id).over && dragState(entry.id).position === "after"}
-              use:sortableDropTarget={{
-                id: entry.id,
-                type: "weekly-plan",
-                onOver: handleDragOver,
-                onLeave: handleDragLeave,
-                onDrop: handleDrop
-              }}
-            >
-              <div class="card-top">
-                <span
-                  role="button"
-                  tabindex="0"
-                  class="drag-handle"
-                  aria-label={`Reorder ${entry.session}`}
-                  title="Drag to reorder"
-                  use:sortableDragHandle={{
-                    id: entry.id,
-                    type: "weekly-plan",
-                    onStart: handleDragStart,
-                    onEnd: resetDrag
-                  }}
-                >
-                  <GripVertical size={13} />
-                </span>
-                {#if editingSessionId === entry.id}
-                  <input
-                    class="session-input"
-                    value={entry.session}
-                    onblur={() => editingSessionId = null}
-                    onkeydown={(e) => { if (e.key === "Enter") editingSessionId = null; }}
-                    oninput={(event) => onUpdate(entry.id, { session: event.currentTarget.value })}
-                    placeholder="What session?"
-                    use:focus
-                    onclick={(event) => event.stopPropagation()}
-                  />
-                {:else}
-                  <button type="button" class="session-title" onclick={() => editingSessionId = entry.id} title={entry.session || "Unnamed session"}>
-                    {entry.session || "Unnamed session"}
+            {#each entries as entry (entry.id)}
+              {@const summary = planSummary(entry)}
+              <article
+                class="plan-card"
+                class:dragging={dragState(entry.id).dragging}
+                class:drop-before={dragState(entry.id).over && dragState(entry.id).position === "before"}
+                class:drop-after={dragState(entry.id).over && dragState(entry.id).position === "after"}
+                use:sortableDropTarget={{
+                  id: entry.id,
+                  type: "weekly-plan",
+                  onOver: handleDragOver,
+                  onLeave: handleDragLeave,
+                  onDrop: handleDrop
+                }}
+              >
+                <div class="card-top">
+                  <span
+                    role="button"
+                    tabindex="0"
+                    class="drag-handle"
+                    aria-label={`Reorder ${entry.session}`}
+                    title="Drag to reorder"
+                    use:sortableDragHandle={{
+                      id: entry.id,
+                      type: "weekly-plan",
+                      onStart: handleDragStart,
+                      onEnd: resetDrag
+                    }}
+                  >
+                    <GripVertical size={13} />
+                  </span>
+                  {#if editingSessionId === entry.id}
+                    <input
+                      class="session-input"
+                      value={entry.session}
+                      onblur={() => editingSessionId = null}
+                      onkeydown={(e) => { if (e.key === "Enter") editingSessionId = null; }}
+                      oninput={(event) => onUpdate(entry.id, { session: event.currentTarget.value })}
+                      placeholder="What session?"
+                      use:focus
+                      onclick={(event) => event.stopPropagation()}
+                    />
+                  {:else}
+                    <button type="button" class="session-title" onclick={() => editingSessionId = entry.id} title={entry.session || "Unnamed session"}>
+                      {entry.session || "Unnamed session"}
+                    </button>
+                  {/if}
+
+                  <button type="button" class="delete-btn" onpointerdown={(e) => e.preventDefault()} onclick={() => onDelete(entry.id)} aria-label="Delete plan entry" title="Delete">
+                    <Trash2 size={13} />
                   </button>
-                {/if}
+                </div>
 
-                <button type="button" class="delete-btn" onpointerdown={(e) => e.preventDefault()} onclick={() => onDelete(entry.id)} aria-label="Delete plan entry" title="Delete">
-                  <Trash2 size={13} />
+                <ReadonlyBadges subjects={summary.subjects} minutes={summary.targetMinutes} />
+
+                <button type="button" class="details-btn" onclick={() => selectedEntryId = entry.id} aria-label={`Open planned activities for ${entry.session}`} title="Open planned activities">
+                  <ListTodo size={13} />
+                  <span>{entry.activities?.length || 0} planned</span>
                 </button>
-              </div>
-
-              <ReadonlyBadges subjects={summary.subjects} minutes={summary.targetMinutes} />
-
-              <button type="button" class="details-btn" onclick={() => selectedEntryId = entry.id} aria-label={`Open planned activities for ${entry.session}`} title="Open planned activities">
-                <ListTodo size={13} />
-                <span>{entry.activities?.length || 0} planned</span>
-              </button>
-            </article>
-          {/each}
+              </article>
+            {/each}
           </div>
 
-        <button type="button" class="add-day-btn" onclick={() => onAdd(day)} title={`Add planned session to ${day}`}>
-          <Plus size={13} /> Add
-        </button>
-      </section>
+          <button type="button" class="add-day-btn" onclick={() => onAdd(day)} title={`Add planned session to ${day}`}>
+            <Plus size={13} /> Add
+          </button>
+        </section>
       {/if}
     {/each}
   </div>
@@ -283,6 +284,15 @@
   .card-list.empty {
     position: relative;
     align-content: start;
+    min-height: 0;
+  }
+
+  .day-drop-target {
+    display: grid;
+    place-items: center;
+    width: min(100%, 158px);
+    min-height: 76px;
+    justify-self: center;
   }
 
   .plan-card {
@@ -337,9 +347,8 @@
   }
 
   .day-drop-zone {
-    width: min(100%, 158px);
+    width: 100%;
     height: 76px;
-    justify-self: center;
     border: 1px solid var(--accent);
     border-radius: 6px;
     background: color-mix(in srgb, var(--accent) 8%, transparent);

@@ -364,7 +364,8 @@ describe("logger editing", () => {
     expect(onMove).toHaveBeenCalledWith("p1", "p2", "after");
 
     const friColumn = [...container.querySelectorAll(".day-column")][4];
-    document.elementsFromPoint = vi.fn(() => [friColumn]);
+    const friTarget = friColumn.querySelector(".day-drop-target");
+    document.elementsFromPoint = vi.fn(() => [friTarget]);
     await fireEvent.pointerDown(handle, { button: 0, pointerId: 2, clientX: 0, clientY: 0 });
     await fireEvent.pointerMove(window, { pointerId: 2, clientX: 0, clientY: 20 });
     await tick();
