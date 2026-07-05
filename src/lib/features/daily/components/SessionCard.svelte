@@ -222,8 +222,8 @@
   .session-card.drop-before { box-shadow: 0 -2px 0 var(--accent), var(--shadow-sm); }
   .session-card.drop-after { box-shadow: 0 2px 0 var(--accent), var(--shadow-sm); }
   header { display: flex; align-items: center; padding: 0 10px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface-2); }
-  .drag-handle { display: inline-grid; place-items: center; flex: 0 0 24px; width: 24px; height: 28px; margin-right: 6px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); cursor: grab; user-select: none; }
-  .drag-handle:hover { background: var(--surface-hover); color: var(--text-color); }
+  .drag-handle { display: inline-grid; place-items: center; flex: 0 0 24px; width: 24px; height: 28px; margin-right: 6px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); cursor: grab; user-select: none; transition: color 0.15s ease; }
+  .drag-handle:hover { background: transparent; color: var(--text-color); }
   .drag-handle:active { cursor: grabbing; }
   .session-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; min-width: 0; min-height: 46px; color: var(--text-color); }
   .session-name-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; flex: 1; min-width: 0; font-size: var(--text-md); font-weight: 700; line-height: 1.25; cursor: pointer; transition: color 0.15s ease; }

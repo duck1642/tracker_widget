@@ -382,10 +382,11 @@
     color: var(--text-muted);
     cursor: grab;
     user-select: none;
+    transition: color 0.15s ease;
   }
 
   .drag-handle:hover {
-    background: var(--surface-hover);
+    background: transparent;
     color: var(--text-color);
   }
 
