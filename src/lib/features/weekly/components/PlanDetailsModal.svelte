@@ -37,7 +37,7 @@
     <header>
       <div>
         <h2>{entry.session || "Unnamed session"}</h2>
-        <p>{entry.day} · {summary.targetMinutes}m · {(entry.activities || []).length} activities</p>
+        <p>{entry.day} / {summary.targetMinutes}m / {(entry.activities || []).length} activities</p>
       </div>
       <button type="button" class="icon-button" onclick={onClose} aria-label="Close planned activities" title="Close">
         <X size={16} />
@@ -118,7 +118,7 @@
     border-radius: var(--radius-lg);
     background: var(--surface);
     box-shadow: var(--shadow-lg);
-    overflow: visible;
+    overflow: hidden;
   }
 
   header {
@@ -128,6 +128,7 @@
     gap: 14px;
     padding: 14px 16px;
     border-bottom: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: var(--surface-2);
   }
 

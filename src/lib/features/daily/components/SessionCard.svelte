@@ -20,7 +20,6 @@
     onDrop,
     onDragEnd
   } = $props();
-  let expanded = $state(true);
   let isEditingName = $state(false);
   let editNameInput = $state("");
   let nameEdited = $state(false);
@@ -182,7 +181,7 @@
       </div>
       <small>{subtotal}m / {session.activities.length} activities</small>
     {:else}
-      <button class="session-title" onclick={() => expanded = !expanded} aria-expanded={expanded}>
+      <div class="session-title">
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <span
@@ -196,27 +195,25 @@
           {session.name}
         </span>
         <small>{subtotal}m / {session.activities.length} activities</small>
-      </button>
+      </div>
     {/if}
     <button class="icon-button danger" onclick={onDeleteSession} aria-label="Delete session" title="Delete session"><Trash2 size={15} /></button>
   </header>
-  {#if expanded}
-    <div class="activities">
-      {#each session.activities as activity, index (activity.id)}
-        <ActivityRow
-          {activity}
-          canMoveUp={index > 0}
-          canMoveDown={index < session.activities.length - 1}
-          onUpdate={(patch) => onUpdateActivity(activity.id, patch)}
-          onDelete={() => onDeleteActivity(activity.id)}
-          onMoveUp={() => onMoveActivity(activity.id, "up")}
-          onMoveDown={() => onMoveActivity(activity.id, "down")}
-        />
-      {/each}
-      {#if session.activities.length === 0}<p>No activities yet.</p>{/if}
-    </div>
-    <footer><button onclick={onAddActivity}><Plus size={14} /> Add activity</button></footer>
-  {/if}
+  <div class="activities">
+    {#each session.activities as activity, index (activity.id)}
+      <ActivityRow
+        {activity}
+        canMoveUp={index > 0}
+        canMoveDown={index < session.activities.length - 1}
+        onUpdate={(patch) => onUpdateActivity(activity.id, patch)}
+        onDelete={() => onDeleteActivity(activity.id)}
+        onMoveUp={() => onMoveActivity(activity.id, "up")}
+        onMoveDown={() => onMoveActivity(activity.id, "down")}
+      />
+    {/each}
+    {#if session.activities.length === 0}<p>No activities yet.</p>{/if}
+  </div>
+  <footer><button onclick={onAddActivity}><Plus size={14} /> Add activity</button></footer>
 </article>
 
 <style>
@@ -228,7 +225,7 @@
   .drag-handle { display: inline-grid; place-items: center; flex: 0 0 24px; width: 24px; height: 28px; margin-right: 6px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); cursor: grab; user-select: none; }
   .drag-handle:hover { background: var(--surface-hover); color: var(--text-color); }
   .drag-handle:active { cursor: grabbing; }
-  .session-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; min-width: 0; min-height: 46px; border: 0; background: transparent; color: var(--text-color); padding: 0; text-align: left; cursor: pointer; }
+  .session-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; min-width: 0; min-height: 46px; color: var(--text-color); }
   .session-name-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; flex: 1; min-width: 0; font-size: var(--text-md); font-weight: 700; line-height: 1.25; cursor: pointer; transition: color 0.15s ease; }
   .session-name-text:hover { color: var(--accent); }
   .name-edit-wrapper { position: relative; flex: 1; min-width: 0; min-height: 46px; display: flex; align-items: center; margin-right: 12px; }

@@ -29,12 +29,12 @@ function mondayFor(date) {
 
 function rangeLabel(start, end) {
   if (start.getFullYear() !== end.getFullYear()) {
-    return `${MONTHS[start.getMonth()]} ${start.getDate()}, ${start.getFullYear()}–${MONTHS[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
+    return `${MONTHS[start.getMonth()]} ${start.getDate()}, ${start.getFullYear()} - ${MONTHS[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
   }
   if (start.getMonth() !== end.getMonth()) {
-    return `${MONTHS[start.getMonth()]} ${start.getDate()}–${MONTHS[end.getMonth()]} ${end.getDate()}`;
+    return `${MONTHS[start.getMonth()]} ${start.getDate()} - ${MONTHS[end.getMonth()]} ${end.getDate()}`;
   }
-  return `${MONTHS[start.getMonth()]} ${start.getDate()}–${end.getDate()}`;
+  return `${MONTHS[start.getMonth()]} ${start.getDate()} - ${end.getDate()}`;
 }
 
 export function getWeekDescriptor(date) {
