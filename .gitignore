@@ -23,6 +23,7 @@ vite.config.ts.timestamp-*
 src-tauri/target/
 src-tauri/gen/schemas/
 /t/
+/target/
 /build-artifacts/
 
 # IDE / Editors
