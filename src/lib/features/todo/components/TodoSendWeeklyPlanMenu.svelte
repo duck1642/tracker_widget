@@ -1,6 +1,6 @@
 <script>
   import { CalendarDays, ListTodo } from "@lucide/svelte";
-  import { clampContextMenuPosition } from "$lib/features/todo/todoContextMenuPosition.js";
+  import { clampContextMenuPosition } from "$lib/shared/services/contextMenuPosition.js";
 
   let {
     x = 0,

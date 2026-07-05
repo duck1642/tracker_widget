@@ -1,12 +1,11 @@
 <script>
-  import { ClipboardList } from "@lucide/svelte";
   import { clampContextMenuPosition } from "$lib/shared/services/contextMenuPosition.js";
 
   let {
     x = 0,
     y = 0,
-    sessions = [],
-    onSelectSession
+    items = [],
+    ariaLabel = "Context actions"
   } = $props();
 
   let menuElement = $state();
@@ -19,7 +18,7 @@
       x,
       y,
       width: rect?.width || 196,
-      height: rect?.height || 140,
+      height: rect?.height || 150,
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight
     });
@@ -30,19 +29,33 @@
 
 <div
   bind:this={menuElement}
-  class="todo-context-menu session-picker-menu"
+  class="context-menu"
   style:left={`${menuLeft}px`}
   style:top={`${menuTop}px`}
   role="menu"
-  aria-label="Choose activity session"
+  aria-label={ariaLabel}
   tabindex="-1"
   oncontextmenu={(event) => event.preventDefault()}
 >
-  <div class="context-count">Send to activity</div>
-  {#each sessions as session (session.id)}
-    <button type="button" role="menuitem" onclick={() => onSelectSession(session.id)} title={session.name}>
-      <ClipboardList size={13} />
-      <span>{session.name}</span>
-    </button>
+  {#each items as item}
+    {#if item.separator}
+      <div class="context-separator" aria-hidden="true"></div>
+    {:else if item.isHeader}
+      <div class="context-count">{item.label}</div>
+    {:else}
+      <button
+        type="button"
+        role="menuitem"
+        class:danger-item={item.danger}
+        disabled={item.disabled}
+        onclick={item.onclick}
+      >
+        {#if item.icon}
+          {@const Icon = item.icon}
+          <Icon size={13} />
+        {/if}
+        <span>{item.label}</span>
+      </button>
+    {/if}
   {/each}
 </div>

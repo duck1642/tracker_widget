@@ -10,7 +10,9 @@
   import { workspaceStore } from "$lib/app/workspaceStore.svelte.js";
   import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
   import TodoList from "./TodoList.svelte";
-  import TodoContextMenu from "./TodoContextMenu.svelte";
+  import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
+  import { CheckSquare2, ChevronDown, ChevronUp, ClipboardList, Flag, IndentDecrease, IndentIncrease, ListTodo, Square, Trash2, X, Terminal } from "@lucide/svelte";
+  import { invoke } from "@tauri-apps/api/core";
   import TodoSendSessionMenu from "./TodoSendSessionMenu.svelte";
   import TodoSendWeeklyPlanMenu from "./TodoSendWeeklyPlanMenu.svelte";
 
@@ -23,6 +25,100 @@
   let weeklyPlanMenu = $state(null);
   /** @type {Record<string, string>} */
   let originalTexts = {};
+
+  let contextMenuItems = $derived.by(() => {
+    if (!contextMenu) return [];
+    const selectedCount = todoUiState.selectedTodoIds.length;
+    const items = [
+      { label: `${selectedCount} selected`, isHeader: true },
+      {
+        label: "Send to today's activity",
+        icon: ClipboardList,
+        onclick: handleOpenTodayActivitySessions
+      },
+      {
+        label: "Send to weekly objective",
+        icon: Flag,
+        onclick: handleSendToWeeklyObjective
+      },
+      {
+        label: "Send to weekly planned",
+        icon: ListTodo,
+        onclick: handleOpenWeeklyPlannedSessions
+      },
+      { separator: true },
+      {
+        label: "Check selected",
+        icon: CheckSquare2,
+        onclick: () => handleSetSelectedChecked(true)
+      },
+      {
+        label: "Uncheck selected",
+        icon: Square,
+        onclick: () => handleSetSelectedChecked(false)
+      },
+      {
+        label: "Indent selected",
+        icon: IndentIncrease,
+        onclick: () => handleShiftSelectedIndent(1)
+      },
+      {
+        label: "Outdent selected",
+        icon: IndentDecrease,
+        onclick: () => handleShiftSelectedIndent(-1)
+      }
+    ];
+
+    if (selectedCount === 1) {
+      items.push(
+        {
+          label: "Move Up",
+          icon: ChevronUp,
+          onclick: handleMoveSelectedUp
+        },
+        {
+          label: "Move Down",
+          icon: ChevronDown,
+          onclick: handleMoveSelectedDown
+        }
+      );
+    }
+
+    items.push(
+      { separator: true },
+      {
+        label: "Delete selected",
+        icon: Trash2,
+        danger: true,
+        onclick: handleDeleteSelected
+      },
+      {
+        label: "Clear selection",
+        icon: X,
+        onclick: handleClearSelectionFromMenu
+      }
+    );
+
+    if (appStore.devMode) {
+      items.push(
+        { separator: true },
+        {
+          label: "Inspect Element",
+          icon: Terminal,
+          onclick: async () => {
+            closeContextMenu();
+            try {
+              await invoke("toggle_devtools");
+            } catch (err) {
+              appStore.showStatus("Inspect failed: " + err);
+            }
+          }
+        }
+      );
+    }
+
+    return items;
+  });
 
   // Keep a reference to inputs to set focus programmatically
   /** @type {Record<string, HTMLInputElement>} */
@@ -494,21 +590,11 @@
     onKeyDown={handleKeyDown}
   />
   {#if contextMenu}
-    <TodoContextMenu
+    <ContextMenu
       x={contextMenu.x}
       y={contextMenu.y}
-      selectedCount={todoUiState.selectedTodoIds.length}
-      onSendToTodayActivity={handleOpenTodayActivitySessions}
-      onSendToWeeklyObjective={handleSendToWeeklyObjective}
-      onSendToWeeklyPlanned={handleOpenWeeklyPlannedSessions}
-      onCheckSelected={() => handleSetSelectedChecked(true)}
-      onUncheckSelected={() => handleSetSelectedChecked(false)}
-      onIndentSelected={() => handleShiftSelectedIndent(1)}
-      onOutdentSelected={() => handleShiftSelectedIndent(-1)}
-      onDeleteSelected={handleDeleteSelected}
-      onClearSelection={handleClearSelectionFromMenu}
-      onMoveUp={handleMoveSelectedUp}
-      onMoveDown={handleMoveSelectedDown}
+      items={contextMenuItems}
+      ariaLabel="Todo selection actions"
     />
   {/if}
   {#if sessionMenu}

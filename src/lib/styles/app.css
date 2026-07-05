@@ -335,7 +335,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   color: var(--text-color);
 }
 
-.todo-context-menu {
+.context-menu {
   position: fixed;
   z-index: 1000;
   display: grid;
@@ -360,7 +360,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   background: var(--border-color);
 }
 
-.todo-context-menu button {
+.context-menu button {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -376,18 +376,18 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   text-align: left;
 }
 
-.todo-context-menu button span {
+.context-menu button span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.todo-context-menu button:hover {
+.context-menu button:hover {
   background: var(--surface-hover);
 }
 
-.todo-context-menu button.danger-item:hover {
+.context-menu button.danger-item:hover {
   color: var(--danger);
   background: rgba(255, 85, 85, 0.1);
 }

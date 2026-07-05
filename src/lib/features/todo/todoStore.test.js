@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TodoStore } from "./todoStore.svelte.js";
-import { clampContextMenuPosition } from "./todoContextMenuPosition.js";
+import { clampContextMenuPosition } from "$lib/shared/services/contextMenuPosition.js";
 
 vi.mock("$lib/shared/services/logWorkspaceService.js", () => ({
   selectTodoFile: vi.fn()
