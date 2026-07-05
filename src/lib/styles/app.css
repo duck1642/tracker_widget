@@ -279,6 +279,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   min-width: 100%;
   padding: 7px 10px;
   box-sizing: border-box;
+  overflow-x: auto;
 }
 
 .todo-list.numbered {
@@ -303,7 +304,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   padding: 1px 3px;
   border-radius: 2px;
   min-width: 100%;
-  width: 100%;
+  width: max-content;
   box-sizing: border-box;
 }
 
@@ -560,6 +561,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   display: flex;
   gap: 2px;
   flex: 0 0 auto;
+  margin-left: 8px;
+  padding-left: 6px;
+  border-left: 1px solid var(--border-subtle);
   visibility: hidden;
 }
 
