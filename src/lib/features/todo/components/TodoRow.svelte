@@ -90,6 +90,30 @@
     }
   });
 
+  // Re-calculate height on width/layout resize to prevent wrapping gaps
+  $effect(() => {
+    if (!inputEl || typeof ResizeObserver === "undefined") return;
+    
+    let prevWidth = inputEl.clientWidth;
+    
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        const width = entry.contentRect.width;
+        if (width !== prevWidth) {
+          prevWidth = width;
+          inputEl.style.height = "auto";
+          inputEl.style.height = inputEl.scrollHeight + "px";
+        }
+      }
+    });
+    
+    resizeObserver.observe(inputEl);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  });
+
   function handleInput(e) {
     const value = e.currentTarget.value.replace(/\r?\n/g, " ");
     onUpdateText(todo.id, value);
