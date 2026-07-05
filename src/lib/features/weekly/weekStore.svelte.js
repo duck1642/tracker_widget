@@ -170,6 +170,24 @@ export class WeekStore {
     void this.save();
   }
 
+  addPlanActivities(entryId, descriptions) {
+    const entry = this.plan.find((item) => item.id === entryId);
+    const cleaned = descriptions.map((description) => description.trim()).filter(Boolean);
+    if (!entry || !cleaned.length) return false;
+    entry.activities = [
+      ...(entry.activities || []),
+      ...cleaned.map((description) => ({
+        id: id("plan-activity"),
+        subjects: ["general"],
+        minutes: 0,
+        description
+      }))
+    ];
+    this.plan = [...this.plan];
+    void this.save();
+    return true;
+  }
+
   updatePlanActivity(entryId, activityId, patch) {
     const activity = this.plan.find((entry) => entry.id === entryId)?.activities?.find((item) => item.id === activityId);
     if (!activity) return;

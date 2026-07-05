@@ -1,5 +1,5 @@
 <script>
-  import { CheckSquare2, ClipboardList, Flag, IndentDecrease, IndentIncrease, Square, Trash2, X } from "@lucide/svelte";
+  import { CheckSquare2, ClipboardList, Flag, IndentDecrease, IndentIncrease, ListTodo, Square, Trash2, X } from "@lucide/svelte";
   import { clampContextMenuPosition } from "$lib/features/todo/todoContextMenuPosition.js";
 
   let {
@@ -8,6 +8,7 @@
     selectedCount = 0,
     onSendToTodayActivity,
     onSendToWeeklyObjective,
+    onSendToWeeklyPlanned,
     onCheckSelected,
     onUncheckSelected,
     onIndentSelected,
@@ -53,6 +54,10 @@
   <button type="button" role="menuitem" onclick={onSendToWeeklyObjective}>
     <Flag size={13} />
     <span>Send to weekly objective</span>
+  </button>
+  <button type="button" role="menuitem" onclick={onSendToWeeklyPlanned}>
+    <ListTodo size={13} />
+    <span>Send to weekly planned</span>
   </button>
   <div class="context-separator" aria-hidden="true"></div>
   <button type="button" role="menuitem" onclick={onCheckSelected}>

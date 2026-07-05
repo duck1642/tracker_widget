@@ -130,6 +130,33 @@ describe("WeekStore editing", () => {
     expect(files.get("week.md")).not.toContain("First");
   });
 
+  it("adds multiple planned activities with default metadata", async () => {
+    const { store, files } = harness();
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    store.addPlanEntry("Fri");
+    const entry = store.plan[0];
+
+    expect(store.addPlanActivities(entry.id, ["One", "Two"])).toBe(true);
+    expect(entry.activities.slice(-2)).toMatchObject([
+      { subjects: ["general"], minutes: 0, description: "One" },
+      { subjects: ["general"], minutes: 0, description: "Two" }
+    ]);
+    await store.flushSave();
+    expect(files.get("week.md")).toContain("- {subjects: (general), time: 0m} One");
+    expect(files.get("week.md")).toContain("- {subjects: (general), time: 0m} Two");
+  });
+
+  it("does not add planned activities for missing entries or empty descriptions", async () => {
+    const { store } = harness();
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    store.addPlanEntry("Fri");
+    const entry = store.plan[0];
+
+    expect(store.addPlanActivities("missing", ["One"])).toBe(false);
+    expect(store.addPlanActivities(entry.id, [" ", ""])).toBe(false);
+    expect(entry.activities).toHaveLength(1);
+  });
+
   it("serializes empty plan activity summaries as general zero", async () => {
     const { store, files } = harness();
     await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });

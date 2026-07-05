@@ -11,12 +11,15 @@
   import TodoList from "./TodoList.svelte";
   import TodoContextMenu from "./TodoContextMenu.svelte";
   import TodoSendSessionMenu from "./TodoSendSessionMenu.svelte";
+  import TodoSendWeeklyPlanMenu from "./TodoSendWeeklyPlanMenu.svelte";
 
   let focusedTodoId = $state("");
   /** @type {{ x: number, y: number } | null} */
   let contextMenu = $state(null);
   /** @type {{ x: number, y: number, sessions: any[] } | null} */
   let sessionMenu = $state(null);
+  /** @type {{ x: number, y: number, plan: any[] } | null} */
+  let weeklyPlanMenu = $state(null);
   /** @type {Record<string, string>} */
   let originalTexts = {};
 
@@ -113,9 +116,14 @@
     sessionMenu = null;
   }
 
+  function closeWeeklyPlanMenu() {
+    weeklyPlanMenu = null;
+  }
+
   function closeMenus() {
     contextMenu = null;
     sessionMenu = null;
+    weeklyPlanMenu = null;
   }
 
   /**
@@ -129,6 +137,7 @@
     }
     contextMenu = { x: event.clientX, y: event.clientY };
     sessionMenu = null;
+    weeklyPlanMenu = null;
   }
 
   function handleClearSelectionFromMenu() {
@@ -198,6 +207,37 @@
     };
   }
 
+  async function handleOpenWeeklyPlannedSessions() {
+    const descriptions = selectedTodoDescriptions();
+    const descriptor = getWeekDescriptor(new Date());
+    let week = workspaceStore.weeks.find((item) => item.name === descriptor.folderName);
+    const menuPosition = contextMenu || { x: 0, y: 0 };
+    closeContextMenu();
+    if (!descriptions.length) return;
+    if (!week?.indexPath) {
+      await workspaceStore.refresh();
+      week = workspaceStore.weeks.find((item) => item.name === descriptor.folderName);
+    }
+    if (!week?.indexPath) {
+      appStore.showStatus("Current week not found");
+      return;
+    }
+    if (weekStore.path !== week.indexPath) {
+      const loaded = await weekStore.loadPath(week.indexPath, descriptor, week.days);
+      if (!loaded) return;
+    }
+    const plan = weekStore.plan.filter((entry) => entry.session?.trim());
+    if (!plan.length) {
+      appStore.showStatus("No weekly planned sessions");
+      return;
+    }
+    weeklyPlanMenu = {
+      x: menuPosition.x + 12,
+      y: menuPosition.y + 12,
+      plan
+    };
+  }
+
   /** @param {string} sessionId */
   function handleSendToSession(sessionId) {
     const descriptions = selectedTodoDescriptions();
@@ -207,6 +247,23 @@
     } else {
       closeSessionMenu();
     }
+  }
+
+  /** @param {string} entryId */
+  function handleSendToWeeklyPlanEntry(entryId) {
+    const descriptions = selectedTodoDescriptions();
+    if (weekStore.addPlanActivities(entryId, descriptions)) {
+      appStore.showStatus(`Sent ${descriptions.length} planned ${descriptions.length === 1 ? "activity" : "activities"}`);
+      clearSelection();
+    } else {
+      appStore.showStatus("Weekly planned session not found");
+      closeWeeklyPlanMenu();
+    }
+  }
+
+  /** @param {string} day */
+  function handleEmptyWeeklyPlanDay(day) {
+    appStore.showStatus(`No planned sessions for ${day}`);
   }
 
   /** @param {boolean} checked */
@@ -394,6 +451,7 @@
       selectedCount={todoUiState.selectedTodoIds.length}
       onSendToTodayActivity={handleOpenTodayActivitySessions}
       onSendToWeeklyObjective={handleSendToWeeklyObjective}
+      onSendToWeeklyPlanned={handleOpenWeeklyPlannedSessions}
       onCheckSelected={() => handleSetSelectedChecked(true)}
       onUncheckSelected={() => handleSetSelectedChecked(false)}
       onIndentSelected={() => handleShiftSelectedIndent(1)}
@@ -410,16 +468,25 @@
       onSelectSession={handleSendToSession}
     />
   {/if}
+  {#if weeklyPlanMenu}
+    <TodoSendWeeklyPlanMenu
+      x={weeklyPlanMenu.x}
+      y={weeklyPlanMenu.y}
+      plan={weeklyPlanMenu.plan}
+      onSelectEntry={handleSendToWeeklyPlanEntry}
+      onEmptyDay={handleEmptyWeeklyPlanDay}
+    />
+  {/if}
 {/if}
 
 <svelte:window
   onpointerdown={(event) => {
-    if (!contextMenu && !sessionMenu) return;
+    if (!contextMenu && !sessionMenu && !weeklyPlanMenu) return;
     if (event.target instanceof Element && event.target.closest(".todo-context-menu")) return;
     closeMenus();
   }}
   onkeydown={(event) => {
-    if ((contextMenu || sessionMenu) && event.key === "Escape") {
+    if ((contextMenu || sessionMenu || weeklyPlanMenu) && event.key === "Escape") {
       event.preventDefault();
       closeMenus();
     }

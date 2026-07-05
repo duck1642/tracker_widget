@@ -44,6 +44,7 @@ afterEach(() => {
   dailyStore.sessions = [];
   weekStore.path = "";
   weekStore.objectives = [];
+  weekStore.plan = [];
   subjectHistoryStore.history = { subjects: {} };
   subjectHistoryStore.loaded = false;
   subjectHistoryStore.rebuilding = false;
@@ -1211,6 +1212,123 @@ describe("todo actions", () => {
       expect(appStore.currentView).toBe("todo");
       expect(todoUiState.selectedTodoIds).toEqual([]);
       expect(screen.queryByRole("menu", { name: "Choose activity session" })).toBeNull();
+    } finally {
+      todoStore.todos = originalTodos;
+      workspaceStore.weeks = originalWeeks;
+    }
+  });
+
+  it("opens a weekly planned picker and sends selected todos as planned activities", async () => {
+    const originalTodos = todoStore.todos;
+    const originalWeeks = workspaceStore.weeks;
+    const descriptor = getWeekDescriptor(new Date());
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First planned activity", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second planned activity", checked: false, indent: 0 }
+    ];
+    workspaceStore.weeks = [{ name: descriptor.folderName, indexPath: "week.md", days: [] }];
+    weekStore.path = "";
+    weekStore.plan = [
+      { id: "p1", day: "Mon", session: "Long planned session name that should be visible on hover", activities: [] },
+      { id: "p2", day: "Fri", session: "Friday session", activities: [] }
+    ];
+    const loadPath = vi.spyOn(weekStore, "loadPath").mockResolvedValue(true);
+    const addPlanActivities = vi.spyOn(weekStore, "addPlanActivities").mockReturnValue(true);
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First planned activity"), { ctrlKey: true });
+      await fireEvent.pointerDown(screen.getByDisplayValue("Second planned activity"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First planned activity"), { clientX: 10, clientY: 12 });
+
+      expect(screen.getByRole("menuitem", { name: /Send to weekly planned/ })).toBeTruthy();
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Send to weekly planned/ }));
+
+      expect(loadPath).toHaveBeenCalledWith("week.md", descriptor, []);
+      expect(screen.getByRole("menu", { name: "Choose weekly planned session" })).toBeTruthy();
+      expect(screen.getByRole("menuitem", { name: /Long planned session name/ }).getAttribute("title")).toBe("Long planned session name that should be visible on hover");
+
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Long planned session name/ }));
+      expect(addPlanActivities).toHaveBeenCalledWith("p1", ["First planned activity", "Second planned activity"]);
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+      expect(screen.queryByRole("menu", { name: "Choose weekly planned session" })).toBeNull();
+    } finally {
+      todoStore.todos = originalTodos;
+      workspaceStore.weeks = originalWeeks;
+    }
+  });
+
+  it("warns for an empty weekly planned day and keeps selection", async () => {
+    const originalTodos = todoStore.todos;
+    const originalWeeks = workspaceStore.weeks;
+    const descriptor = getWeekDescriptor(new Date());
+    const showStatus = vi.spyOn(appStore, "showStatus");
+    todoStore.todos = [{ id: "todo-1", isTodo: true, text: "First planned activity", checked: false, indent: 0 }];
+    workspaceStore.weeks = [{ name: descriptor.folderName, indexPath: "week.md", days: [] }];
+    weekStore.path = "week.md";
+    weekStore.plan = [{ id: "p1", day: "Mon", session: "Monday session", activities: [] }];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First planned activity"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First planned activity"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Send to weekly planned/ }));
+      await fireEvent.click(screen.getByRole("button", { name: "Tue" }));
+
+      expect(showStatus).toHaveBeenCalledWith("No planned sessions for Tue");
+      expect(screen.getByText("No planned sessions")).toBeTruthy();
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-1"]);
+    } finally {
+      todoStore.todos = originalTodos;
+      workspaceStore.weeks = originalWeeks;
+    }
+  });
+
+  it("keeps selection when weekly planned send has no current week or plan entries", async () => {
+    const originalTodos = todoStore.todos;
+    const showStatus = vi.spyOn(appStore, "showStatus");
+    todoStore.todos = [{ id: "todo-1", isTodo: true, text: "First planned activity", checked: false, indent: 0 }];
+    workspaceStore.weeks = [];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First planned activity"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First planned activity"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Send to weekly planned/ }));
+      expect(showStatus).toHaveBeenCalledWith("Current week not found");
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-1"]);
+
+      const descriptor = getWeekDescriptor(new Date());
+      workspaceStore.weeks = [{ name: descriptor.folderName, indexPath: "week.md", days: [] }];
+      weekStore.path = "week.md";
+      weekStore.plan = [];
+      await fireEvent.contextMenu(screen.getByDisplayValue("First planned activity"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Send to weekly planned/ }));
+      expect(showStatus).toHaveBeenCalledWith("No weekly planned sessions");
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-1"]);
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("closes the weekly planned picker with outside click and Escape", async () => {
+    const originalTodos = todoStore.todos;
+    const originalWeeks = workspaceStore.weeks;
+    const descriptor = getWeekDescriptor(new Date());
+    todoStore.todos = [{ id: "todo-1", isTodo: true, text: "First planned activity", checked: false, indent: 0 }];
+    workspaceStore.weeks = [{ name: descriptor.folderName, indexPath: "week.md", days: [] }];
+    weekStore.path = "week.md";
+    weekStore.plan = [{ id: "p1", day: "Mon", session: "Monday session", activities: [] }];
+    try {
+      render(TodoPanel);
+      await fireEvent.pointerDown(screen.getByDisplayValue("First planned activity"), { ctrlKey: true });
+      await fireEvent.contextMenu(screen.getByDisplayValue("First planned activity"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Send to weekly planned/ }));
+      expect(screen.getByRole("menu", { name: "Choose weekly planned session" })).toBeTruthy();
+      await fireEvent.pointerDown(document.body);
+      expect(screen.queryByRole("menu", { name: "Choose weekly planned session" })).toBeNull();
+
+      await fireEvent.contextMenu(screen.getByDisplayValue("First planned activity"), { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: /Send to weekly planned/ }));
+      await fireEvent.keyDown(window, { key: "Escape" });
+      expect(screen.queryByRole("menu", { name: "Choose weekly planned session" })).toBeNull();
     } finally {
       todoStore.todos = originalTodos;
       workspaceStore.weeks = originalWeeks;
