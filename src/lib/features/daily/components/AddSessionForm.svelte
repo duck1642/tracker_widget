@@ -246,6 +246,10 @@
     left: 0;
     z-index: 50;
     width: 100%;
+    max-height: 156px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
     margin: 4px 0 0 0;
     padding: 4px 0;
     list-style: none;
@@ -254,6 +258,16 @@
     border-radius: var(--radius-md);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     box-sizing: border-box;
+  }
+  .suggestions-dropdown::-webkit-scrollbar {
+    width: 6px;
+  }
+  .suggestions-dropdown::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: var(--border-strong);
+  }
+  .suggestions-dropdown::-webkit-scrollbar-track {
+    background: transparent;
   }
   .suggestion-item {
     padding: 8px 12px;
