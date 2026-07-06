@@ -14,6 +14,7 @@ import DailyPanel from "$lib/features/daily/components/DailyPanel.svelte";
 import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
 import AddSessionForm from "$lib/features/daily/components/AddSessionForm.svelte";
 import PlanSection from "$lib/features/weekly/components/PlanSection.svelte";
+import ActualSection from "$lib/features/weekly/components/ActualSection.svelte";
 import ObjectiveRow from "$lib/features/weekly/components/ObjectiveRow.svelte";
 import TodoPanel from "$lib/features/todo/components/TodoPanel.svelte";
 import TodoToolbar from "$lib/features/todo/components/TodoToolbar.svelte";
@@ -467,6 +468,37 @@ describe("logger editing", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Open planned activities for Development" }));
     await fireEvent.click(screen.getByRole("presentation"));
     expect(screen.queryByRole("dialog", { name: "Planned activities for Development" })).toBeNull();
+  });
+
+  it("opens weekly actual read-only details and closes the modal", async () => {
+    render(ActualSection, {
+      actual: [{
+        day: "Mon",
+        session: "Development",
+        subjects: ["rust", "test"],
+        actualMinutes: 90,
+        activities: [
+          { description: "Draft tests", subjects: ["rust"], minutes: 60 },
+          { description: "Review parser", subjects: ["test"], minutes: 30 }
+        ]
+      }],
+      onRefresh: vi.fn()
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Open actual activities for Development" }));
+
+    expect(screen.getByRole("dialog", { name: "Actual activities for Development" })).toBeTruthy();
+    expect(screen.getByText("Mon / 90m / 2 activities")).toBeTruthy();
+    expect(screen.getByText("Draft tests")).toBeTruthy();
+    expect(screen.getByText("Review parser")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Add activity" })).toBeNull();
+
+    await fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Actual activities for Development" })).toBeNull();
+
+    await fireEvent.click(screen.getByRole("button", { name: "Open actual activities for Development" }));
+    await fireEvent.click(screen.getByRole("presentation"));
+    expect(screen.queryByRole("dialog", { name: "Actual activities for Development" })).toBeNull();
   });
 
   it("shows filtered weekly session suggestions when adding a daily session", async () => {

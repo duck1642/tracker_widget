@@ -108,8 +108,17 @@ describe("weekly actual aggregation", () => {
       ]
     }];
     expect(aggregateWeeklyActual(plan, days)).toEqual([
-      { day: "Mon", session: "Custom", subjects: ["art"], actualMinutes: 20 },
-      { day: "Mon", session: "Development", subjects: ["rust", "test"], actualMinutes: 90 }
+      { day: "Mon", session: "Custom", subjects: ["art"], actualMinutes: 20, activities: [{ description: undefined, subjects: ["art"], minutes: 20 }] },
+      {
+        day: "Mon",
+        session: "Development",
+        subjects: ["rust", "test"],
+        actualMinutes: 90,
+        activities: [
+          { description: undefined, subjects: ["rust"], minutes: 60 },
+          { description: undefined, subjects: ["test", "rust"], minutes: 30 }
+        ]
+      }
     ]);
   });
 
@@ -119,7 +128,16 @@ describe("weekly actual aggregation", () => {
       { name: "work", activities: [{ subjects: ["test", "rust"], minutes: 10 }] }
     ] }];
     expect(aggregateWeeklyActual([], days)).toEqual([
-      { day: "Mon", session: "Work", subjects: ["rust", "test"], actualMinutes: 30 }
+      {
+        day: "Mon",
+        session: "Work",
+        subjects: ["rust", "test"],
+        actualMinutes: 30,
+        activities: [
+          { description: undefined, subjects: ["rust"], minutes: 20 },
+          { description: undefined, subjects: ["test", "rust"], minutes: 10 }
+        ]
+      }
     ]);
   });
 });

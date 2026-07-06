@@ -2,9 +2,11 @@
   // @ts-nocheck
   import { RefreshCw } from "@lucide/svelte";
   import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
+  import ActualDetailsModal from "./ActualDetailsModal.svelte";
 
   let { actual, onRefresh } = $props();
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  let selectedActual = $state(null);
 </script>
 
 <section id="actual" class="week-section">
@@ -26,13 +28,18 @@
 
         <div class="card-list">
           {#each entries as entry}
-            <article class="actual-card">
+            <button
+              type="button"
+              class="actual-card"
+              onclick={() => selectedActual = entry}
+              aria-label={`Open actual activities for ${entry.session || "Unnamed session"}`}
+            >
               <div class="card-top">
-                <strong>{entry.session || "Unnamed session"}</strong>
+                <strong title={entry.session || "Unnamed session"}>{entry.session || "Unnamed session"}</strong>
               </div>
 
               <ReadonlyBadges subjects={entry.subjects} minutes={entry.actualMinutes} />
-            </article>
+            </button>
           {/each}
 
           {#if entries.length === 0}
@@ -42,6 +49,10 @@
       </section>
     {/each}
   </div>
+
+  {#if selectedActual}
+    <ActualDetailsModal entry={selectedActual} onClose={() => selectedActual = null} />
+  {/if}
 </section>
 
 <style>
@@ -97,14 +108,23 @@
   .actual-card {
     display: grid;
     gap: 7px;
+    width: 100%;
     padding: 8px;
     border: 1px solid transparent;
     border-radius: 6px;
     background: #161916;
+    text-align: left;
+    cursor: pointer;
   }
 
-  .actual-card:hover {
+  .actual-card:hover,
+  .actual-card:focus-visible {
     border-color: var(--border-subtle);
+  }
+
+  .actual-card:focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .card-top {

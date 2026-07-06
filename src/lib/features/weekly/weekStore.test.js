@@ -206,7 +206,13 @@ describe("WeekStore editing", () => {
       { id: "session-1", name: "Work", activities: [{ id: "activity-1", subjects: ["rust"], minutes: 25, description: "Current" }] }
     ]);
 
-    expect(store.actual).toEqual([{ day: "Mon", session: "Work", subjects: ["rust"], actualMinutes: 25 }]);
+    expect(store.actual).toEqual([{
+      day: "Mon",
+      session: "Work",
+      subjects: ["rust"],
+      actualMinutes: 25,
+      activities: [{ description: "Current", subjects: ["rust"], minutes: 25 }]
+    }]);
     expect(files.get("week.md")).toContain("| Mon | Work | rust | 25 |");
   });
 });

@@ -10,13 +10,18 @@ export function aggregateWeeklyActual(plan, days) {
       let row = bySession.get(key);
       if (!row) {
         const planned = plan.find((entry) => entry.day.toLowerCase() === day.day.toLowerCase() && entry.session.normalize("NFC").toLowerCase() === session.name.normalize("NFC").toLowerCase());
-        row = { day: day.day, session: planned?.session || session.name, subjects: [], actualMinutes: 0 };
+        row = { day: day.day, session: planned?.session || session.name, subjects: [], actualMinutes: 0, activities: [] };
         rows.push(row);
         bySession.set(key, row);
       }
       row.actualMinutes += minutes;
       for (const activity of session.activities) {
         for (const subject of activity.subjects) if (!row.subjects.includes(subject)) row.subjects.push(subject);
+        row.activities.push({
+          description: activity.description,
+          subjects: [...activity.subjects],
+          minutes: activity.minutes
+        });
       }
     }
   }
