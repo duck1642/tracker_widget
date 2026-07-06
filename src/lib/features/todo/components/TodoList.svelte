@@ -11,8 +11,6 @@
     inputElements, 
     onToggleTodo, 
     onUpdateText, 
-    onMoveTodoUp, 
-    onMoveTodoDown, 
     onMoveTodoToVisiblePosition,
     onDeleteTodo, 
     onFocus, 
@@ -57,10 +55,7 @@
         onToggleTodo={onToggleTodo}
         onToggleFold={onToggleFold}
         onUpdateText={onUpdateText}
-        onMoveTodoUp={onMoveTodoUp}
-        onMoveTodoDown={onMoveTodoDown}
         onMoveTodoToVisiblePosition={onMoveTodoToVisiblePosition}
-        onDeleteTodo={onDeleteTodo}
         onFocus={onFocus}
         onBlur={onBlur}
         onKeyDown={onKeyDown}

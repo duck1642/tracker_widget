@@ -1,5 +1,4 @@
 <script>
-  // @ts-nocheck
   import { tick } from "svelte";
   import { appStore } from "$lib/app/appStore.svelte.js";
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
@@ -26,9 +25,22 @@
   /** @type {Record<string, string>} */
   let originalTexts = {};
 
+  /**
+   * @typedef {{
+   *   label?: string,
+   *   icon?: any,
+   *   onclick?: () => void | Promise<void>,
+   *   isHeader?: boolean,
+   *   separator?: boolean,
+   *   danger?: boolean,
+   *   disabled?: boolean
+   * }} ContextMenuItem
+   */
+
   let contextMenuItems = $derived.by(() => {
     if (!contextMenu) return [];
     const selectedCount = todoUiState.selectedTodoIds.length;
+    /** @type {ContextMenuItem[]} */
     const items = [
       { label: `${selectedCount} selected`, isHeader: true },
       {
@@ -121,7 +133,7 @@
   });
 
   // Keep a reference to inputs to set focus programmatically
-  /** @type {Record<string, HTMLInputElement>} */
+  /** @type {Record<string, HTMLTextAreaElement>} */
   let inputElements = {};
   let visibleTodos = $derived(buildVisibleTodoRows(todoStore.todos, todoFoldStore.foldedTodoIds));
   let visibleTodoRows = $derived(visibleTodos.rows.filter((row) => row.todo.isTodo));
@@ -484,7 +496,8 @@
         inputElements[newId].focus();
       }
     } else if (event.key === "ArrowUp") {
-      const textarea = event.target;
+      const textarea = event.target instanceof HTMLTextAreaElement ? event.target : null;
+      if (!textarea) return;
       const selectionStart = textarea.selectionStart ?? 0;
       if (selectionStart > 0) {
         return;
@@ -502,7 +515,8 @@
         }
       }
     } else if (event.key === "ArrowDown") {
-      const textarea = event.target;
+      const textarea = event.target instanceof HTMLTextAreaElement ? event.target : null;
+      if (!textarea) return;
       const selectionEnd = textarea.selectionEnd ?? 0;
       if (selectionEnd < textarea.value.length) {
         return;
@@ -561,8 +575,6 @@
     inputElements={inputElements}
     onToggleTodo={(/** @type {string} */ id) => todoStore.toggleTodo(id)}
     onUpdateText={(/** @type {string} */ id, /** @type {string} */ text) => todoStore.updateText(id, text)}
-    onMoveTodoUp={(/** @type {number} */ index) => todoStore.moveTodoUp(index)}
-    onMoveTodoDown={(/** @type {number} */ index) => todoStore.moveTodoDown(index)}
     onMoveTodoToVisiblePosition={moveTodoToVisiblePosition}
     onDeleteTodo={(/** @type {number} */ index) => todoStore.deleteTodo(index)}
     onToggleFold={toggleFold}

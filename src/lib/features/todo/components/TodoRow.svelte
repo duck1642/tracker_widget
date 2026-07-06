@@ -1,7 +1,6 @@
 <script>
-  // @ts-nocheck
   import { tick } from "svelte";
-  import { Check, ChevronDown, ChevronRight, ChevronUp, Trash2 } from "@lucide/svelte";
+  import { Check, ChevronDown, ChevronRight } from "@lucide/svelte";
 
   let { 
     todo, 
@@ -16,10 +15,7 @@
     onToggleTodo, 
     onToggleFold,
     onUpdateText, 
-    onMoveTodoUp, 
-    onMoveTodoDown, 
     onMoveTodoToVisiblePosition,
-    onDeleteTodo, 
     onFocus, 
     onBlur, 
     onKeyDown,
@@ -29,11 +25,18 @@
     onOpenContextMenu
   } = $props();
 
+  /** @type {HTMLTextAreaElement | undefined} */
   let inputEl = $state();
+  /** @type {HTMLInputElement | undefined} */
   let targetInputEl = $state();
   let editingMoveTarget = $state(false);
   let moveTargetValue = $state("");
 
+  /** @param {HTMLTextAreaElement} textarea */
+  function resizeTextarea(textarea) {
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }
 
   $effect(() => {
     if (inputEl && inputElements) {
@@ -81,28 +84,24 @@
     }
   }
 
-  // Auto-resize effect for textarea height
   $effect(() => {
-    const val = todo.text; // establish reactive dependency
+    todo.text;
     if (inputEl) {
-      inputEl.style.height = "auto";
-      inputEl.style.height = inputEl.scrollHeight + "px";
+      resizeTextarea(inputEl);
     }
   });
 
-  // Re-calculate height on width/layout resize to prevent wrapping gaps
   $effect(() => {
     if (!inputEl || typeof ResizeObserver === "undefined") return;
     
     let prevWidth = inputEl.clientWidth;
     
     const resizeObserver = new ResizeObserver((entries) => {
-      for (let entry of entries) {
+      for (const entry of entries) {
         const width = entry.contentRect.width;
         if (width !== prevWidth) {
           prevWidth = width;
-          inputEl.style.height = "auto";
-          inputEl.style.height = inputEl.scrollHeight + "px";
+          if (inputEl) resizeTextarea(inputEl);
         }
       }
     });
@@ -114,13 +113,11 @@
     };
   });
 
-  function handleInput(e) {
-    const value = e.currentTarget.value.replace(/\r?\n/g, " ");
+  /** @param {Event & { currentTarget: HTMLTextAreaElement }} event */
+  function handleInput(event) {
+    const value = event.currentTarget.value.replace(/\r?\n/g, " ");
     onUpdateText(todo.id, value);
-    
-    // Auto-resize locally and immediately
-    e.currentTarget.style.height = "auto";
-    e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
+    resizeTextarea(event.currentTarget);
   }
 </script>
 
