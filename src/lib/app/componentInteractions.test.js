@@ -1135,7 +1135,10 @@ describe("todo actions", () => {
       await fireEvent.pointerDown(screen.getByDisplayValue("First"), { ctrlKey: true });
       await fireEvent.pointerDown(screen.getByDisplayValue("Second"), { ctrlKey: true });
       await fireEvent.contextMenu(screen.getByDisplayValue("First"), { clientX: 10, clientY: 12 });
-      await fireEvent.click(screen.getByRole("menuitem", { name: /Delete selected/ }));
+      const deleteItem = screen.getByRole("menuitem", { name: /Delete selected/ });
+      await fireEvent.pointerDown(deleteItem);
+      expect(screen.getByRole("menu", { name: "Todo selection actions" })).toBeTruthy();
+      await fireEvent.click(deleteItem);
 
       expect(deleteTodosByIds).toHaveBeenCalledWith(["todo-1", "todo-2"]);
       expect(todoStore.todos.map((todo) => todo.id)).toEqual(["todo-3"]);

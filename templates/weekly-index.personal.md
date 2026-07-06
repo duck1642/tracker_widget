@@ -1,7 +1,9 @@
 ---
-title: "{{week_year}}w{{week}}"
-type: "weekly_index"
-creation_date: "{{date}}"
+title:
+  - "{{title}}"
+type:
+  - "[log](../../../tags_as_notes/type/log.md)"
+creation_date: {{date}}
 update_date:
 ---
 

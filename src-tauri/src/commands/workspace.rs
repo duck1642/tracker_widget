@@ -234,6 +234,26 @@ fn fill_template(template: &str, values: &[(&str, String)]) -> String {
         })
 }
 
+fn daily_title(date: &str, day_index: usize) -> String {
+    let month = date
+        .get(5..7)
+        .and_then(|value| value.parse::<usize>().ok())
+        .and_then(|month| {
+            [
+                "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
+            ]
+            .get(month.saturating_sub(1))
+        })
+        .copied()
+        .unwrap_or("date");
+    let day = date.get(8..10).unwrap_or("00");
+    let weekday = ["mon", "tue", "wed", "thur", "fri", "sat", "sun"]
+        .get(day_index)
+        .copied()
+        .unwrap_or("day");
+    format!("{month}{day}_{weekday}_log")
+}
+
 fn write_new(path: &Path, content: &str) -> Result<bool, String> {
     match OpenOptions::new().write(true).create_new(true).open(path) {
         Ok(mut file) => {
@@ -298,12 +318,16 @@ pub fn create_log_week(
     if write_new(&index_path, &weekly)? {
         created.push(display_path(&index_path));
     }
-    for date in dates {
+    for (day_index, date) in dates.into_iter().enumerate() {
         let compact = date.replace('-', "");
         let path = week_dir.join(format!("{compact}_log.md"));
         let daily = fill_template(
             &daily_template,
-            &[("title", format!("{compact}_log")), ("date", date)],
+            &[
+                ("title", format!("{compact}_log")),
+                ("daily_title", daily_title(&date, day_index)),
+                ("date", date),
+            ],
         );
         if write_new(&path, &daily)? {
             created.push(display_path(&path));
@@ -490,12 +514,14 @@ mod tests {
         assert_eq!(personal_created.len(), 8);
         let personal_index = personal_root.join("2026w27").join("2026w27_index.md");
         let personal_day = personal_root.join("2026w27").join("20260629_log.md");
-        assert!(fs::read_to_string(personal_index)
-            .unwrap()
-            .contains("type: \"weekly_index\""));
-        assert!(fs::read_to_string(personal_day)
-            .unwrap()
-            .contains("type: \"daily_log\""));
+        let personal_index_content = fs::read_to_string(personal_index).unwrap();
+        let personal_day_content = fs::read_to_string(personal_day).unwrap();
+        assert!(personal_index_content.contains("title:\n  - \"2026w27_index\""));
+        assert!(personal_index_content
+            .contains("type:\n  - \"[log](../../../tags_as_notes/type/log.md)\""));
+        assert!(personal_day_content.contains("title:\n  - \"jun29_mon_log\""));
+        assert!(personal_day_content
+            .contains("type:\n  - \"[log](../../../tags_as_notes/type/log.md)\""));
         fs::remove_dir_all(root).unwrap();
         fs::remove_dir_all(personal_root).unwrap();
     }

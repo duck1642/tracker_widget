@@ -29,7 +29,7 @@
 
 <div
   bind:this={menuElement}
-  class="context-menu"
+  class="context-menu todo-context-menu"
   style:left={`${menuLeft}px`}
   style:top={`${menuTop}px`}
   role="menu"

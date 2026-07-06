@@ -148,6 +148,11 @@
       }, 300);
     };
     window.addEventListener("resize", handleResize);
+    const handleContextMenu = (event) => {
+      if (event.defaultPrevented || appStore.devMode) return;
+      event.preventDefault();
+    };
+    window.addEventListener("contextmenu", handleContextMenu);
     handleResize();
     (async () => {
       try {
@@ -176,7 +181,7 @@
     })();
     const handleFocus = async () => { await persistenceRegistry.checkActive(appStore.currentView); if (appStore.currentView !== "todo") await workspaceStore.refresh(); };
     window.addEventListener("focus", handleFocus);
-    return () => { disposed = true; unlistenClose?.(); unlistenQuit?.(); unlistenResized?.(); window.removeEventListener("focus", handleFocus); window.removeEventListener("resize", handleResize); };
+    return () => { disposed = true; unlistenClose?.(); unlistenQuit?.(); unlistenResized?.(); window.removeEventListener("focus", handleFocus); window.removeEventListener("resize", handleResize); window.removeEventListener("contextmenu", handleContextMenu); };
   });
 
   async function closeApp() {
