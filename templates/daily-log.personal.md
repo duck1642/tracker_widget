@@ -1,6 +1,6 @@
 ---
 title:
-  - "{{daily_title}}"
+  - {{daily_title}}
 type:
   - "[log](../../../tags_as_notes/type/log.md)"
 creation_date: {{date}}

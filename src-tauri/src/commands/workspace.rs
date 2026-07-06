@@ -3,8 +3,6 @@ use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-const DAILY_TEMPLATE: &str = include_str!("../../../templates/daily-log.md");
-const WEEKLY_TEMPLATE: &str = include_str!("../../../templates/weekly-index.md");
 const DAILY_NO_FRONTMATTER_TEMPLATE: &str =
     include_str!("../../../templates/daily-log.no-frontmatter.md");
 const WEEKLY_NO_FRONTMATTER_TEMPLATE: &str =
@@ -188,8 +186,6 @@ fn template_dir() -> PathBuf {
 fn ensure_templates_in_dir(dir: &Path) -> Result<(), String> {
     fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
     let templates = [
-        ("daily-log.md", DAILY_TEMPLATE),
-        ("weekly-index.md", WEEKLY_TEMPLATE),
         ("daily-log.no-frontmatter.md", DAILY_NO_FRONTMATTER_TEMPLATE),
         (
             "weekly-index.no-frontmatter.md",
@@ -516,10 +512,10 @@ mod tests {
         let personal_day = personal_root.join("2026w27").join("20260629_log.md");
         let personal_index_content = fs::read_to_string(personal_index).unwrap();
         let personal_day_content = fs::read_to_string(personal_day).unwrap();
-        assert!(personal_index_content.contains("title:\n  - \"2026w27_index\""));
+        assert!(personal_index_content.contains("title:\n  - 2026w27_index"));
         assert!(personal_index_content
             .contains("type:\n  - \"[log](../../../tags_as_notes/type/log.md)\""));
-        assert!(personal_day_content.contains("title:\n  - \"jun29_mon_log\""));
+        assert!(personal_day_content.contains("title:\n  - jun29_mon_log"));
         assert!(personal_day_content
             .contains("type:\n  - \"[log](../../../tags_as_notes/type/log.md)\""));
         fs::remove_dir_all(root).unwrap();
