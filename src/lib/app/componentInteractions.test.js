@@ -1681,7 +1681,11 @@ describe("sidebar sorting", () => {
     render(AppSidebar, { selectedPath: "", onSelectWeek: vi.fn(), onSelectDay: vi.fn() });
     const labels = () => screen.getAllByRole("button", { name: /20\d\dw\d\d/ }).map((button) => button.textContent.trim());
     expect(labels()).toEqual(["2026w25", "2025w52"]);
-    await fireEvent.click(screen.getByRole("button", { name: "Toggle week sorting" }));
+    const sortButton = screen.getByRole("button", { name: "Week order: newest first — click for oldest first" });
+    expect(sortButton.title).toBe("Week order: newest first — click for oldest first");
+    await fireEvent.click(sortButton);
+    expect(screen.getByRole("button", { name: "Week order: oldest first — click for newest first" }).title)
+      .toBe("Week order: oldest first — click for newest first");
     expect(labels()).toEqual(["2025w52", "2026w25"]);
   });
 
@@ -1693,7 +1697,7 @@ describe("sidebar sorting", () => {
     ];
     const view = render(AppSidebar, props);
     const labels = () => screen.getAllByRole("button", { name: /20\d\dw\d\d/ }).map((button) => button.textContent.trim());
-    await fireEvent.click(screen.getByRole("button", { name: "Toggle week sorting" }));
+    await fireEvent.click(screen.getByRole("button", { name: /Week order:/ }));
     await fireEvent.click(screen.getByRole("button", { name: "2025w52" }));
     expect(labels()).toEqual(["2025w52", "2026w25"]);
     expect(screen.getByRole("button", { name: "2025w52" }).getAttribute("aria-expanded")).toBe("false");
@@ -1920,7 +1924,7 @@ describe("sidebar keyboard file navigation", () => {
 
     selectedPath = "old/1.md";
     await view.rerender({ open: true, selectedPath, onSelectWeek, onSelectDay });
-    await fireEvent.click(screen.getByRole("button", { name: "Toggle week sorting" }));
+    await fireEvent.click(screen.getByRole("button", { name: /Week order:/ }));
     await fireEvent.keyDown(window, { key: "PageDown", ctrlKey: true });
     await vi.waitFor(() => expect(onSelectWeek).toHaveBeenLastCalledWith(expect.objectContaining({ name: "2026w25" })));
   });

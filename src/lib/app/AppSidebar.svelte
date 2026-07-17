@@ -15,6 +15,9 @@
   let expansionCommand = $state(null);
   let expansionCommandId = 0;
   let sortedWeeks = $derived([...workspaceStore.weeks].sort((left, right) => sortAscending ? left.name.localeCompare(right.name) : right.name.localeCompare(left.name)));
+  let sortDescription = $derived(sortAscending
+    ? "Week order: oldest first — click for newest first"
+    : "Week order: newest first — click for oldest first");
   let queuedNavigationPath = "";
   let navigationQueue = Promise.resolve();
 
@@ -105,7 +108,7 @@
 <aside class:closed={!open}>
   <div class="actions">
     <button onclick={() => workspaceStore.createCurrentWeekFiles()} aria-label="Create week files" title="Create week files"><CalendarPlus size={15} /></button>
-    <button onclick={() => sortAscending = !sortAscending} aria-label="Toggle week sorting" title={sortAscending ? "Sort: Oldest weeks first" : "Sort: Newest weeks first"}><ArrowDownUp size={15} /></button>
+    <button onclick={() => sortAscending = !sortAscending} aria-label={sortDescription} title={sortDescription}><ArrowDownUp size={15} /></button>
     <button onclick={toggleAllWeeks} aria-label={allWeeksExpanded ? "Collapse all weeks" : "Expand all weeks"} title={allWeeksExpanded ? "Collapse all weeks" : "Expand all weeks"}>{#if allWeeksExpanded}<ChevronsDownUp size={15} />{:else}<ChevronsUpDown size={15} />{/if}</button>
     <button onclick={openActiveMarkdown} aria-label="Open active file in system editor" title="Open active file in system editor"><ExternalLink size={15} /></button>
   </div>
