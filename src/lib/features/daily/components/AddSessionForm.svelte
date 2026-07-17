@@ -121,7 +121,6 @@
           <input
             bind:this={inputEl}
             bind:value={name}
-            class:dropdown-open={showDropdown && filteredSuggestions.length > 0}
             placeholder="Session name..."
             onkeydown={handleKeyDown}
             onfocus={() => showDropdown = true}
@@ -251,17 +250,14 @@
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong) transparent;
-    margin: -1px 0 0 0;
+    margin: 4px 0 0 0;
     padding: 4px 0;
     list-style: none;
     background: #181818;
     border: 1px solid var(--border-color);
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    border-radius: var(--radius-md);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     box-sizing: border-box;
-  }
-  .input-wrapper input.dropdown-open {
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
   .suggestions-dropdown::-webkit-scrollbar {
     width: 6px;

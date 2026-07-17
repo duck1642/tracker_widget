@@ -146,7 +146,6 @@
       <div class="name-edit-wrapper">
         <input
           class="name-input quiet-edit-input"
-          class:dropdown-open={showSuggestions && filteredSuggestions.length > 0}
           value={editNameInput}
           oninput={(event) => {
             editNameInput = event.currentTarget.value;
@@ -233,8 +232,7 @@
   .session-name-text:hover { color: var(--accent); }
   .name-edit-wrapper { position: relative; flex: 1; min-width: 0; min-height: 46px; display: flex; align-items: center; margin-right: 12px; }
   .name-input { flex: 1; width: 100%; height: 28px; min-height: 28px; font-size: var(--text-md); font-weight: 700; color: var(--text-color); padding: 3px 8px; box-sizing: border-box; }
-  .name-input.dropdown-open { border-radius: var(--radius-md) var(--radius-md) 0 0; }
-  .suggestions-dropdown { position: absolute; top: calc(50% + 13px); left: 0; z-index: 60; width: min(260px, 100%); max-height: 156px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; margin: 0; padding: 4px 0; list-style: none; background: #181818; border: 1px solid var(--border-color); border-radius: 0 0 var(--radius-md) var(--radius-md); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); box-sizing: border-box; }
+  .suggestions-dropdown { position: absolute; top: calc(100% + 4px); left: 0; z-index: 60; width: min(260px, 100%); max-height: 156px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; margin: 0; padding: 4px 0; list-style: none; background: #181818; border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); box-sizing: border-box; }
   .suggestions-dropdown::-webkit-scrollbar { width: 6px; }
   .suggestions-dropdown::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--border-strong); }
   .suggestions-dropdown::-webkit-scrollbar-track { background: transparent; }
