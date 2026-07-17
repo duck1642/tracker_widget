@@ -215,6 +215,27 @@ describe("logger editing", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("cancels an empty pill edit before starting a new pill", async () => {
+    const onChange = vi.fn();
+    render(SubjectInput, { subjects: ["general"], onChange, variant: "badge" });
+
+    await fireEvent.click(screen.getByRole("button", { name: "general" }));
+    const editInput = screen.getByRole("textbox", { name: "Edit subject general" });
+    await fireEvent.input(editInput, { target: { value: "" } });
+
+    const addInput = screen.getByRole("textbox", { name: "Add subject" });
+    await fireEvent.focus(addInput);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(screen.queryByRole("textbox", { name: "Edit subject general" })).toBeNull();
+    expect(screen.getByRole("button", { name: "general" })).toBeTruthy();
+    expect(onChange).not.toHaveBeenCalled();
+
+    await fireEvent.input(addInput, { target: { value: "programming" } });
+    await fireEvent.keyDown(addInput, { key: "Enter" });
+    expect(onChange).toHaveBeenCalledWith(["general", "programming"]);
+  });
+
   it("suggests subjects while adding and editing pills", async () => {
     subjectHistoryStore.history = {
       subjects: {

@@ -11,6 +11,8 @@
   let editText = $state("");
   let showSuggestions = $state(false);
   let highlightedSuggestion = $state(0);
+  let editSession = 0;
+  let addSession = 0;
 
   /** @type {HTMLInputElement | null} */
   let addInput = $state(null);
@@ -42,6 +44,13 @@
     addInput?.focus();
   }
 
+  function beginAdd() {
+    addSession += 1;
+    if (editingIndex !== null) cancelEdit();
+    showSuggestions = true;
+    highlightedSuggestion = 0;
+  }
+
   function isDuplicate(value, allowedIndex = null) {
     const key = keyFor(value);
     return subjects.some((subject, index) => index !== allowedIndex && keyFor(subject) === key);
@@ -67,6 +76,9 @@
   }
 
   function startEdit(index) {
+    addSession += 1;
+    editSession += 1;
+    addText = "";
     editingIndex = index;
     editText = subjects[index] || "";
     invalid = false;
@@ -75,6 +87,7 @@
   }
 
   function cancelEdit() {
+    editSession += 1;
     editingIndex = null;
     editText = "";
     invalid = false;
@@ -93,6 +106,22 @@
     void subjectHistoryStore.record([next]);
     cancelEdit();
     return true;
+  }
+
+  function scheduleEditCommit(index) {
+    const session = editSession;
+    setTimeout(() => {
+      if (session === editSession && editingIndex === index) commitEdit();
+    }, 120);
+  }
+
+  function scheduleAddCommit() {
+    const session = addSession;
+    setTimeout(() => {
+      if (session !== addSession) return;
+      if (addText.trim()) commitAdd();
+      else showSuggestions = false;
+    }, 120);
   }
 
   function removeSubject(index) {
@@ -178,7 +207,7 @@
 
 {#if variant === "badge"}
   <div class="subject-badges-container">
-    <div class="subject-badges" onclick={focusAddInput} onkeydown={handleContainerKeydown} role="button" tabindex="0" aria-label="Subject editor">
+    <div class="subject-badges" onclick={(event) => { if (event.target === event.currentTarget) focusAddInput(); }} onkeydown={handleContainerKeydown} role="button" tabindex="0" aria-label="Subject editor">
       {#each subjects as subject, index}
         {#if editingIndex === index}
           <span class="badge-input-container">
@@ -188,8 +217,9 @@
               value={editText}
               oninput={(event) => { editText = event.currentTarget.value; invalid = false; showSuggestions = true; highlightedSuggestion = 0; }}
               onfocus={() => { showSuggestions = true; highlightedSuggestion = 0; }}
-              onblur={() => setTimeout(commitEdit, 120)}
+              onblur={() => scheduleEditCommit(index)}
               onkeydown={handleEditKeydown}
+              onclick={(event) => event.stopPropagation()}
               aria-label={`Edit subject ${subject}`}
               aria-invalid={invalid}
               use:focus
@@ -234,9 +264,9 @@
           class:empty-add={!addText}
           value={addText}
           oninput={(event) => { addText = event.currentTarget.value; invalid = false; showSuggestions = true; highlightedSuggestion = 0; }}
-          onfocus={() => { showSuggestions = true; highlightedSuggestion = 0; }}
+          onfocus={beginAdd}
           onkeydown={handleAddKeydown}
-          onblur={() => setTimeout(() => { if (addText.trim()) commitAdd(); else showSuggestions = false; }, 120)}
+          onblur={scheduleAddCommit}
           aria-label="Add subject"
           aria-invalid={invalid}
           placeholder="+"
