@@ -240,6 +240,22 @@ describe("logger editing", () => {
     expect(onChange).toHaveBeenCalledWith(["general", "programming"]);
   });
 
+  it("restores an existing pill when an empty edit loses focus", async () => {
+    const onChange = vi.fn();
+    render(SubjectInput, { subjects: ["general"], onChange, variant: "badge" });
+
+    await fireEvent.click(screen.getByRole("button", { name: "general" }));
+    const editInput = screen.getByRole("textbox", { name: "Edit subject general" });
+    await fireEvent.input(editInput, { target: { value: "" } });
+    await fireEvent.blur(editInput);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(screen.queryByRole("textbox", { name: "Edit subject general" })).toBeNull();
+    expect(screen.getByRole("button", { name: "general" })).toBeTruthy();
+    expect(screen.queryByRole("listbox", { name: "Subject suggestions" })).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("suggests subjects while adding and editing pills", async () => {
     subjectHistoryStore.history = {
       subjects: {

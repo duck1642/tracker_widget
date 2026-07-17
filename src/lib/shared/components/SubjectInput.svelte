@@ -97,8 +97,12 @@
   function commitEdit() {
     if (editingIndex === null) return false;
     const next = normalize(editText);
+    if (!next) {
+      cancelEdit();
+      return true;
+    }
     if (!validSubject(next, editingIndex)) {
-      invalid = Boolean(next);
+      invalid = true;
       return false;
     }
     const updated = subjects.map((subject, index) => index === editingIndex ? next : subject);
