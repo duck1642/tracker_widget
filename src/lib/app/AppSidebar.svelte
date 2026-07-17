@@ -9,12 +9,69 @@
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
   import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
 
-  let { open = true, selectedPath = "", onSelectWeek, onSelectDay } = $props();
+  let { open = true, selectedPath = "", onSelectWeek, onSelectDay, keyboardNavigationEnabled = true } = $props();
   let sortAscending = $state(false);
   let allWeeksExpanded = $state(true);
   let expansionCommand = $state(null);
   let expansionCommandId = 0;
   let sortedWeeks = $derived([...workspaceStore.weeks].sort((left, right) => sortAscending ? left.name.localeCompare(right.name) : right.name.localeCompare(left.name)));
+  let queuedNavigationPath = "";
+  let navigationQueue = Promise.resolve();
+
+  const EDITOR_BLUR_SETTLE_MS = 160;
+
+  function navigationEntries() {
+    return sortedWeeks.flatMap((week) => [
+      ...(week.indexPath ? [{ kind: "week", path: week.indexPath, week }] : []),
+      ...week.days.filter((day) => day.path).map((day) => ({ kind: "day", path: day.path, week, day }))
+    ]);
+  }
+
+  function keyboardNavigationBlocked() {
+    return !keyboardNavigationEnabled
+      || !["week", "day"].includes(appStore.currentView)
+      || Boolean(document.querySelector('[role="dialog"], [role="menu"]'));
+  }
+
+  async function settleActiveEditor() {
+    const activeElement = document.activeElement;
+    if (!(activeElement instanceof HTMLElement)) return;
+    if (!activeElement.matches('input, textarea, select, [contenteditable="true"]')) return;
+
+    activeElement.blur();
+    await new Promise((resolve) => setTimeout(resolve, EDITOR_BLUR_SETTLE_MS));
+  }
+
+  function handleKeyboardNavigation(event) {
+    if (!event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
+    if (event.key !== "PageUp" && event.key !== "PageDown") return;
+
+    event.preventDefault();
+    if (keyboardNavigationBlocked()) return;
+
+    const entries = navigationEntries();
+    const currentIndex = entries.findIndex((entry) => entry.path === (queuedNavigationPath || selectedPath));
+    if (currentIndex < 0) return;
+
+    const direction = event.key === "PageDown" ? 1 : -1;
+    const destination = entries[currentIndex + direction];
+    if (!destination) return;
+
+    queuedNavigationPath = destination.path;
+    navigationQueue = navigationQueue
+      .then(async () => {
+        await settleActiveEditor();
+        if (destination.kind === "week") {
+          await onSelectWeek(destination.week);
+        } else {
+          await onSelectDay(destination.day, destination.week);
+        }
+      })
+      .catch((error) => appStore.showStatus("File navigation failed: " + error))
+      .finally(() => {
+        if (queuedNavigationPath === destination.path) queuedNavigationPath = "";
+      });
+  }
 
   function toggleAllWeeks() {
     allWeeksExpanded = !allWeeksExpanded;
@@ -42,6 +99,8 @@
     }
   }
 </script>
+
+<svelte:window onkeydown={handleKeyboardNavigation} />
 
 <aside class:closed={!open}>
   <div class="actions">

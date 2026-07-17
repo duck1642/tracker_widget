@@ -39,6 +39,7 @@ afterEach(() => {
   appStore.logsRootPath = "";
   appStore.filePath = "";
   appStore.frontmatterMode = "off";
+  appStore.currentView = "todo";
   todoStore.fileMissing = false;
   dailyStore.path = "";
   dailyStore.date = "";
@@ -1878,5 +1879,144 @@ describe("NotesEditor interactions", () => {
     await result.rerender({ value: textarea.value, onChange });
 
     expect(scrollPanel.scrollTop).toBe(32);
+  });
+});
+
+describe("sidebar keyboard file navigation", () => {
+  const weeks = () => [
+    {
+      path: "new", name: "2026w25", indexPath: "new/index.md",
+      days: [
+        { path: "new/1.md", date: "2026-06-22" },
+        { path: "new/2.md", date: "2026-06-23" }
+      ]
+    },
+    {
+      path: "old", name: "2026w24", indexPath: "old/index.md",
+      days: [{ path: "old/1.md", date: "2026-06-15" }]
+    }
+  ];
+
+  it("navigates logical files across collapsed weeks in the active sort order", async () => {
+    appStore.currentView = "day";
+    workspaceStore.weeks = weeks();
+    let selectedPath = "new/2.md";
+    let view;
+    const onSelectWeek = vi.fn(async (week) => {
+      selectedPath = week.indexPath;
+      await view.rerender({ open: true, selectedPath, onSelectWeek, onSelectDay });
+    });
+    const onSelectDay = vi.fn(async (day) => {
+      selectedPath = day.path;
+      await view.rerender({ open: true, selectedPath, onSelectWeek, onSelectDay });
+    });
+    view = render(AppSidebar, { open: true, selectedPath, onSelectWeek, onSelectDay });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Collapse all weeks" }));
+    await fireEvent.keyDown(window, { key: "PageDown", ctrlKey: true });
+    await vi.waitFor(() => expect(onSelectWeek).toHaveBeenCalledWith(expect.objectContaining({ name: "2026w24" })));
+    expect(screen.getByRole("button", { name: "2026w25" }).getAttribute("aria-expanded")).toBe("false");
+    expect(screen.getByRole("button", { name: "2026w24" }).getAttribute("aria-expanded")).toBe("false");
+
+    selectedPath = "old/1.md";
+    await view.rerender({ open: true, selectedPath, onSelectWeek, onSelectDay });
+    await fireEvent.click(screen.getByRole("button", { name: "Toggle week sorting" }));
+    await fireEvent.keyDown(window, { key: "PageDown", ctrlKey: true });
+    await vi.waitFor(() => expect(onSelectWeek).toHaveBeenLastCalledWith(expect.objectContaining({ name: "2026w25" })));
+  });
+
+  it("moves in both directions, skips missing entries, and stops at boundaries", async () => {
+    appStore.currentView = "day";
+    workspaceStore.weeks = [{
+      path: "week", name: "2026w25", indexPath: "week/index.md",
+      days: [
+        { path: "week/1.md", date: "2026-06-22" },
+        { path: "week/3.md", date: "2026-06-24" }
+      ]
+    }];
+    let selectedPath = "week/3.md";
+    let view;
+    const onSelectWeek = vi.fn(async (week) => {
+      selectedPath = week.indexPath;
+      await view.rerender({ selectedPath, onSelectWeek, onSelectDay });
+    });
+    const onSelectDay = vi.fn(async (day) => {
+      selectedPath = day.path;
+      await view.rerender({ selectedPath, onSelectWeek, onSelectDay });
+    });
+    view = render(AppSidebar, { selectedPath, onSelectWeek, onSelectDay });
+
+    await fireEvent.keyDown(window, { key: "PageUp", ctrlKey: true });
+    await vi.waitFor(() => expect(onSelectDay).toHaveBeenLastCalledWith(expect.objectContaining({ path: "week/1.md" }), expect.anything()));
+    await fireEvent.keyDown(window, { key: "PageUp", ctrlKey: true });
+    await vi.waitFor(() => expect(onSelectWeek).toHaveBeenCalledOnce());
+    await fireEvent.keyDown(window, { key: "PageUp", ctrlKey: true });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onSelectWeek).toHaveBeenCalledOnce();
+
+    selectedPath = "week/3.md";
+    await view.rerender({ selectedPath, onSelectWeek, onSelectDay });
+    const dayCalls = onSelectDay.mock.calls.length;
+    await fireEvent.keyDown(window, { key: "PageDown", ctrlKey: true });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onSelectDay).toHaveBeenCalledTimes(dayCalls);
+  });
+
+  it("suppresses navigation in Todo, Settings, dialogs, and menus", async () => {
+    workspaceStore.weeks = weeks();
+    const onSelectWeek = vi.fn();
+    const onSelectDay = vi.fn();
+    const view = render(AppSidebar, { selectedPath: "new/index.md", onSelectWeek, onSelectDay });
+
+    appStore.currentView = "todo";
+    await fireEvent.keyDown(window, { key: "PageDown", ctrlKey: true });
+    appStore.currentView = "week";
+    await view.rerender({ selectedPath: "new/index.md", onSelectWeek, onSelectDay, keyboardNavigationEnabled: false });
+    await fireEvent.keyDown(window, { key: "PageDown", ctrlKey: true });
+
+    await view.rerender({ selectedPath: "new/index.md", onSelectWeek, onSelectDay, keyboardNavigationEnabled: true });
+    const dialog = document.createElement("div");
+    dialog.setAttribute("role", "dialog");
+    document.body.append(dialog);
+    await fireEvent.keyDown(window, { key: "PageDown", ctrlKey: true });
+    dialog.remove();
+    const menu = document.createElement("div");
+    menu.setAttribute("role", "menu");
+    document.body.append(menu);
+    await fireEvent.keyDown(window, { key: "PageDown", ctrlKey: true });
+    menu.remove();
+
+    expect(onSelectWeek).not.toHaveBeenCalled();
+    expect(onSelectDay).not.toHaveBeenCalled();
+  });
+
+  it("settles an active editor and serializes rapid repeated navigation", async () => {
+    appStore.currentView = "week";
+    workspaceStore.weeks = weeks();
+    const input = document.createElement("input");
+    let editSettled = false;
+    input.addEventListener("blur", () => setTimeout(() => { editSettled = true; }, 150));
+    document.body.append(input);
+    input.focus();
+
+    const resolvers = [];
+    const onSelectWeek = vi.fn(() => new Promise((resolve) => resolvers.push(resolve)));
+    const onSelectDay = vi.fn(() => new Promise((resolve) => resolvers.push(resolve)));
+    render(AppSidebar, { selectedPath: "new/index.md", onSelectWeek, onSelectDay });
+
+    await fireEvent.keyDown(window, { key: "PageDown", ctrlKey: true });
+    await fireEvent.keyDown(window, { key: "PageDown", ctrlKey: true });
+    await fireEvent.keyDown(window, { key: "PageDown", ctrlKey: true });
+    await vi.waitFor(() => expect(onSelectDay).toHaveBeenCalledTimes(1));
+    expect(editSettled).toBe(true);
+    expect(onSelectDay.mock.calls[0][0].path).toBe("new/1.md");
+
+    resolvers.shift()();
+    await vi.waitFor(() => expect(onSelectDay).toHaveBeenCalledTimes(2));
+    expect(onSelectDay.mock.calls[1][0].path).toBe("new/2.md");
+    resolvers.shift()();
+    await vi.waitFor(() => expect(onSelectWeek).toHaveBeenCalledTimes(1));
+    expect(onSelectWeek.mock.calls[0][0].indexPath).toBe("old/index.md");
+    resolvers.shift()();
   });
 });

@@ -244,7 +244,7 @@
     </section>
   {:else}
     <div class="workspace-shell">
-      <AppSidebar open={workspaceStore.sidebarOpen} {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} />
+      <AppSidebar open={workspaceStore.sidebarOpen} {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} keyboardNavigationEnabled={!editingSettings} />
       <section class="main-workspace">
         {#if editingSettings}
           <SettingsPanel dragEnabled={appStore.dragEnabled} autostartEnabled={appStore.autostartEnabled} onToggleDrag={() => appStore.toggleDrag()} onToggleAutostart={() => appStore.toggleAutostart()} />
