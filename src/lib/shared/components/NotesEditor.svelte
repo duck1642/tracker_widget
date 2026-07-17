@@ -7,6 +7,7 @@
   let containerEl = $state(null);
   let textareaEl = $state(null);
   let pendingCaretPosition = $state(-1);
+  let measuredTextareaHeight = 0;
 
   // Parse raw markdown text into structured blocks
   function parseMarkdown(text) {
@@ -166,10 +167,27 @@
   // Auto-resize effect for textarea height
   $effect(() => {
     const val = value;
-    if (textareaEl) {
-      textareaEl.style.height = "auto";
-      textareaEl.style.height = textareaEl.scrollHeight + "px";
+    if (!textareaEl) {
+      measuredTextareaHeight = 0;
+      return;
     }
+
+    const previousHeight = measuredTextareaHeight;
+    textareaEl.style.height = "auto";
+    const nextHeight = textareaEl.scrollHeight;
+    textareaEl.style.height = nextHeight + "px";
+    measuredTextareaHeight = nextHeight;
+
+    if (previousHeight <= 0 || nextHeight <= previousHeight) return;
+    const textarea = textareaEl;
+    requestAnimationFrame(() => {
+      if (document.activeElement !== textarea || textarea.selectionEnd !== textarea.value.length) return;
+      const scrollPanel = textarea.closest(".panel-scroll");
+      if (!scrollPanel) return;
+      const gap = parseFloat(getComputedStyle(textarea).getPropertyValue("--panel-bottom-gap")) || 22;
+      const missing = textarea.getBoundingClientRect().bottom + gap - scrollPanel.getBoundingClientRect().bottom;
+      if (missing > 0) scrollPanel.scrollTop += missing;
+    });
   });
 
   function handlePreviewClick(event) {

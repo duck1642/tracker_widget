@@ -98,6 +98,6 @@
 </main>
 
 <style>
-  .daily-panel { display: grid; align-content: start; gap: 18px; width: min(100%, 1040px); margin: 0 auto; padding: 0 22px 22px 22px; box-sizing: border-box; }
+  .daily-panel { --panel-bottom-gap: 22px; display: grid; align-content: start; gap: 18px; width: min(100%, 1040px); margin: 0 auto; padding: 0 22px var(--panel-bottom-gap) 22px; box-sizing: border-box; }
   .sessions { display: grid; gap: 12px; }
 </style>

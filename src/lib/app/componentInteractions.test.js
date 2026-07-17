@@ -1848,4 +1848,35 @@ describe("NotesEditor interactions", () => {
     expect(textarea).toBeTruthy();
     expect(textarea.value).toBe("- [ ] Item 1\n- Item 2\n\nSome text here");
   });
+
+  it("reveals the configured bottom gap when notes grow at the caret", async () => {
+    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+    const onChange = vi.fn();
+    const result = render(NotesEditor, { value: "line", onChange });
+    const scrollPanel = document.createElement("div");
+    scrollPanel.className = "panel-scroll";
+    scrollPanel.style.setProperty("--panel-bottom-gap", "22px");
+    document.body.append(scrollPanel);
+    scrollPanel.append(result.container);
+
+    await fireEvent.click(screen.getByText("line"));
+    const textarea = screen.getByRole("textbox");
+    let scrollHeight = 150;
+    Object.defineProperty(textarea, "scrollHeight", { configurable: true, get: () => scrollHeight });
+    textarea.getBoundingClientRect = () => ({ top: 30, bottom: 210, left: 0, right: 100, width: 100, height: 180 });
+    scrollPanel.getBoundingClientRect = () => ({ top: 0, bottom: 200, left: 0, right: 100, width: 100, height: 200 });
+    scrollPanel.scrollTop = 0;
+    await result.rerender({ value: "line one", onChange });
+
+    scrollHeight = 180;
+    textarea.value = "line one\nline two";
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await result.rerender({ value: textarea.value, onChange });
+
+    expect(scrollPanel.scrollTop).toBe(32);
+  });
 });
