@@ -113,6 +113,10 @@
   }
 
   function scheduleEditCommit(index) {
+    if (!normalize(editText)) {
+      cancelEdit();
+      return;
+    }
     const session = editSession;
     setTimeout(() => {
       if (session === editSession && editingIndex === index) commitEdit();

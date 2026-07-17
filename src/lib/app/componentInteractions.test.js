@@ -248,7 +248,6 @@ describe("logger editing", () => {
     const editInput = screen.getByRole("textbox", { name: "Edit subject general" });
     await fireEvent.input(editInput, { target: { value: "" } });
     await fireEvent.blur(editInput);
-    await new Promise((resolve) => setTimeout(resolve, 150));
 
     expect(screen.queryByRole("textbox", { name: "Edit subject general" })).toBeNull();
     expect(screen.getByRole("button", { name: "general" })).toBeTruthy();
