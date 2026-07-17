@@ -89,6 +89,8 @@
         saveName();
       }
     } else if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
       cancelNameEdit();
     } else if (event.key === "ArrowDown") {
       if (filteredSuggestions.length > 0) {

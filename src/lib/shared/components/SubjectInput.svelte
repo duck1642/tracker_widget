@@ -142,9 +142,13 @@
         commitAdd();
       }
     } else if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      addSession += 1;
       addText = "";
       invalid = false;
       showSuggestions = false;
+      event.currentTarget.blur();
     } else if (event.key === "Backspace" && !addText && canRemove) {
       event.preventDefault();
       removeSubject(subjects.length - 1);
@@ -168,6 +172,8 @@
       }
       commitEdit();
     } else if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
       cancelEdit();
     } else if (event.key === "ArrowDown" && filteredSuggestions.length > 0) {
       event.preventDefault();

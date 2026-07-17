@@ -201,6 +201,8 @@ describe("logger editing", () => {
 
   it("cancels subject add and edit input with Escape", async () => {
     const onChange = vi.fn();
+    const onWindowEscape = vi.fn();
+    window.addEventListener("keydown", onWindowEscape);
     render(SubjectInput, { subjects: ["rust", "test"], onChange, variant: "badge" });
     const addInput = screen.getByRole("textbox", { name: "Add subject" });
 
@@ -213,6 +215,8 @@ describe("logger editing", () => {
     await fireEvent.keyDown(screen.getByRole("textbox", { name: "Edit subject rust" }), { key: "Escape" });
     expect(screen.queryByRole("textbox", { name: "Edit subject rust" })).toBeNull();
     expect(onChange).not.toHaveBeenCalled();
+    expect(onWindowEscape).not.toHaveBeenCalled();
+    window.removeEventListener("keydown", onWindowEscape);
   });
 
   it("cancels an empty pill edit before starting a new pill", async () => {
@@ -366,6 +370,31 @@ describe("logger editing", () => {
     expect(onRenameSession).toHaveBeenCalledWith("Long renamed session");
   });
 
+  it("cancels a daily session rename with Escape", async () => {
+    const onRenameSession = vi.fn(() => true);
+    const onWindowEscape = vi.fn();
+    window.addEventListener("keydown", onWindowEscape);
+    render(SessionCard, {
+      session: { id: "session-1", name: "Work", activities: [] },
+      dragState: null,
+      onAddActivity: vi.fn(), onUpdateActivity: vi.fn(), onDeleteActivity: vi.fn(),
+      onMoveActivity: vi.fn(), onDeleteSession: vi.fn(), onRenameSession,
+      onDragStart: vi.fn(), onDragOver: vi.fn(), onDragLeave: vi.fn(),
+      onDrop: vi.fn(), onDragEnd: vi.fn()
+    });
+
+    await fireEvent.click(screen.getByText("Work"));
+    const input = screen.getByDisplayValue("Work");
+    await fireEvent.input(input, { target: { value: "Draft" } });
+    await fireEvent.keyDown(input, { key: "Escape" });
+
+    expect(screen.queryByDisplayValue("Draft")).toBeNull();
+    expect(screen.getByText("Work")).toBeTruthy();
+    expect(onRenameSession).not.toHaveBeenCalled();
+    expect(onWindowEscape).not.toHaveBeenCalled();
+    window.removeEventListener("keydown", onWindowEscape);
+  });
+
   it("renders a zero-minute default when TimeInput has no minutes prop", async () => {
     const { default: TimeInput } = await import("$lib/shared/components/TimeInput.svelte");
     render(TimeInput, { onChange: vi.fn(), variant: "badge" });
@@ -384,6 +413,25 @@ describe("logger editing", () => {
     expect(screen.getByText("60m")).toBeTruthy();
     expect(screen.getByText("rust")).toBeTruthy();
     expect(screen.queryByRole("textbox", { name: "Add subject" })).toBeNull();
+  });
+
+  it("restores a weekly session name when Escape cancels editing", async () => {
+    const entry = { id: "p1", day: "Mon", session: "Development", activities: [] };
+    const onUpdate = vi.fn((id, patch) => Object.assign(entry, patch));
+    const onWindowEscape = vi.fn();
+    window.addEventListener("keydown", onWindowEscape);
+    render(PlanSection, { plan: [entry], onAdd: vi.fn(), onUpdate, onDelete: vi.fn() });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Development" }));
+    const input = screen.getByPlaceholderText("What session?");
+    await fireEvent.input(input, { target: { value: "Draft" } });
+    await fireEvent.keyDown(input, { key: "Escape" });
+
+    expect(onUpdate).toHaveBeenLastCalledWith("p1", { session: "Development" });
+    expect(screen.queryByPlaceholderText("What session?")).toBeNull();
+    expect(screen.getByRole("button", { name: "Development" })).toBeTruthy();
+    expect(onWindowEscape).not.toHaveBeenCalled();
+    window.removeEventListener("keydown", onWindowEscape);
   });
 
   it("emits weekly plan drag moves across cards and day drop zones", async () => {

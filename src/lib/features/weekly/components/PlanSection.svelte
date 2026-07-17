@@ -21,6 +21,7 @@
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   let editingSessionId = $state(null);
+  let editingOriginalSession = $state("");
   let selectedEntryId = $state(null);
   let draggedEntryId = $state(null);
   let dragOverEntryId = $state(null);
@@ -31,6 +32,19 @@
 
   function focus(node) {
     node.focus();
+  }
+
+  function beginSessionEdit(entry) {
+    editingOriginalSession = entry.session;
+    editingSessionId = entry.id;
+  }
+
+  function cancelSessionEdit(event, entry) {
+    event.preventDefault();
+    event.stopPropagation();
+    onUpdate(entry.id, { session: editingOriginalSession });
+    editingSessionId = null;
+    editingOriginalSession = "";
   }
 
   function resetDrag() {
@@ -185,14 +199,17 @@
                       class="session-input quiet-edit-input"
                       value={entry.session}
                       onblur={() => editingSessionId = null}
-                      onkeydown={(e) => { if (e.key === "Enter") editingSessionId = null; }}
+                      onkeydown={(e) => {
+                        if (e.key === "Enter") editingSessionId = null;
+                        else if (e.key === "Escape") cancelSessionEdit(e, entry);
+                      }}
                       oninput={(event) => onUpdate(entry.id, { session: event.currentTarget.value })}
                       placeholder="What session?"
                       use:focus
                       onclick={(event) => event.stopPropagation()}
                     />
                   {:else}
-                    <button type="button" class="session-title" onclick={() => editingSessionId = entry.id} title={entry.session || "Unnamed session"}>
+                    <button type="button" class="session-title" onclick={() => beginSessionEdit(entry)} title={entry.session || "Unnamed session"}>
                       {entry.session || "Unnamed session"}
                     </button>
                   {/if}
