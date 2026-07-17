@@ -9,6 +9,7 @@
   import { subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
   import { sessionHistoryStore } from "./sessionHistoryStore.svelte.js";
   import { persistenceRegistry } from "./persistenceRegistry.js";
+  import { suppressPrintShortcut } from "./applicationShortcuts.js";
   import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
   import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
@@ -230,6 +231,8 @@
         : "")
   );
 </script>
+
+<svelte:window onkeydown={suppressPrintShortcut} />
 
 <main class="app-container" class:desktop-mode={appStore.layerMode === "desktop"} class:maximized={isMaximized}>
   <AppHeader title={workspaceStore.needsFirstSetup ? "Workspace setup" : appStore.currentView === "todo" ? "Todo" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={headerStatusMessage} {showModeMenu} {isMaximized} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onDismissModeMenu={() => showModeMenu = false} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={toggleSettings} onShrinkApp={minimizeApp} onMaximizeApp={toggleMaximizeApp} onCloseApp={closeApp} />
