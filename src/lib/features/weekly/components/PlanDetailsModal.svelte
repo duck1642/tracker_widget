@@ -25,9 +25,10 @@
 <svelte:window onkeydown={(event) => { if (event.key === "Escape") onClose(); }} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
-<div class="modal-backdrop" role="presentation" onclick={onClose}>
+<div class="modal-backdrop" style="overflow-y: auto" role="presentation" onclick={onClose}>
   <div
     class="plan-modal"
+    style="overflow: visible"
     role="dialog"
     aria-modal="true"
     aria-label={`Planned activities for ${entry.session}`}
@@ -103,22 +104,26 @@
     position: fixed;
     inset: 0;
     z-index: 80;
-    display: grid;
-    place-items: center;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
     padding: 24px;
+    overflow-y: auto;
     background: rgba(0, 0, 0, 0.42);
+    box-sizing: border-box;
   }
 
   .plan-modal {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
+    flex: 0 0 auto;
     width: min(680px, 100%);
-    max-height: min(720px, calc(100vh - 48px));
+    margin: auto 0;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     background: var(--surface);
     box-shadow: var(--shadow-lg);
-    overflow: hidden;
+    overflow: visible;
   }
 
   header {

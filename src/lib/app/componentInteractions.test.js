@@ -507,6 +507,30 @@ describe("logger editing", () => {
     expect(screen.getByRole("button", { name: "Move planned activity up" }).disabled).toBe(true);
   });
 
+  it("lets subject suggestions overflow weekly plan details while the backdrop scrolls", async () => {
+    subjectHistoryStore.history = {
+      subjects: { backend: { count: 2, last_used: "2026-07-02T00:00:00.000Z" } }
+    };
+    render(PlanSection, {
+      plan: [{
+        id: "p1", day: "Mon", session: "Development",
+        activities: [{ id: "a1", subjects: ["rust"], minutes: 30, description: "Draft tests" }]
+      }],
+      onAdd: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn(),
+      onMove: vi.fn(), onMoveToDay: vi.fn(), onAddActivity: vi.fn(),
+      onUpdateActivity: vi.fn(), onDeleteActivity: vi.fn(), onMoveActivity: vi.fn()
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Open planned activities for Development" }));
+    await fireEvent.click(screen.getByRole("button", { name: "rust" }));
+
+    const subjectEditor = screen.getByRole("textbox", { name: "Edit subject rust" });
+    const modal = subjectEditor.closest(".plan-modal");
+    const backdrop = subjectEditor.closest(".modal-backdrop");
+    expect(getComputedStyle(modal).overflow).toBe("visible");
+    expect(getComputedStyle(backdrop).overflowY).toBe("auto");
+  });
+
   it("closes weekly plan details with Escape and backdrop click", async () => {
     const props = {
       plan: [{
