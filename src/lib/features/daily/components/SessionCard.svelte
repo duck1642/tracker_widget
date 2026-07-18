@@ -30,7 +30,7 @@
   const normalize = (value) => value.trim().toLowerCase();
   let filteredSuggestions = $derived(
     suggestions.filter((suggestion) => {
-      const trimmed = suggestion.trim();
+      const trimmed = suggestion.name.trim();
       const query = nameEdited ? editNameInput.trim().toLowerCase() : "";
       const matches = trimmed.toLowerCase().includes(query);
       const isCurrent = normalize(trimmed) === normalize(session.name);
@@ -84,7 +84,7 @@
     if (event.key === "Enter") {
       if (showSuggestions && highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length) {
         event.preventDefault();
-        selectSuggestion(filteredSuggestions[highlightedIndex]);
+        selectSuggestion(filteredSuggestions[highlightedIndex].name);
       } else {
         saveName();
       }
@@ -170,12 +170,12 @@
                 class="suggestion-item"
                 class:highlighted={index === highlightedIndex}
                 onmouseenter={() => highlightedIndex = index}
-                onclick={() => selectSuggestion(suggestion)}
+                onclick={() => selectSuggestion(suggestion.name)}
                 role="option"
                 aria-selected={index === highlightedIndex}
-                title={suggestion}
+                title={suggestion.name}
               >
-                {suggestion}
+                {#if suggestion.plannedThisWeek}<span class="planned-marker" aria-hidden="true" title="Planned this week">*</span>{/if}{suggestion.name}
               </li>
             {/each}
           </ul>
@@ -238,6 +238,7 @@
   .suggestions-dropdown::-webkit-scrollbar-track { background: transparent; }
   .suggestion-item { padding: 8px 12px; font-size: var(--text-sm); color: var(--text-muted); cursor: pointer; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: background 0.1s ease, color 0.1s ease; }
   .suggestion-item:hover, .suggestion-item.highlighted { background: var(--surface-hover); color: var(--text-color); }
+  .planned-marker { display: inline-block; width: 12px; color: var(--accent); font-weight: 700; }
   small { flex-shrink: 0; color: var(--text-muted); font-size: var(--text-sm); font-weight: 400; line-height: 1; }
   .activities p { padding: 12px 14px; color: var(--text-muted); }
   footer { padding: 8px 10px; border-top: 1px solid var(--border-subtle); }

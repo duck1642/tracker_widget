@@ -15,8 +15,8 @@
 
   let filteredSuggestions = $derived(
     suggestions.filter(s => {
-      const match = s.toLowerCase().includes(name.trim().toLowerCase());
-      const alreadyExists = existingSessions.some(session => normalize(session) === normalize(s));
+      const match = s.name.toLowerCase().includes(name.trim().toLowerCase());
+      const alreadyExists = existingSessions.some(session => normalize(session) === normalize(s.name));
       return match && !alreadyExists;
     })
   );
@@ -52,7 +52,7 @@
 
   function resolveSubmittedName() {
     const trimmed = name.trim();
-    return filteredSuggestions.find((suggestion) => normalize(suggestion) === normalize(trimmed)) || trimmed;
+    return filteredSuggestions.find((suggestion) => normalize(suggestion.name) === normalize(trimmed))?.name || trimmed;
   }
 
   /** @param {SubmitEvent} event */
@@ -82,7 +82,7 @@
     } else if (event.key === "Enter") {
       if (showDropdown && highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length) {
         event.preventDefault();
-        selectSuggestion(filteredSuggestions[highlightedIndex]);
+        selectSuggestion(filteredSuggestions[highlightedIndex].name);
       }
     }
   }
@@ -138,12 +138,12 @@
                   class="suggestion-item"
                   class:highlighted={index === highlightedIndex}
                   onmouseenter={() => highlightedIndex = index}
-                  onclick={() => selectSuggestion(suggestion)}
+                  onclick={() => selectSuggestion(suggestion.name)}
                   role="option"
                   aria-selected={index === highlightedIndex}
-                  title={suggestion}
+                  title={suggestion.name}
                 >
-                  {suggestion}
+                  {#if suggestion.plannedThisWeek}<span class="planned-marker" aria-hidden="true" title="Planned this week">*</span>{/if}{suggestion.name}
                 </li>
               {/each}
             </ul>
@@ -284,4 +284,5 @@
     background: var(--surface-hover);
     color: var(--text-color);
   }
+  .planned-marker { display: inline-block; width: 12px; color: var(--accent); font-weight: 700; }
 </style>

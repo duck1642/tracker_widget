@@ -4,6 +4,10 @@ function normalizedName(value) {
   return value.trim().normalize("NFC").toLocaleLowerCase();
 }
 
+/**
+ * @param {{ currentWeekSessions?: string[], historicalSessions?: string[], excludedSessions?: string[] }} [options]
+ * @returns {{ name: string, plannedThisWeek: boolean }[]}
+ */
 export function buildSessionSuggestions({ currentWeekSessions = [], historicalSessions = [], excludedSessions = [] } = {}) {
   const excluded = new Set(excludedSessions.map(normalizedName).filter(Boolean));
   const seen = new Set();

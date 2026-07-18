@@ -14,7 +14,7 @@
   let suggestions = $derived(buildSessionSuggestions({
     currentWeekSessions: weekStore.currentWeekSessionNames(),
     historicalSessions: sessionHistoryStore.suggestions
-  }).map((suggestion) => suggestion.name));
+  }));
   let existingSessions = $derived(dailyStore.sessions.map((session) => session.name));
   let draggedSessionId = $state(null);
   let dragOverSessionId = $state(null);
