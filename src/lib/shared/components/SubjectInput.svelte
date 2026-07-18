@@ -488,16 +488,15 @@
   }
   .subject-suggestions {
     position: absolute;
-    top: calc(100% + 4px);
+    top: 100%;
     left: 0;
     z-index: 300;
     display: grid;
-    min-width: 126px;
-    max-width: 170px;
+    width: max(100%, 126px);
+    max-width: 180px;
     max-height: 156px;
     overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-strong) transparent;
+    scrollbar-width: none;
     padding: 4px;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
@@ -506,14 +505,7 @@
     box-sizing: border-box;
   }
   .subject-suggestions::-webkit-scrollbar {
-    width: 6px;
-  }
-  .subject-suggestions::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: var(--border-strong);
-  }
-  .subject-suggestions::-webkit-scrollbar-track {
-    background: transparent;
+    display: none;
   }
   .subject-suggestions button {
     min-width: 0;
