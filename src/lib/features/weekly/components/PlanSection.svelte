@@ -331,7 +331,8 @@
   }
   .session-edit-wrapper { position: relative; flex: 1; min-width: 0; }
   .session-edit-wrapper .session-input { width: 100%; box-sizing: border-box; }
-  .session-suggestions { position: absolute; top: calc(100% + 4px); left: 0; z-index: 50; width: 100%; max-height: 156px; margin: 0; padding: 4px 0; overflow-y: auto; list-style: none; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #181818; box-shadow: 0 4px 12px rgba(0, 0, 0, .4); box-sizing: border-box; }
+  .session-suggestions { position: absolute; top: calc(100% + 4px); left: 0; z-index: 50; width: 100%; max-height: 156px; margin: 0; padding: 4px 0; overflow-y: auto; scrollbar-width: none; list-style: none; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #181818; box-shadow: 0 4px 12px rgba(0, 0, 0, .4); box-sizing: border-box; }
+  .session-suggestions::-webkit-scrollbar { display: none; }
   .session-suggestions li { padding: 8px 12px; overflow: hidden; color: var(--text-muted); font-size: var(--text-sm); text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
   .session-suggestions li:hover, .session-suggestions li.highlighted { background: var(--surface-hover); color: var(--text-color); }
 

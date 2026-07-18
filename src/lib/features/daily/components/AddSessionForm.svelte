@@ -248,8 +248,7 @@
     width: 100%;
     max-height: 156px;
     overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-strong) transparent;
+    scrollbar-width: none;
     margin: 4px 0 0 0;
     padding: 4px 0;
     list-style: none;
@@ -260,14 +259,7 @@
     box-sizing: border-box;
   }
   .suggestions-dropdown::-webkit-scrollbar {
-    width: 6px;
-  }
-  .suggestions-dropdown::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: var(--border-strong);
-  }
-  .suggestions-dropdown::-webkit-scrollbar-track {
-    background: transparent;
+    display: none;
   }
   .suggestion-item {
     padding: 8px 12px;
