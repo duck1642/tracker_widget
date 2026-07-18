@@ -237,7 +237,7 @@
   .suggestion-item { padding: 8px 12px; font-size: var(--text-sm); color: var(--text-muted); cursor: pointer; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: background 0.1s ease, color 0.1s ease; }
   .suggestion-item:hover, .suggestion-item.highlighted { background: var(--surface-hover); color: var(--text-color); }
   .planned-marker { display: inline-block; width: 12px; color: var(--accent); font-weight: 700; }
-  .icon-button.danger:hover { background: transparent; color: var(--danger); }
+  .icon-button.danger:hover { background: transparent; color: #ff5555; }
   small { flex-shrink: 0; color: var(--text-muted); font-size: var(--text-sm); font-weight: 400; line-height: 1; }
   .activities p { padding: 12px 14px; color: var(--text-muted); }
   footer { padding: 8px 10px; border-top: 1px solid var(--border-subtle); }

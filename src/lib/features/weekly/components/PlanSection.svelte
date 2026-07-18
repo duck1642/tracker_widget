@@ -532,8 +532,8 @@
   }
 
   .delete-btn:hover {
-    background: rgba(255, 136, 136, 0.1);
-    color: #ff8888;
+    background: transparent;
+    color: #ff5555;
   }
 
   .details-btn {
