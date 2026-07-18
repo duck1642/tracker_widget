@@ -6,6 +6,10 @@
   import NotesEditor from "$lib/shared/components/NotesEditor.svelte";
   import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
+  import { sessionHistoryStore } from "$lib/app/sessionHistoryStore.svelte.js";
+  import { buildSessionSuggestions } from "$lib/shared/services/sessionSuggestions.js";
+
+  let historicalSessionSuggestions = $derived(buildSessionSuggestions({ historicalSessions: sessionHistoryStore.suggestions }));
 
   function scrollToSection(event, id) {
     event.preventDefault();
@@ -37,6 +41,7 @@
     <ObjectivesSection objectives={weekStore.objectives} onAdd={() => weekStore.addObjective()} onUpdate={(id, patch) => weekStore.updateObjective(id, patch)} onDelete={(id) => weekStore.removeObjective(id)} onMove={(id, direction) => weekStore.moveObjective(id, direction)} />
     <PlanSection
       plan={weekStore.plan}
+      suggestions={historicalSessionSuggestions}
       onAdd={(day) => weekStore.addPlanEntry(day)}
       onUpdate={(id, patch) => weekStore.updatePlanEntry(id, patch)}
       onDelete={(id) => weekStore.removePlanEntry(id)}

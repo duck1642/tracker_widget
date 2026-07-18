@@ -454,6 +454,31 @@ describe("logger editing", () => {
     window.removeEventListener("keydown", onWindowEscape);
   });
 
+  it("offers usage-ranked history when editing a weekly planned session", async () => {
+    const entry = { id: "p1", day: "Mon", session: "Development", activities: [] };
+    const onUpdate = vi.fn((id, patch) => Object.assign(entry, patch));
+    render(PlanSection, {
+      plan: [entry],
+      suggestions: [
+        { name: "Research", plannedThisWeek: false },
+        { name: "Deep Work", plannedThisWeek: false }
+      ],
+      onAdd: vi.fn(), onUpdate, onDelete: vi.fn()
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Development" }));
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(["Research", "Deep Work"]);
+    expect(document.querySelector(".planned-marker")).toBeNull();
+
+    const input = screen.getByPlaceholderText("What session?");
+    await fireEvent.input(input, { target: { value: "deep" } });
+    await fireEvent.keyDown(input, { key: "ArrowDown" });
+    await fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(onUpdate).toHaveBeenLastCalledWith("p1", { session: "Deep Work" });
+    expect(screen.getByRole("button", { name: "Deep Work" })).toBeTruthy();
+  });
+
   it("emits weekly plan drag moves across cards and day drop zones", async () => {
     const onMove = vi.fn();
     const onMoveToDay = vi.fn();

@@ -8,6 +8,7 @@
 
   let {
     plan,
+    suggestions = [],
     onAdd,
     onUpdate,
     onDelete,
@@ -22,6 +23,9 @@
 
   let editingSessionId = $state(null);
   let editingOriginalSession = $state("");
+  let sessionNameEdited = $state(false);
+  let showSessionSuggestions = $state(false);
+  let highlightedSessionIndex = $state(-1);
   let selectedEntryId = $state(null);
   let draggedEntryId = $state(null);
   let dragOverEntryId = $state(null);
@@ -29,6 +33,11 @@
   let dropPosition = $state("before");
 
   let selectedEntry = $derived(plan.find((entry) => entry.id === selectedEntryId));
+  let editingEntry = $derived(plan.find((entry) => entry.id === editingSessionId));
+  let filteredSessionSuggestions = $derived(suggestions.filter((suggestion) => {
+    const query = sessionNameEdited ? (editingEntry?.session || "").trim().toLowerCase() : "";
+    return suggestion.name.toLowerCase().includes(query);
+  }));
 
   function focus(node) {
     node.focus();
@@ -37,14 +46,49 @@
   function beginSessionEdit(entry) {
     editingOriginalSession = entry.session;
     editingSessionId = entry.id;
+    sessionNameEdited = false;
+    showSessionSuggestions = suggestions.length > 0;
+    highlightedSessionIndex = -1;
+  }
+
+  function finishSessionEdit() {
+    editingSessionId = null;
+    editingOriginalSession = "";
+    sessionNameEdited = false;
+    showSessionSuggestions = false;
+    highlightedSessionIndex = -1;
+  }
+
+  function selectSessionSuggestion(entry, suggestion) {
+    onUpdate(entry.id, { session: suggestion.name });
+    finishSessionEdit();
+  }
+
+  function handleSessionKeydown(event, entry) {
+    if (event.key === "Enter") {
+      if (showSessionSuggestions && highlightedSessionIndex >= 0 && highlightedSessionIndex < filteredSessionSuggestions.length) {
+        event.preventDefault();
+        selectSessionSuggestion(entry, filteredSessionSuggestions[highlightedSessionIndex]);
+      } else {
+        finishSessionEdit();
+      }
+    } else if (event.key === "Escape") {
+      cancelSessionEdit(event, entry);
+    } else if (event.key === "ArrowDown" && filteredSessionSuggestions.length > 0) {
+      event.preventDefault();
+      showSessionSuggestions = true;
+      highlightedSessionIndex = (highlightedSessionIndex + 1) % filteredSessionSuggestions.length;
+    } else if (event.key === "ArrowUp" && showSessionSuggestions && filteredSessionSuggestions.length > 0) {
+      event.preventDefault();
+      highlightedSessionIndex = (highlightedSessionIndex - 1 + filteredSessionSuggestions.length) % filteredSessionSuggestions.length;
+    }
   }
 
   function cancelSessionEdit(event, entry) {
     event.preventDefault();
     event.stopPropagation();
     onUpdate(entry.id, { session: editingOriginalSession });
-    editingSessionId = null;
-    editingOriginalSession = "";
+    finishSessionEdit();
   }
 
   function resetDrag() {
@@ -195,19 +239,45 @@
                     <GripVertical size={13} />
                   </span>
                   {#if editingSessionId === entry.id}
-                    <input
-                      class="session-input quiet-edit-input"
-                      value={entry.session}
-                      onblur={() => editingSessionId = null}
-                      onkeydown={(e) => {
-                        if (e.key === "Enter") editingSessionId = null;
-                        else if (e.key === "Escape") cancelSessionEdit(e, entry);
-                      }}
-                      oninput={(event) => onUpdate(entry.id, { session: event.currentTarget.value })}
-                      placeholder="What session?"
-                      use:focus
-                      onclick={(event) => event.stopPropagation()}
-                    />
+                    <div class="session-edit-wrapper">
+                      <input
+                        class="session-input quiet-edit-input"
+                        value={entry.session}
+                        onblur={() => {
+                          const blurredEntryId = entry.id;
+                          setTimeout(() => { if (editingSessionId === blurredEntryId) finishSessionEdit(); }, 150);
+                        }}
+                        onkeydown={(event) => handleSessionKeydown(event, entry)}
+                        oninput={(event) => {
+                          sessionNameEdited = true;
+                          showSessionSuggestions = true;
+                          highlightedSessionIndex = -1;
+                          onUpdate(entry.id, { session: event.currentTarget.value });
+                        }}
+                        placeholder="What session?"
+                        use:focus
+                        onclick={(event) => event.stopPropagation()}
+                        autocomplete="off"
+                        spellcheck="false"
+                      />
+                      {#if showSessionSuggestions && filteredSessionSuggestions.length > 0}
+                        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                        <ul class="session-suggestions" onmousedown={(event) => event.preventDefault()}>
+                          {#each filteredSessionSuggestions as suggestion, index}
+                            <!-- svelte-ignore a11y_click_events_have_key_events -->
+                            <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
+                            <li
+                              class:highlighted={index === highlightedSessionIndex}
+                              onmouseenter={() => highlightedSessionIndex = index}
+                              onclick={() => selectSessionSuggestion(entry, suggestion)}
+                              role="option"
+                              aria-selected={index === highlightedSessionIndex}
+                              title={suggestion.name}
+                            >{suggestion.name}</li>
+                          {/each}
+                        </ul>
+                      {/if}
+                    </div>
                   {:else}
                     <button type="button" class="session-title" onclick={() => beginSessionEdit(entry)} title={entry.session || "Unnamed session"}>
                       {entry.session || "Unnamed session"}
@@ -259,6 +329,11 @@
     overflow: visible;
     padding-bottom: 2px;
   }
+  .session-edit-wrapper { position: relative; flex: 1; min-width: 0; }
+  .session-edit-wrapper .session-input { width: 100%; box-sizing: border-box; }
+  .session-suggestions { position: absolute; top: calc(100% + 4px); left: 0; z-index: 50; width: 100%; max-height: 156px; margin: 0; padding: 4px 0; overflow-y: auto; list-style: none; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #181818; box-shadow: 0 4px 12px rgba(0, 0, 0, .4); box-sizing: border-box; }
+  .session-suggestions li { padding: 8px 12px; overflow: hidden; color: var(--text-muted); font-size: var(--text-sm); text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  .session-suggestions li:hover, .session-suggestions li.highlighted { background: var(--surface-hover); color: var(--text-color); }
 
   .day-column {
     display: flex;
