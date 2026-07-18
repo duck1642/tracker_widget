@@ -67,7 +67,7 @@ describe("WeekStore editing", () => {
     expect(store.plan.at(-1).id).toBe("p4");
   });
 
-  it("returns sorted unique session suggestions from the whole week", () => {
+  it("returns sorted unique session names from the whole week", () => {
     const { store } = harness();
     store.plan = [
       { day: "Mon", session: "  Zeta  " },
@@ -78,7 +78,7 @@ describe("WeekStore editing", () => {
       { day: "Tue", session: "Other day" }
     ];
 
-    expect(store.suggestionsFor("Mon")).toEqual(["Alpha", "beta", "Other day", "Zeta"]);
+    expect(store.currentWeekSessionNames()).toEqual(["Alpha", "beta", "Other day", "Zeta"]);
   });
 
   it("adds multiple objectives with default metadata", async () => {

@@ -267,7 +267,7 @@ export class WeekStore {
     void this.save();
   }
 
-  suggestionsFor() {
+  currentWeekSessionNames() {
     const seen = new Set();
     return this.plan
       .map((entry) => entry.session.trim())
