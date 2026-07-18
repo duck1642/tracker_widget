@@ -39,7 +39,7 @@ describe("WeekStore editing", () => {
     expect(files.get("week.md")).toContain("local after reload");
   });
 
-  it("adds weekly plan entries with zero target minutes by default", async () => {
+  it("adds weekly plan entries without a placeholder activity", async () => {
     const { store, files } = harness();
     await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
     store.addPlanEntry("Tue");
@@ -50,10 +50,10 @@ describe("WeekStore editing", () => {
       session: "Session",
       subjects: ["general"],
       targetMinutes: 0,
-      activities: [{ subjects: ["general"], minutes: 0, description: "Session" }]
+      activities: []
     });
     expect(files.get("week.md")).toContain("| p1 | Tue | Session | general | 0 |");
-    expect(files.get("week.md")).toContain("### p1\n\n- {subjects: (general), time: 0m} Session");
+    expect(files.get("week.md")).not.toContain("### p1");
   });
 
   it("uses the next highest plan ID when adding entries", async () => {
@@ -116,6 +116,7 @@ describe("WeekStore editing", () => {
     await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
     store.addPlanEntry("Fri");
     const entry = store.plan[0];
+    store.addPlanActivity(entry.id);
     store.updatePlanActivity(entry.id, entry.activities[0].id, { description: "First", subjects: ["math"], minutes: 30 });
     store.addPlanActivity(entry.id);
     store.updatePlanActivity(entry.id, entry.activities[1].id, { description: "Second", subjects: ["rust"], minutes: 45 });
@@ -154,7 +155,7 @@ describe("WeekStore editing", () => {
 
     expect(store.addPlanActivities("missing", ["One"])).toBe(false);
     expect(store.addPlanActivities(entry.id, [" ", ""])).toBe(false);
-    expect(entry.activities).toHaveLength(1);
+    expect(entry.activities).toHaveLength(0);
   });
 
   it("serializes empty plan activity summaries as general zero", async () => {
@@ -162,7 +163,6 @@ describe("WeekStore editing", () => {
     await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
     store.addPlanEntry("Fri");
     const entry = store.plan[0];
-    store.removePlanActivity(entry.id, entry.activities[0].id);
     await store.flushSave();
     expect(files.get("week.md")).toContain("| p1 | Fri | Session | general | 0 |");
   });

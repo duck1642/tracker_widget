@@ -143,7 +143,7 @@ export class WeekStore {
       session: "Session",
       subjects: ["general"],
       targetMinutes: 0,
-      activities: [{ id: id("plan-activity"), subjects: ["general"], minutes: 0, description: "Session" }]
+      activities: []
     });
     void this.save();
   }
