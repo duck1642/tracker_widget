@@ -745,6 +745,26 @@ describe("logger editing", () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it("folds and unfolds indented objective rows", async () => {
+    const { default: ObjectivesSection } = await import("$lib/features/weekly/components/ObjectivesSection.svelte");
+    render(ObjectivesSection, {
+      objectives: [
+        { id: "parent", subjects: ["general"], status: "open", description: "Parent", indent: 0 },
+        { id: "child", subjects: ["general"], status: "open", description: "Child", indent: 1 },
+        { id: "sibling", subjects: ["general"], status: "open", description: "Sibling", indent: 0 }
+      ],
+      onAdd: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn(), onMove: vi.fn(), onIndent: vi.fn(), onOutdent: vi.fn()
+    });
+
+    expect(screen.getByText("Child")).toBeTruthy();
+    await fireEvent.click(screen.getByRole("button", { name: "Collapse objective" }));
+    expect(screen.queryByText("Child")).toBeNull();
+    expect(screen.getByText("Sibling")).toBeTruthy();
+
+    await fireEvent.click(screen.getByRole("button", { name: "Expand objective" }));
+    expect(screen.getByText("Child")).toBeTruthy();
+  });
+
   it("emits Weekly objective move actions", async () => {
     const onMoveUp = vi.fn();
     const onMoveDown = vi.fn();

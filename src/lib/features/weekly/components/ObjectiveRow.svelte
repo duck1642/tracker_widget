@@ -1,8 +1,8 @@
 <script>
   // @ts-nocheck
-  import { ChevronDown, ChevronUp, Trash2 } from "@lucide/svelte";
+  import { ChevronDown, ChevronRight, ChevronUp, Trash2 } from "@lucide/svelte";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
-  let { objective, canMoveUp = true, canMoveDown = true, onUpdate, onDelete, onMoveUp, onMoveDown, onIndent, onOutdent } = $props();
+  let { objective, hasChildren = false, isFolded = false, canMoveUp = true, canMoveDown = true, onToggleFold, onUpdate, onDelete, onMoveUp, onMoveDown, onIndent, onOutdent } = $props();
 
   let isEditingDesc = $state(false);
   let showStatusDropdown = $state(false);
@@ -47,6 +47,19 @@
 
 <article class="objective-card" style:margin-left={`${(objective.indent || 0) * 24}px`}>
   <div class="row-top">
+    {#if hasChildren}
+      <button
+        type="button"
+        class="fold-btn"
+        onclick={onToggleFold}
+        aria-label={isFolded ? "Expand objective" : "Collapse objective"}
+        title={isFolded ? "Expand objective" : "Collapse objective"}
+      >
+        {#if isFolded}<ChevronRight size={13} />{:else}<ChevronDown size={13} />{/if}
+      </button>
+    {:else}
+      <span class="fold-placeholder" aria-hidden="true"></span>
+    {/if}
     {#if isEditingDesc}
       <input
         class="desc-input quiet-edit-input"

@@ -2,23 +2,43 @@
   // @ts-nocheck
   import { Plus } from "@lucide/svelte";
   import ObjectiveRow from "./ObjectiveRow.svelte";
+  import { buildVisibleObjectiveRows } from "../objectiveFolding.js";
   let { objectives, onAdd, onUpdate, onDelete, onMove, onIndent, onOutdent } = $props();
+
+  let foldedObjectiveIds = $state([]);
+  let visibleObjectives = $derived(buildVisibleObjectiveRows(objectives, foldedObjectiveIds));
+
+  $effect(() => {
+    const validFoldedIds = visibleObjectives.foldedIds;
+    if (validFoldedIds.length !== foldedObjectiveIds.length || validFoldedIds.some((id, index) => id !== foldedObjectiveIds[index])) {
+      foldedObjectiveIds = validFoldedIds;
+    }
+  });
+
+  function toggleFold(id) {
+    foldedObjectiveIds = foldedObjectiveIds.includes(id)
+      ? foldedObjectiveIds.filter((item) => item !== id)
+      : [...foldedObjectiveIds, id];
+  }
 </script>
 
 <section id="objectives" class="week-section">
   <header><div><h2>Objectives</h2></div></header>
   <div class="objectives-list">
-    {#each objectives as objective, index (objective.id)}
+    {#each visibleObjectives.rows as row (row.objective.id)}
       <ObjectiveRow
-        {objective}
-        canMoveUp={index > 0}
-        canMoveDown={index < objectives.length - 1}
-        onUpdate={(patch) => onUpdate(objective.id, patch)}
-        onDelete={() => onDelete(objective.id)}
-        onMoveUp={() => onMove(objective.id, "up")}
-        onMoveDown={() => onMove(objective.id, "down")}
-        onIndent={() => onIndent(objective.id)}
-        onOutdent={() => onOutdent(objective.id)}
+        objective={row.objective}
+        hasChildren={row.hasChildren}
+        isFolded={row.isFolded}
+        canMoveUp={row.index > 0}
+        canMoveDown={row.index < objectives.length - 1}
+        onToggleFold={() => toggleFold(row.objective.id)}
+        onUpdate={(patch) => onUpdate(row.objective.id, patch)}
+        onDelete={() => onDelete(row.objective.id)}
+        onMoveUp={() => onMove(row.objective.id, "up")}
+        onMoveDown={() => onMove(row.objective.id, "down")}
+        onIndent={() => onIndent(row.objective.id)}
+        onOutdent={() => onOutdent(row.objective.id)}
       />
     {/each}
     {#if objectives.length === 0}
