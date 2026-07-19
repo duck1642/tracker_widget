@@ -1,12 +1,24 @@
 <script>
   // @ts-nocheck
-  import { Plus } from "@lucide/svelte";
+  import { ChevronDown, ChevronUp, IndentDecrease, IndentIncrease, Plus, Trash2 } from "@lucide/svelte";
+  import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
   import ObjectiveRow from "./ObjectiveRow.svelte";
   import { buildVisibleObjectiveRows } from "../objectiveFolding.js";
   let { objectives, onAdd, onUpdate, onDelete, onMove, onIndent, onOutdent } = $props();
 
   let foldedObjectiveIds = $state([]);
+  let contextMenu = $state(null);
   let visibleObjectives = $derived(buildVisibleObjectiveRows(objectives, foldedObjectiveIds));
+  let contextObjective = $derived(contextMenu ? objectives.find((objective) => objective.id === contextMenu.id) : null);
+  let contextObjectiveIndex = $derived(contextObjective ? objectives.findIndex((objective) => objective.id === contextObjective.id) : -1);
+  let contextMenuItems = $derived(contextObjective ? [
+    { label: "Indent", icon: IndentIncrease, disabled: (contextObjective.indent || 0) >= 2, onclick: () => runContextAction(onIndent, contextObjective.id) },
+    { label: "Outdent", icon: IndentDecrease, disabled: (contextObjective.indent || 0) <= 0, onclick: () => runContextAction(onOutdent, contextObjective.id) },
+    { label: "Move Up", icon: ChevronUp, disabled: contextObjectiveIndex <= 0, onclick: () => runContextAction(onMove, contextObjective.id, "up") },
+    { label: "Move Down", icon: ChevronDown, disabled: contextObjectiveIndex >= objectives.length - 1, onclick: () => runContextAction(onMove, contextObjective.id, "down") },
+    { separator: true },
+    { label: "Delete", icon: Trash2, danger: true, onclick: () => runContextAction(onDelete, contextObjective.id) }
+  ] : []);
 
   $effect(() => {
     const validFoldedIds = visibleObjectives.foldedIds;
@@ -19,6 +31,20 @@
     foldedObjectiveIds = foldedObjectiveIds.includes(id)
       ? foldedObjectiveIds.filter((item) => item !== id)
       : [...foldedObjectiveIds, id];
+  }
+
+  function openContextMenu(event, id) {
+    event.preventDefault();
+    contextMenu = { x: event.clientX, y: event.clientY, id };
+  }
+
+  function closeContextMenu() {
+    contextMenu = null;
+  }
+
+  function runContextAction(action, ...args) {
+    closeContextMenu();
+    action(...args);
   }
 </script>
 
@@ -39,6 +65,7 @@
         onMoveDown={() => onMove(row.objective.id, "down")}
         onIndent={() => onIndent(row.objective.id)}
         onOutdent={() => onOutdent(row.objective.id)}
+        onOpenContextMenu={(event) => openContextMenu(event, row.objective.id)}
       />
     {/each}
     {#if objectives.length === 0}
@@ -50,7 +77,26 @@
       </button>
     </div>
   </div>
+  {#if contextMenu && contextObjective}
+    <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenuItems} ariaLabel="Objective actions" />
+  {/if}
 </section>
+
+<svelte:window
+  onpointerdown={(event) => {
+    if (!contextMenu) return;
+    if (event.target instanceof Element && event.target.closest(".todo-context-menu")) return;
+    closeContextMenu();
+  }}
+  onkeydown={(event) => {
+    if (contextMenu && event.key === "Escape") {
+      event.preventDefault();
+      closeContextMenu();
+    }
+  }}
+  onscrollcapture={closeContextMenu}
+  onwheel={closeContextMenu}
+/>
 
 <style>
   .objectives-list { display: flex; flex-direction: column; }

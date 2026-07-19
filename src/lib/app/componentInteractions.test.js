@@ -806,6 +806,60 @@ describe("logger editing", () => {
     expect(screen.getByText("Child")).toBeTruthy();
   });
 
+  it("offers single-objective structure actions from the context menu", async () => {
+    const { default: ObjectivesSection } = await import("$lib/features/weekly/components/ObjectivesSection.svelte");
+    const onIndent = vi.fn();
+    const onOutdent = vi.fn();
+    const onMove = vi.fn();
+    const onDelete = vi.fn();
+    render(ObjectivesSection, {
+      objectives: [
+        { id: "first", subjects: [], status: "open", description: "First", indent: 0 },
+        { id: "target", subjects: [], status: "open", description: "Target", indent: 1 },
+        { id: "last", subjects: [], status: "open", description: "Last", indent: 0 }
+      ],
+      onAdd: vi.fn(), onUpdate: vi.fn(), onDelete, onMove, onIndent, onOutdent
+    });
+
+    const targetRow = screen.getByText("Target").closest("article");
+    await fireEvent.contextMenu(targetRow, { clientX: 40, clientY: 50 });
+    expect(screen.getByRole("menu", { name: "Objective actions" })).toBeTruthy();
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Indent" }));
+    expect(onIndent).toHaveBeenCalledWith("target");
+    expect(screen.queryByRole("menu", { name: "Objective actions" })).toBeNull();
+
+    await fireEvent.contextMenu(targetRow);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Outdent" }));
+    expect(onOutdent).toHaveBeenCalledWith("target");
+
+    await fireEvent.contextMenu(targetRow);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Move Up" }));
+    expect(onMove).toHaveBeenCalledWith("target", "up");
+
+    await fireEvent.contextMenu(targetRow);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Move Down" }));
+    expect(onMove).toHaveBeenCalledWith("target", "down");
+
+    await fireEvent.contextMenu(targetRow);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+    expect(onDelete).toHaveBeenCalledWith("target");
+  });
+
+  it("disables unavailable objective context actions and closes with Escape", async () => {
+    const { default: ObjectivesSection } = await import("$lib/features/weekly/components/ObjectivesSection.svelte");
+    render(ObjectivesSection, {
+      objectives: [{ id: "only", subjects: [], status: "open", description: "Only", indent: 0 }],
+      onAdd: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn(), onMove: vi.fn(), onIndent: vi.fn(), onOutdent: vi.fn()
+    });
+
+    await fireEvent.contextMenu(screen.getByText("Only").closest("article"));
+    expect(screen.getByRole("menuitem", { name: "Outdent" }).disabled).toBe(true);
+    expect(screen.getByRole("menuitem", { name: "Move Up" }).disabled).toBe(true);
+    expect(screen.getByRole("menuitem", { name: "Move Down" }).disabled).toBe(true);
+    await fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("menu", { name: "Objective actions" })).toBeNull();
+  });
+
   it("emits Weekly objective move actions", async () => {
     const onMoveUp = vi.fn();
     const onMoveDown = vi.fn();

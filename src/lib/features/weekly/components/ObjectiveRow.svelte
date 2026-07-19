@@ -2,7 +2,7 @@
   // @ts-nocheck
   import { ChevronDown, ChevronRight, ChevronUp, Trash2 } from "@lucide/svelte";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
-  let { objective, hasChildren = false, isFolded = false, canMoveUp = true, canMoveDown = true, onToggleFold, onUpdate, onDelete, onMoveUp, onMoveDown, onIndent, onOutdent } = $props();
+  let { objective, hasChildren = false, isFolded = false, canMoveUp = true, canMoveDown = true, onToggleFold, onUpdate, onDelete, onMoveUp, onMoveDown, onIndent, onOutdent, onOpenContextMenu } = $props();
 
   let isEditingDesc = $state(false);
   let showStatusDropdown = $state(false);
@@ -45,7 +45,7 @@
   }
 </script>
 
-<article class="objective-card" style:margin-left={`${(objective.indent || 0) * 24}px`}>
+<article class="objective-card" style:margin-left={`${(objective.indent || 0) * 24}px`} oncontextmenu={(event) => onOpenContextMenu?.(event)}>
   <div class="objective-marker">
     {#if hasChildren}
       <button
