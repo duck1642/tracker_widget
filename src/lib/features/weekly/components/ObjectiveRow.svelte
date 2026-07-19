@@ -46,11 +46,11 @@
 </script>
 
 <article class="objective-card" style:margin-left={`${(objective.indent || 0) * 24}px`}>
-  <div class="row-top">
+  <div class="objective-marker">
     {#if hasChildren}
       <button
         type="button"
-        class="fold-btn"
+        class="objective-fold-btn"
         onclick={onToggleFold}
         aria-label={isFolded ? "Expand objective" : "Collapse objective"}
         title={isFolded ? "Expand objective" : "Collapse objective"}
@@ -58,79 +58,119 @@
         {#if isFolded}<ChevronRight size={13} />{:else}<ChevronDown size={13} />{/if}
       </button>
     {:else}
-      <span class="fold-placeholder" aria-hidden="true"></span>
+      <span class="objective-leaf-dot" aria-hidden="true"></span>
     {/if}
-    {#if isEditingDesc}
-      <input
-        class="desc-input quiet-edit-input"
-        value={objective.description}
-        oninput={(event) => onUpdate({ description: event.currentTarget.value.replace(/[\r\n]/g, " ") })}
-        onblur={() => isEditingDesc = false}
-        onkeydown={handleDescriptionKeydown}
-        placeholder="Objective description"
-        use:focus
-      />
-    {:else}
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <span class="desc-text" onclick={() => isEditingDesc = true}>
-        {objective.description || "Add objective description..."}
-      </span>
-    {/if}
-    <div class="objective-actions">
-      <button type="button" class="row-btn" disabled={!canMoveUp} onclick={onMoveUp} aria-label="Move objective up" title="Move up">
-        <ChevronUp size={13} />
-      </button>
-      <button type="button" class="row-btn" disabled={!canMoveDown} onclick={onMoveDown} aria-label="Move objective down" title="Move down">
-        <ChevronDown size={13} />
-      </button>
-      <button type="button" class="row-btn del" onclick={onDelete} aria-label="Delete objective" title="Delete">
-        <Trash2 size={13} />
-      </button>
-    </div>
   </div>
-  <div class="row-bottom">
-    <div class="status-dropdown-container" bind:this={dropdownEl}>
-      <button
-        type="button"
-        aria-label="Status"
-        class={`status-badge ${objective.status}`}
-        onclick={() => showStatusDropdown = !showStatusDropdown}
-      >
-        {capitalize(objective.status)}
-      </button>
 
-      {#if showStatusDropdown}
-        <div class="dropdown-menu" role="menu">
-          {#each ["open", "done", "partial", "cancelled"] as opt}
-            <button
-              type="button"
-              class={`menu-item ${opt} ${objective.status === opt ? "active" : ""}`}
-              onclick={() => {
-                onUpdate({ status: opt });
-                showStatusDropdown = false;
-              }}
-              role="menuitem"
-              aria-label={capitalize(opt)}
-            >
-              {capitalize(opt)}
-            </button>
-          {/each}
-        </div>
+  <div class="objective-content">
+    <div class="row-top">
+      {#if isEditingDesc}
+        <input
+          class="desc-input quiet-edit-input"
+          value={objective.description}
+          oninput={(event) => onUpdate({ description: event.currentTarget.value.replace(/[\r\n]/g, " ") })}
+          onblur={() => isEditingDesc = false}
+          onkeydown={handleDescriptionKeydown}
+          placeholder="Objective description"
+          use:focus
+        />
+      {:else}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <span class="desc-text" onclick={() => isEditingDesc = true}>
+          {objective.description || "Add objective description..."}
+        </span>
       {/if}
+      <div class="objective-actions">
+        <button type="button" class="row-btn" disabled={!canMoveUp} onclick={onMoveUp} aria-label="Move objective up" title="Move up">
+          <ChevronUp size={13} />
+        </button>
+        <button type="button" class="row-btn" disabled={!canMoveDown} onclick={onMoveDown} aria-label="Move objective down" title="Move down">
+          <ChevronDown size={13} />
+        </button>
+        <button type="button" class="row-btn del" onclick={onDelete} aria-label="Delete objective" title="Delete">
+          <Trash2 size={13} />
+        </button>
+      </div>
     </div>
+    <div class="row-bottom">
+      <div class="status-dropdown-container" bind:this={dropdownEl}>
+        <button
+          type="button"
+          aria-label="Status"
+          class={`status-badge ${objective.status}`}
+          onclick={() => showStatusDropdown = !showStatusDropdown}
+        >
+          {capitalize(objective.status)}
+        </button>
 
-    <SubjectInput subjects={objective.subjects} onChange={(subjects) => onUpdate({ subjects })} variant="badge" />
+        {#if showStatusDropdown}
+          <div class="dropdown-menu" role="menu">
+            {#each ["open", "done", "partial", "cancelled"] as opt}
+              <button
+                type="button"
+                class={`menu-item ${opt} ${objective.status === opt ? "active" : ""}`}
+                onclick={() => {
+                  onUpdate({ status: opt });
+                  showStatusDropdown = false;
+                }}
+                role="menuitem"
+                aria-label={capitalize(opt)}
+              >
+                {capitalize(opt)}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      <SubjectInput subjects={objective.subjects} onChange={(subjects) => onUpdate({ subjects })} variant="badge" />
+    </div>
   </div>
 </article>
 
 <style>
   .objective-card {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    align-items: start;
+    column-gap: 6px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .objective-marker {
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 24px;
+  }
+  .objective-fold-btn {
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+  .objective-fold-btn:hover {
+    color: var(--text-color);
+  }
+  .objective-leaf-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--border-strong);
+  }
+  .objective-content {
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border-subtle);
   }
   .row-top {
     display: flex;
