@@ -1,6 +1,9 @@
 <script>
   // @ts-nocheck
-  import { ChevronDown, ChevronUp, Plus, Trash2, X } from "@lucide/svelte";
+  import { ChevronDown, ChevronUp, ClipboardPaste, Copy, Plus, Scissors, TextSelect, Trash2, X } from "@lucide/svelte";
+  import { appStore } from "$lib/app/appStore.svelte.js";
+  import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
+  import { captureEditableText, copyEditableSelection, cutEditableSelection, hasEditableSelection, pasteIntoEditable, selectAllEditableText } from "$lib/shared/services/editableTextClipboard.js";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
   import TimeInput from "$lib/shared/components/TimeInput.svelte";
   import { planSummary } from "../weeklyIndexParser.js";
@@ -15,14 +18,75 @@
   } = $props();
 
   let editingActivityId = $state(null);
+  let contextMenu = $state(null);
   let summary = $derived(planSummary(entry));
+  let contextActivityIndex = $derived(contextMenu ? (entry.activities || []).findIndex((activity) => activity.id === contextMenu.activityId) : -1);
+  let contextMenuItems = $derived.by(() => {
+    if (!contextMenu) return [];
+    const activityId = contextMenu.activityId;
+    const editable = contextMenu.editable;
+    return [
+      ...(editable ? [
+        { label: "Cut", icon: Scissors, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(cutEditableSelection, editable) },
+        { label: "Copy", icon: Copy, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(copyEditableSelection, editable) },
+        { label: "Paste", icon: ClipboardPaste, onclick: () => runTextAction(pasteIntoEditable, editable) },
+        { label: "Select All", icon: TextSelect, disabled: !editable.target.value, onclick: () => runTextAction(selectAllEditableText, editable) },
+        { separator: true }
+      ] : []),
+      { label: "Move Up", icon: ChevronUp, disabled: contextActivityIndex <= 0, onclick: () => runEntityAction(onMoveActivity, activityId, "up") },
+      { label: "Move Down", icon: ChevronDown, disabled: contextActivityIndex < 0 || contextActivityIndex >= (entry.activities || []).length - 1, onclick: () => runEntityAction(onMoveActivity, activityId, "down") },
+      { separator: true },
+      { label: "Delete", icon: Trash2, danger: true, onclick: () => runEntityAction(onDeleteActivity, activityId) }
+    ];
+  });
 
   function focus(node) {
     node.focus();
   }
+
+  function openContextMenu(event, activityId) {
+    event.preventDefault();
+    contextMenu = { activityId, x: event.clientX, y: event.clientY, editable: captureEditableText(event.target) };
+  }
+
+  function closeContextMenu() {
+    contextMenu = null;
+  }
+
+  function runEntityAction(action, ...args) {
+    closeContextMenu();
+    action(...args);
+  }
+
+  async function runTextAction(action, editable) {
+    closeContextMenu();
+    try {
+      await action(editable);
+    } catch (error) {
+      appStore.showStatus(`Clipboard failed: ${error}`);
+    }
+  }
 </script>
 
-<svelte:window onkeydown={(event) => { if (event.key === "Escape") onClose(); }} />
+<svelte:window
+  onpointerdown={(event) => {
+    if (!contextMenu) return;
+    if (event.target instanceof Element && event.target.closest(".todo-context-menu")) return;
+    closeContextMenu();
+  }}
+  onkeydown={(event) => {
+    if (event.key !== "Escape") return;
+    if (contextMenu) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeContextMenu();
+    } else {
+      onClose();
+    }
+  }}
+  onscrollcapture={closeContextMenu}
+  onwheel={closeContextMenu}
+/>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div class="modal-backdrop" style="overflow-y: auto" role="presentation" onclick={onClose}>
@@ -47,7 +111,7 @@
 
     <div class="activity-list">
       {#each entry.activities || [] as activity, index (activity.id)}
-        <article class="planned-activity">
+        <article class="planned-activity" oncontextmenu={(event) => openContextMenu(event, activity.id)}>
           <div class="row-top">
             {#if editingActivityId === activity.id}
               <input
@@ -98,6 +162,16 @@
     </footer>
   </div>
 </div>
+
+{#if contextMenu}
+  <ContextMenu
+    x={contextMenu.x}
+    y={contextMenu.y}
+    items={contextMenuItems}
+    ariaLabel="Planned activity actions"
+    preserveFocus={Boolean(contextMenu.editable)}
+  />
+{/if}
 
 <style>
   .modal-backdrop {

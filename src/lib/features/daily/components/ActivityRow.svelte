@@ -3,7 +3,7 @@
   import { ChevronDown, ChevronUp, Trash2 } from "@lucide/svelte";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
   import TimeInput from "$lib/shared/components/TimeInput.svelte";
-  let { activity, canMoveUp = true, canMoveDown = true, onUpdate, onDelete, onMoveUp, onMoveDown } = $props();
+  let { activity, canMoveUp = true, canMoveDown = true, onUpdate, onDelete, onMoveUp, onMoveDown, onOpenContextMenu } = $props();
 
   let isEditingDesc = $state(false);
 
@@ -12,7 +12,7 @@
   }
 </script>
 
-<article class="activity-card">
+<article class="activity-card" oncontextmenu={(event) => { event.stopPropagation(); onOpenContextMenu?.(event); }}>
   <div class="row-top">
     {#if isEditingDesc}
       <input

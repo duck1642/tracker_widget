@@ -13,6 +13,8 @@
     onDeleteActivity,
     onMoveActivity,
     onDeleteSession,
+    onOpenSessionContextMenu,
+    onOpenActivityContextMenu,
     onRenameSession,
     onDragStart,
     onDragOver,
@@ -125,6 +127,7 @@
     onLeave: onDragLeave,
     onDrop
   }}
+  oncontextmenu={(event) => onOpenSessionContextMenu?.(event)}
 >
   <header>
     <span
@@ -211,6 +214,7 @@
         onDelete={() => onDeleteActivity(activity.id)}
         onMoveUp={() => onMoveActivity(activity.id, "up")}
         onMoveDown={() => onMoveActivity(activity.id, "down")}
+        onOpenContextMenu={(event) => onOpenActivityContextMenu?.(event, activity.id)}
       />
     {/each}
     {#if session.activities.length === 0}<p>No activities yet.</p>{/if}

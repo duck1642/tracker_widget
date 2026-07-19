@@ -432,6 +432,66 @@ describe("logger editing", () => {
     window.removeEventListener("keydown", onWindowEscape);
   });
 
+  it("keeps daily session and activity context menus separate", async () => {
+    dailyStore.loaded = true;
+    dailyStore.date = "2026-07-19";
+    dailyStore.sessions = [
+      { id: "s1", name: "First session", activities: [
+        { id: "a1", subjects: ["rust"], minutes: 20, description: "First activity" },
+        { id: "a2", subjects: ["test"], minutes: 10, description: "Second activity" }
+      ] },
+      { id: "s2", name: "Second session", activities: [] }
+    ];
+    const moveSessionTo = vi.spyOn(dailyStore, "moveSessionTo").mockReturnValue(true);
+    const moveActivity = vi.spyOn(dailyStore, "moveActivity").mockReturnValue(true);
+    const removeActivity = vi.spyOn(dailyStore, "removeActivity").mockImplementation(() => {});
+
+    render(DailyPanel);
+    await fireEvent.contextMenu(screen.getByText("First session").closest(".session-card"));
+    expect(screen.getByRole("menu", { name: "Session actions" })).toBeTruthy();
+    expect(screen.queryByRole("menu", { name: "Activity actions" })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "Move Up" }).disabled).toBe(true);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Move Down" }));
+    expect(moveSessionTo).toHaveBeenCalledWith("s1", "s2", "after");
+
+    await fireEvent.contextMenu(screen.getByText("First activity").closest(".activity-card"));
+    expect(screen.getByRole("menu", { name: "Activity actions" })).toBeTruthy();
+    expect(screen.queryByRole("menu", { name: "Session actions" })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "Move Up" }).disabled).toBe(true);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Move Down" }));
+    expect(moveActivity).toHaveBeenCalledWith("s1", "a1", "down");
+
+    await fireEvent.contextMenu(screen.getByText("Second activity").closest(".activity-card"));
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+    expect(removeActivity).toHaveBeenCalledWith("s1", "a2");
+  });
+
+  it("adds clipboard actions to daily session and activity editors", async () => {
+    dailyStore.loaded = true;
+    dailyStore.date = "2026-07-19";
+    dailyStore.sessions = [{ id: "s1", name: "Session name", activities: [
+      { id: "a1", subjects: ["rust"], minutes: 20, description: "Activity text" }
+    ] }];
+    vi.spyOn(dailyStore, "save").mockResolvedValue(true);
+
+    render(DailyPanel);
+    await fireEvent.click(screen.getByText("Session name"));
+    const sessionInput = screen.getByDisplayValue("Session name");
+    sessionInput.setSelectionRange(0, 7);
+    await fireEvent.contextMenu(sessionInput);
+    expect(screen.getByRole("menuitem", { name: "Copy" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toBeTruthy();
+    await fireEvent.keyDown(window, { key: "Escape" });
+
+    await fireEvent.click(screen.getByText("Activity text"));
+    const activityInput = screen.getByPlaceholderText("What happened?");
+    activityInput.setSelectionRange(0, 8);
+    await fireEvent.contextMenu(activityInput);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Cut" }));
+    await vi.waitFor(() => expect(dailyStore.sessions[0].activities[0].description).toBe(" text"));
+    expect(writeText).toHaveBeenCalledWith("Activity");
+  });
+
   it("renders a zero-minute default when TimeInput has no minutes prop", async () => {
     const { default: TimeInput } = await import("$lib/shared/components/TimeInput.svelte");
     render(TimeInput, { onChange: vi.fn(), variant: "badge" });
@@ -661,6 +721,45 @@ describe("logger editing", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Open planned activities for Development" }));
     await fireEvent.click(screen.getByRole("presentation"));
     expect(screen.queryByRole("dialog", { name: "Planned activities for Development" })).toBeNull();
+  });
+
+  it("adds separate structure and clipboard actions to weekly planned activities", async () => {
+    const onUpdateActivity = vi.fn();
+    const onDeleteActivity = vi.fn();
+    const onMoveActivity = vi.fn();
+    render(PlanSection, {
+      plan: [{
+        id: "p1", day: "Mon", session: "Development",
+        activities: [
+          { id: "a1", subjects: ["rust"], minutes: 30, description: "First planned" },
+          { id: "a2", subjects: ["test"], minutes: 20, description: "Second planned" }
+        ]
+      }],
+      onAdd: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn(), onMove: vi.fn(),
+      onMoveToDay: vi.fn(), onAddActivity: vi.fn(), onUpdateActivity,
+      onDeleteActivity, onMoveActivity
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Open planned activities for Development" }));
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "First planned" }).closest(".planned-activity"));
+    expect(screen.getByRole("menu", { name: "Planned activity actions" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Copy" })).toBeNull();
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Move Down" }));
+    expect(onMoveActivity).toHaveBeenCalledWith("p1", "a1", "down");
+
+    await fireEvent.click(screen.getByRole("button", { name: "First planned" }));
+    const input = screen.getByPlaceholderText("Planned activity");
+    input.setSelectionRange(0, 5);
+    await fireEvent.contextMenu(input);
+    expect(screen.getByRole("menuitem", { name: "Cut" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toBeTruthy();
+    await fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("menu", { name: "Planned activity actions" })).toBeNull();
+    expect(screen.getByRole("dialog", { name: "Planned activities for Development" })).toBeTruthy();
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Second planned" }).closest(".planned-activity"));
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+    expect(onDeleteActivity).toHaveBeenCalledWith("p1", "a2");
   });
 
   it("opens weekly actual read-only details and closes the modal", async () => {
