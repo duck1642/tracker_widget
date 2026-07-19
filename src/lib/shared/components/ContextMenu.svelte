@@ -5,7 +5,8 @@
     x = 0,
     y = 0,
     items = [],
-    ariaLabel = "Context actions"
+    ariaLabel = "Context actions",
+    preserveFocus = false
   } = $props();
 
   let menuElement = $state();
@@ -48,6 +49,7 @@
         role="menuitem"
         class:danger-item={item.danger}
         disabled={item.disabled}
+        onpointerdown={(event) => { if (preserveFocus) event.preventDefault(); }}
         onclick={item.onclick}
       >
         {#if item.icon}

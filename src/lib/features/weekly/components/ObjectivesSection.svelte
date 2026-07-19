@@ -1,7 +1,9 @@
 <script>
   // @ts-nocheck
-  import { ChevronDown, ChevronUp, IndentDecrease, IndentIncrease, Plus, Trash2 } from "@lucide/svelte";
+  import { ChevronDown, ChevronUp, ClipboardPaste, Copy, IndentDecrease, IndentIncrease, Plus, Scissors, Trash2 } from "@lucide/svelte";
+  import { appStore } from "$lib/app/appStore.svelte.js";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
+  import { captureEditableText, copyEditableSelection, cutEditableSelection, hasEditableSelection, pasteIntoEditable } from "$lib/shared/services/editableTextClipboard.js";
   import ObjectiveRow from "./ObjectiveRow.svelte";
   import { buildVisibleObjectiveRows } from "../objectiveFolding.js";
   let { objectives, onAdd, onUpdate, onDelete, onMove, onIndent, onOutdent } = $props();
@@ -11,14 +13,24 @@
   let visibleObjectives = $derived(buildVisibleObjectiveRows(objectives, foldedObjectiveIds));
   let contextObjective = $derived(contextMenu ? objectives.find((objective) => objective.id === contextMenu.id) : null);
   let contextObjectiveIndex = $derived(contextObjective ? objectives.findIndex((objective) => objective.id === contextObjective.id) : -1);
-  let contextMenuItems = $derived(contextObjective ? [
-    { label: "Indent", icon: IndentIncrease, disabled: (contextObjective.indent || 0) >= 2, onclick: () => runContextAction(onIndent, contextObjective.id) },
-    { label: "Outdent", icon: IndentDecrease, disabled: (contextObjective.indent || 0) <= 0, onclick: () => runContextAction(onOutdent, contextObjective.id) },
-    { label: "Move Up", icon: ChevronUp, disabled: contextObjectiveIndex <= 0, onclick: () => runContextAction(onMove, contextObjective.id, "up") },
-    { label: "Move Down", icon: ChevronDown, disabled: contextObjectiveIndex >= objectives.length - 1, onclick: () => runContextAction(onMove, contextObjective.id, "down") },
-    { separator: true },
-    { label: "Delete", icon: Trash2, danger: true, onclick: () => runContextAction(onDelete, contextObjective.id) }
-  ] : []);
+  let contextMenuItems = $derived.by(() => {
+    if (!contextObjective) return [];
+    const editable = contextMenu?.editable;
+    return [
+      ...(editable ? [
+        { label: "Cut", icon: Scissors, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(cutEditableSelection, editable) },
+        { label: "Copy", icon: Copy, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(copyEditableSelection, editable) },
+        { label: "Paste", icon: ClipboardPaste, onclick: () => runTextAction(pasteIntoEditable, editable) },
+        { separator: true }
+      ] : []),
+      { label: "Indent", icon: IndentIncrease, disabled: (contextObjective.indent || 0) >= 2, onclick: () => runContextAction(onIndent, contextObjective.id) },
+      { label: "Outdent", icon: IndentDecrease, disabled: (contextObjective.indent || 0) <= 0, onclick: () => runContextAction(onOutdent, contextObjective.id) },
+      { label: "Move Up", icon: ChevronUp, disabled: contextObjectiveIndex <= 0, onclick: () => runContextAction(onMove, contextObjective.id, "up") },
+      { label: "Move Down", icon: ChevronDown, disabled: contextObjectiveIndex >= objectives.length - 1, onclick: () => runContextAction(onMove, contextObjective.id, "down") },
+      { separator: true },
+      { label: "Delete", icon: Trash2, danger: true, onclick: () => runContextAction(onDelete, contextObjective.id) }
+    ];
+  });
 
   $effect(() => {
     const validFoldedIds = visibleObjectives.foldedIds;
@@ -35,7 +47,7 @@
 
   function openContextMenu(event, id) {
     event.preventDefault();
-    contextMenu = { x: event.clientX, y: event.clientY, id };
+    contextMenu = { x: event.clientX, y: event.clientY, id, editable: captureEditableText(event.target) };
   }
 
   function closeContextMenu() {
@@ -45,6 +57,15 @@
   function runContextAction(action, ...args) {
     closeContextMenu();
     action(...args);
+  }
+
+  async function runTextAction(action, editable) {
+    closeContextMenu();
+    try {
+      await action(editable);
+    } catch (error) {
+      appStore.showStatus(`Clipboard failed: ${error}`);
+    }
   }
 </script>
 
@@ -78,7 +99,7 @@
     </div>
   </div>
   {#if contextMenu && contextObjective}
-    <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenuItems} ariaLabel="Objective actions" />
+    <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenuItems} ariaLabel="Objective actions" preserveFocus={Boolean(contextMenu.editable)} />
   {/if}
 </section>
 

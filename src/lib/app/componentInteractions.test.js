@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // @ts-nocheck
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/svelte";
 import { tick } from "svelte";
 import MainTabs from "./MainTabs.svelte";
@@ -30,6 +30,19 @@ import { subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
 import { sessionHistoryStore } from "./sessionHistoryStore.svelte.js";
 import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
 import * as logWorkspaceService from "$lib/shared/services/logWorkspaceService.js";
+import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
+
+vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
+  readText: vi.fn(),
+  writeText: vi.fn()
+}));
+
+beforeEach(() => {
+  readText.mockReset();
+  writeText.mockReset();
+  readText.mockResolvedValue("");
+  writeText.mockResolvedValue();
+});
 
 afterEach(() => {
   cleanup();
@@ -40,6 +53,7 @@ afterEach(() => {
   appStore.logsRootPath = "";
   appStore.filePath = "";
   appStore.frontmatterMode = "off";
+  appStore.statusMessage = "";
   appStore.currentView = "todo";
   todoStore.fileMissing = false;
   dailyStore.path = "";
@@ -824,6 +838,7 @@ describe("logger editing", () => {
     const targetRow = screen.getByText("Target").closest("article");
     await fireEvent.contextMenu(targetRow, { clientX: 40, clientY: 50 });
     expect(screen.getByRole("menu", { name: "Objective actions" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Copy" })).toBeNull();
     await fireEvent.click(screen.getByRole("menuitem", { name: "Indent" }));
     expect(onIndent).toHaveBeenCalledWith("target");
     expect(screen.queryByRole("menu", { name: "Objective actions" })).toBeNull();
@@ -858,6 +873,68 @@ describe("logger editing", () => {
     expect(screen.getByRole("menuitem", { name: "Move Down" }).disabled).toBe(true);
     await fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByRole("menu", { name: "Objective actions" })).toBeNull();
+  });
+
+  it("adds focus-preserving text actions to editable objective targets", async () => {
+    const { default: ObjectivesSection } = await import("$lib/features/weekly/components/ObjectivesSection.svelte");
+    render(ObjectivesSection, {
+      objectives: [{ id: "objective", subjects: ["rust"], status: "open", description: "Editable objective", indent: 0 }],
+      onAdd: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn(), onMove: vi.fn(), onIndent: vi.fn(), onOutdent: vi.fn()
+    });
+
+    await fireEvent.click(screen.getByText("Editable objective"));
+    const description = screen.getByPlaceholderText("Objective description");
+    description.setSelectionRange(0, 8);
+    await fireEvent.contextMenu(description);
+
+    const cut = screen.getByRole("menuitem", { name: "Cut" });
+    const copy = screen.getByRole("menuitem", { name: "Copy" });
+    expect(cut.disabled).toBe(false);
+    expect(copy.disabled).toBe(false);
+    expect(screen.getByRole("menuitem", { name: "Paste" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toBeTruthy();
+    expect(await fireEvent.pointerDown(copy)).toBe(false);
+    expect(document.activeElement).toBe(description);
+    expect(description.selectionStart).toBe(0);
+    expect(description.selectionEnd).toBe(8);
+
+    await fireEvent.keyDown(window, { key: "Escape" });
+    description.setSelectionRange(3, 3);
+    await fireEvent.contextMenu(description);
+    expect(screen.getByRole("menuitem", { name: "Cut" }).disabled).toBe(true);
+    expect(screen.getByRole("menuitem", { name: "Copy" }).disabled).toBe(true);
+    await fireEvent.keyDown(window, { key: "Escape" });
+
+    const subjectInput = screen.getByRole("textbox", { name: "Add subject" });
+    await fireEvent.contextMenu(subjectInput);
+    expect(screen.getByRole("menuitem", { name: "Paste" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Indent" })).toBeTruthy();
+    readText.mockRejectedValueOnce(new Error("denied"));
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Paste" }));
+    await vi.waitFor(() => expect(appStore.statusMessage).toContain("Clipboard failed: Error: denied"));
+  });
+
+  it("routes objective Cut and Paste through existing input updates", async () => {
+    const { default: ObjectivesSection } = await import("$lib/features/weekly/components/ObjectivesSection.svelte");
+    const onUpdate = vi.fn();
+    render(ObjectivesSection, {
+      objectives: [{ id: "objective", subjects: ["rust"], status: "open", description: "Editable objective", indent: 0 }],
+      onAdd: vi.fn(), onUpdate, onDelete: vi.fn(), onMove: vi.fn(), onIndent: vi.fn(), onOutdent: vi.fn()
+    });
+
+    await fireEvent.click(screen.getByText("Editable objective"));
+    const description = screen.getByPlaceholderText("Objective description");
+    description.setSelectionRange(0, 8);
+    await fireEvent.contextMenu(description);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Cut" }));
+    await vi.waitFor(() => expect(onUpdate).toHaveBeenCalledWith("objective", { description: " objective" }));
+    expect(writeText).toHaveBeenCalledWith("Editable");
+
+    readText.mockResolvedValueOnce("Updated");
+    description.setSelectionRange(0, 0);
+    await fireEvent.contextMenu(description);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Paste" }));
+    await vi.waitFor(() => expect(onUpdate).toHaveBeenCalledWith("objective", { description: "Updated objective" }));
   });
 
   it("emits Weekly objective move actions", async () => {
