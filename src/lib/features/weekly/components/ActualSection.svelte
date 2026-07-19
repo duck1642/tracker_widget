@@ -4,8 +4,9 @@
   import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
   import ActualDetailsModal from "./ActualDetailsModal.svelte";
 
-  let { actual, onRefresh } = $props();
+  let { actual, onRefresh, collapsedDays = [], toggleDay } = $props();
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  let gridTemplateColumns = $derived(days.map((day) => collapsedDays.includes(day) ? "56px" : "minmax(136px, 1fr)").join(" "));
   let selectedActual = $state(null);
 </script>
 
@@ -17,15 +18,17 @@
     </button>
   </header>
 
-  <div class="week-board">
+  <div class="week-board" style:grid-template-columns={gridTemplateColumns}>
     {#each days as day}
       {@const entries = actual.filter((entry) => entry.day === day)}
-      <section class="day-column" aria-label={`${day} actual`}>
+      <section class="day-column" class:collapsed={collapsedDays.includes(day)} aria-label={`${day} actual`}>
         <header class="day-header">
-          <h3>{day}</h3>
-          <span>{entries.length}</span>
+          <button type="button" onclick={() => toggleDay(day)} aria-expanded={!collapsedDays.includes(day)} aria-label={`${collapsedDays.includes(day) ? "Expand" : "Collapse"} ${day}`} disabled={!collapsedDays.includes(day) && collapsedDays.length === 6}>
+            <span class="day-name">{day}</span><span>{entries.length}</span>
+          </button>
         </header>
 
+        {#if !collapsedDays.includes(day)}
         <div class="card-list">
           {#each entries as entry}
             <button
@@ -46,6 +49,7 @@
             <p class="day-empty">No records</p>
           {/if}
         </div>
+        {/if}
       </section>
     {/each}
   </div>
@@ -58,7 +62,6 @@
 <style>
   .week-board {
     display: grid;
-    grid-template-columns: repeat(7, minmax(136px, 1fr));
     gap: 8px;
     overflow-x: hidden;
     padding-bottom: 2px;
@@ -75,17 +78,33 @@
     overflow: hidden;
   }
 
+  .day-column.collapsed { min-height: 0; }
+
   .day-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     min-height: 38px;
-    padding: 0 9px;
     border-bottom: 1px solid var(--border-subtle);
     background: var(--surface-2);
   }
 
-  h3 {
+  .day-column.collapsed .day-header { border-bottom: 0; }
+
+  .day-header button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 38px;
+    padding: 0 9px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .day-header button:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
+  .day-header button:disabled { cursor: default; }
+
+  .day-name {
     margin: 0;
     color: var(--accent);
     font-size: var(--text-sm);
@@ -175,7 +194,6 @@
 
   @media (max-width: 900px) {
     .week-board {
-      grid-template-columns: repeat(7, 150px);
       overflow-x: auto;
     }
   }

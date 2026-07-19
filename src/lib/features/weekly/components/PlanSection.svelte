@@ -9,6 +9,8 @@
   let {
     plan,
     suggestions = [],
+    collapsedDays = [],
+    toggleDay,
     onAdd,
     onUpdate,
     onDelete,
@@ -20,6 +22,7 @@
     onMoveActivity
   } = $props();
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  let gridTemplateColumns = $derived(days.map((day) => collapsedDays.includes(day) ? "56px" : "minmax(136px, 1fr)").join(" "));
 
   let editingSessionId = $state(null);
   let editingOriginalSession = $state("");
@@ -166,16 +169,18 @@
     <div><h2>Weekly plan</h2></div>
   </header>
 
-  <div class="week-board">
+  <div class="week-board" style:grid-template-columns={gridTemplateColumns}>
     {#each days as day}
       {@const entries = plan.filter((entry) => entry.day === day)}
       {#if entries.length === 0}
-        <section class="day-column" aria-label={`${day} plan`}>
+        <section class="day-column" class:collapsed={collapsedDays.includes(day)} aria-label={`${day} plan`}>
           <header class="day-header">
-            <h3>{day}</h3>
-            <span>{entries.length}</span>
+            <button type="button" onclick={() => toggleDay(day)} aria-expanded={!collapsedDays.includes(day)} aria-label={`${collapsedDays.includes(day) ? "Expand" : "Collapse"} ${day}`} disabled={!collapsedDays.includes(day) && collapsedDays.length === 6}>
+              <span class="day-name">{day}</span><span>{entries.length}</span>
+            </button>
           </header>
 
+          {#if !collapsedDays.includes(day)}
           <div class="card-list empty">
             <div
               class="day-drop-target"
@@ -198,14 +203,17 @@
           <button type="button" class="add-day-btn" onclick={() => onAdd(day)} title={`Add planned session to ${day}`}>
             <Plus size={13} /> Add
           </button>
+          {/if}
         </section>
       {:else}
-        <section class="day-column" aria-label={`${day} plan`}>
+        <section class="day-column" class:collapsed={collapsedDays.includes(day)} aria-label={`${day} plan`}>
           <header class="day-header">
-            <h3>{day}</h3>
-            <span>{entries.length}</span>
+            <button type="button" onclick={() => toggleDay(day)} aria-expanded={!collapsedDays.includes(day)} aria-label={`${collapsedDays.includes(day) ? "Expand" : "Collapse"} ${day}`} disabled={!collapsedDays.includes(day) && collapsedDays.length === 6}>
+              <span class="day-name">{day}</span><span>{entries.length}</span>
+            </button>
           </header>
 
+          {#if !collapsedDays.includes(day)}
           <div class="card-list">
             {#each entries as entry (entry.id)}
               {@const summary = planSummary(entry)}
@@ -304,6 +312,7 @@
           <button type="button" class="add-day-btn" onclick={() => onAdd(day)} title={`Add planned session to ${day}`}>
             <Plus size={13} /> Add
           </button>
+          {/if}
         </section>
       {/if}
     {/each}
@@ -324,7 +333,6 @@
 <style>
   .week-board {
     display: grid;
-    grid-template-columns: repeat(7, minmax(136px, 1fr));
     gap: 8px;
     overflow: visible;
     padding-bottom: 2px;
@@ -347,17 +355,33 @@
     overflow: visible;
   }
 
+  .day-column.collapsed { min-height: 0; overflow: hidden; }
+
   .day-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     min-height: 38px;
-    padding: 0 9px;
     border-bottom: 1px solid var(--border-subtle);
     background: var(--surface-2);
   }
 
-  h3 {
+  .day-column.collapsed .day-header { border-bottom: 0; }
+
+  .day-header button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 38px;
+    padding: 0 9px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .day-header button:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
+  .day-header button:disabled { cursor: default; }
+
+  .day-name {
     margin: 0;
     color: var(--accent);
     font-size: var(--text-sm);
@@ -586,7 +610,6 @@
 
   @media (max-width: 900px) {
     .week-board {
-      grid-template-columns: repeat(7, 150px);
       overflow-x: auto;
     }
   }

@@ -10,6 +10,15 @@
   import { buildSessionSuggestions } from "$lib/shared/services/sessionSuggestions.js";
 
   let historicalSessionSuggestions = $derived(buildSessionSuggestions({ historicalSessions: sessionHistoryStore.suggestions }));
+  let collapsedDays = $state([]);
+
+  function toggleDay(day) {
+    if (collapsedDays.includes(day)) {
+      collapsedDays = collapsedDays.filter((item) => item !== day);
+    } else if (collapsedDays.length < 6) {
+      collapsedDays = [...collapsedDays, day];
+    }
+  }
 
   function scrollToSection(event, id) {
     event.preventDefault();
@@ -42,6 +51,8 @@
     <PlanSection
       plan={weekStore.plan}
       suggestions={historicalSessionSuggestions}
+      {collapsedDays}
+      {toggleDay}
       onAdd={(day) => weekStore.addPlanEntry(day)}
       onUpdate={(id, patch) => weekStore.updatePlanEntry(id, patch)}
       onDelete={(id) => weekStore.removePlanEntry(id)}
@@ -52,7 +63,7 @@
       onDeleteActivity={(entryId, activityId) => weekStore.removePlanActivity(entryId, activityId)}
       onMoveActivity={(entryId, activityId, direction) => weekStore.movePlanActivity(entryId, activityId, direction)}
     />
-    <ActualSection actual={weekStore.actual} onRefresh={() => weekStore.refreshActual()} />
+    <ActualSection actual={weekStore.actual} onRefresh={() => weekStore.refreshActual()} {collapsedDays} {toggleDay} />
     <section id="week-notes" class="week-section"><header><div><h2>Notes</h2></div></header><NotesEditor value={weekStore.notesRaw} onChange={(value) => weekStore.updateNotes(value)} label="Weekly notes" /></section>
   {/if}
 </main>

@@ -15,6 +15,7 @@ import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
 import AddSessionForm from "$lib/features/daily/components/AddSessionForm.svelte";
 import PlanSection from "$lib/features/weekly/components/PlanSection.svelte";
 import ActualSection from "$lib/features/weekly/components/ActualSection.svelte";
+import WeekPanel from "$lib/features/weekly/components/WeekPanel.svelte";
 import ObjectiveRow from "$lib/features/weekly/components/ObjectiveRow.svelte";
 import TodoPanel from "$lib/features/todo/components/TodoPanel.svelte";
 import TodoToolbar from "$lib/features/todo/components/TodoToolbar.svelte";
@@ -46,8 +47,10 @@ afterEach(() => {
   dailyStore.loaded = false;
   dailyStore.sessions = [];
   weekStore.path = "";
+  weekStore.loaded = false;
   weekStore.objectives = [];
   weekStore.plan = [];
+  weekStore.actual = [];
   subjectHistoryStore.history = { subjects: {} };
   subjectHistoryStore.loaded = false;
   subjectHistoryStore.rebuilding = false;
@@ -433,6 +436,44 @@ describe("logger editing", () => {
     expect(screen.getByText("60m")).toBeTruthy();
     expect(screen.getByText("rust")).toBeTruthy();
     expect(screen.queryByRole("textbox", { name: "Add subject" })).toBeNull();
+  });
+
+  it("shares collapsed days between weekly plan and actual", async () => {
+    weekStore.loaded = true;
+    weekStore.descriptor = { year: 2026, week: 29, rangeLabel: "Jul 13 – Jul 19" };
+    weekStore.plan = [{ id: "p1", day: "Mon", session: "Plan session", activities: [] }];
+    weekStore.actual = [{ day: "Mon", session: "Actual session", subjects: [], actualMinutes: 30, activities: [] }];
+
+    const { container } = render(WeekPanel);
+    const collapseMonday = screen.getAllByRole("button", { name: "Collapse Mon" });
+    expect(collapseMonday).toHaveLength(2);
+    await fireEvent.click(collapseMonday[0]);
+
+    expect(screen.queryByRole("button", { name: "Plan session" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open actual activities for Actual session" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Expand Mon" })).toHaveLength(2);
+    expect(container.querySelector("#plan .week-board").style.gridTemplateColumns.startsWith("56px")).toBe(true);
+    expect(container.querySelector("#actual .week-board").style.gridTemplateColumns.startsWith("56px")).toBe(true);
+
+    await fireEvent.click(screen.getAllByRole("button", { name: "Expand Mon" })[1]);
+    expect(screen.getByRole("button", { name: "Plan session" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open actual activities for Actual session" })).toBeTruthy();
+  });
+
+  it("keeps one weekly day expanded", async () => {
+    weekStore.loaded = true;
+    weekStore.descriptor = { year: 2026, week: 29, rangeLabel: "Jul 13 – Jul 19" };
+
+    render(WeekPanel);
+    for (const day of ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]) {
+      await fireEvent.click(screen.getAllByRole("button", { name: `Collapse ${day}` })[0]);
+    }
+    await fireEvent.click(screen.getAllByRole("button", { name: "Collapse Sun" })[0]);
+
+    expect(screen.getAllByRole("button", { name: /^Expand / })).toHaveLength(12);
+    expect(screen.getAllByRole("button", { name: "Collapse Sun" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Collapse Sun" })[0].getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getAllByRole("button", { name: "Collapse Sun" })[0].disabled).toBe(true);
   });
 
   it("restores a weekly session name when Escape cancels editing", async () => {
