@@ -7,7 +7,7 @@ const weekly = `---\ntitle: test\n---\n\n# 2026 - Week 26 - June 22-28\n\n## Obj
 describe("weekly index parser", () => {
   it("parses objectives, plan IDs, details, and escaped table cells", () => {
     const document = parseWeeklyIndex(weekly, { year: 2026, week: 26 });
-    expect(document.objectives[0]).toMatchObject({ origin: "planned", status: "open" });
+    expect(document.objectives[0]).toMatchObject({ legacyOrigin: "planned", status: "open", indent: 0 });
     expect(document.plan[0]).toMatchObject({ id: "p1", session: "Dev | Review" });
     expect(document.plan[0].activities[0]).toMatchObject({ subjects: ["rust"], minutes: 30, description: "Draft parser tests" });
   });
@@ -19,7 +19,7 @@ describe("weekly index parser", () => {
     );
     const document = parseWeeklyIndex(input, { year: 2026, week: 26 });
     expect(document.objectives).toHaveLength(1);
-    expect(document.objectives[0]).toMatchObject({ subjects: ["general"], origin: "planned", status: "open", description: "" });
+    expect(document.objectives[0]).toMatchObject({ subjects: ["general"], legacyOrigin: "planned", status: "open", description: "", indent: 0 });
     expect(document.objectiveRawLines).toHaveLength(0);
     expect(serializeWeeklyIndex(document)).toContain("- {subjects: (general), origin: planned, status: open}");
   });
@@ -88,6 +88,43 @@ describe("weekly index parser", () => {
     const document = parseWeeklyIndex(malformed, { year: 2026, week: 26 });
     expect(document.objectives).toHaveLength(0);
     expect(serializeWeeklyIndex(document)).toContain("orgin: unplanned, status: open");
+  });
+
+  it("parses and serializes flat objective indentation levels zero through two", () => {
+    const input = weekly.replace(
+      "- {subjects: (rust), origin: planned, status: open} Build parser.",
+      [
+        "- {subjects: (one), status: open} Top.",
+        "  - {subjects: (two), status: partial} Child.",
+        "\t\t- {subjects: (three), status: done} Grandchild."
+      ].join("\n")
+    );
+    const document = parseWeeklyIndex(input, { year: 2026, week: 26 });
+
+    expect(document.objectives.map(({ indent, description }) => ({ indent, description }))).toEqual([
+      { indent: 0, description: "Top." },
+      { indent: 1, description: "Child." },
+      { indent: 2, description: "Grandchild." }
+    ]);
+    expect(serializeWeeklyIndex(document)).toContain(
+      "- {subjects: (one), status: open} Top.\n  - {subjects: (two), status: partial} Child.\n    - {subjects: (three), status: done} Grandchild."
+    );
+  });
+
+  it("preserves malformed and over-depth objective indentation as raw Markdown", () => {
+    const input = weekly.replace(
+      "- {subjects: (rust), origin: planned, status: open} Build parser.",
+      [
+        " - {subjects: (odd), status: open} Odd indentation.",
+        "      - {subjects: (deep), status: open} Too deep."
+      ].join("\n")
+    );
+    const document = parseWeeklyIndex(input, { year: 2026, week: 26 });
+
+    expect(document.objectives).toHaveLength(0);
+    const serialized = serializeWeeklyIndex(document);
+    expect(serialized).toContain(" - {subjects: (odd), status: open} Odd indentation.");
+    expect(serialized).toContain("      - {subjects: (deep), status: open} Too deep.");
   });
 });
 

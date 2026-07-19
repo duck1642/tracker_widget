@@ -37,15 +37,19 @@ export function serializeActivityLine(activity) {
 export function parseObjectiveLine(line) {
   const parts = splitLine(line, { allowEmptyDescription: true });
   if (!parts) return null;
+  const metadataKeys = [...parts.metadata.matchAll(/(?:^|,\s*)([\p{L}-]+):/gu)].map((match) => match[1]);
+  if (metadataKeys.some((key) => !["subjects", "origin", "status"].includes(key))) return null;
   const subjects = parseSubjects(parts.metadata);
   const origin = parts.metadata.match(/(?:^|,\s*)origin:\s*([\p{L}-]+)(?:$|,)/u)?.[1];
   const status = parts.metadata.match(/(?:^|,\s*)status:\s*([\p{L}-]+)(?:$|,)/u)?.[1];
-  if (!subjects || !ORIGINS.has(origin) || !STATUSES.has(status)) return null;
-  return { subjects, origin, status, description: parts.description };
+  if (!subjects || (origin && !ORIGINS.has(origin)) || !STATUSES.has(status)) return null;
+  return { subjects, ...(origin ? { legacyOrigin: origin } : {}), status, description: parts.description };
 }
 
 export function serializeObjectiveLine(objective) {
-  const metadata = `- {subjects: (${objective.subjects.join(", ")}), origin: ${objective.origin}, status: ${objective.status}}`;
+  const indent = "  ".repeat(Math.max(0, Number(objective.indent) || 0));
+  const origin = objective.legacyOrigin ? `, origin: ${objective.legacyOrigin}` : "";
+  const metadata = `${indent}- {subjects: (${objective.subjects.join(", ")})${origin}, status: ${objective.status}}`;
   return objective.description ? `${metadata} ${objective.description}` : metadata;
 }
 

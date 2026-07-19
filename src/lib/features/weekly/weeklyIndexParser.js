@@ -34,6 +34,17 @@ function subjectsCell(value) {
   return value.split(",").map((item) => item.trim()).filter(Boolean);
 }
 
+function parseIndentedObjective(line) {
+  const match = line.match(/^([ \t]*)(-\s+.*)$/u);
+  if (!match) return null;
+  const spaces = [...match[1]].reduce((total, character) => total + (character === "\t" ? 2 : 1), 0);
+  if (spaces % 2 !== 0) return null;
+  const indent = spaces / 2;
+  if (indent > 2) return null;
+  const objective = parseObjectiveLine(match[2]);
+  return objective ? { ...objective, indent } : null;
+}
+
 export function planSummary(entry) {
   const activities = entry.activities || [];
   if (!activities.length) {
@@ -101,7 +112,7 @@ export function parseWeeklyIndex(markdown, isoWeek) {
   const objectiveRawLines = [];
   for (const line of section(body, "Objectives").split("\n")) {
     if (!line.trim()) continue;
-    const objective = parseObjectiveLine(line);
+    const objective = parseIndentedObjective(line);
     if (objective) objectives.push({ id: createId("objective", objectives.length), ...objective });
     else objectiveRawLines.push(line);
   }
