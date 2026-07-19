@@ -13,8 +13,11 @@ Current version: `1.2.0`
 - Todo folding, row numbers, keyboard reorder, multiselect, and context-menu actions.
 - Send selected todos to today's activity, weekly objectives, or weekly planned activities.
 - Daily sessions with activity tracking, subject pills, time pills, notes, and session suggestions.
-- Weekly planning with editable planned activity details.
+- Weekly planning with editable planned activity details and collapsible day columns.
 - Weekly actuals derived from daily logs, with read-only activity details.
+- Indented and foldable weekly objectives stored as nested Markdown lists.
+- Keyboard navigation between weekly and daily log files.
+- Custom text and entity context menus throughout the app.
 - App-local subject and session history suggestions.
 - Optional personal YAML frontmatter mode for newly created files.
 - Portable zip release support.
@@ -43,6 +46,13 @@ Unknown files are ignored. Missing week files can be created from the sidebar. M
 
 Workspace location is managed from Settings. The Todo path is derived as `<workspace>/todo.md`.
 
+## Navigation
+
+- `Ctrl + PageUp`: open the previous existing log file in sidebar order.
+- `Ctrl + PageDown`: open the next existing log file in sidebar order.
+- Navigation crosses week boundaries without expanding collapsed sidebar folders.
+- The week-order control determines whether older or newer weeks come first.
+
 ## Todo
 
 - `Enter`: add a todo.
@@ -52,6 +62,7 @@ Workspace location is managed from Settings. The Todo path is derived as `<works
 - `Ctrl + click`: select multiple todos.
 - `Shift + click`: select a visible range.
 - Right-click selected todos for bulk actions and send-to actions.
+- Right-click editable todo text for Cut, Copy, Paste, and Select All.
 
 ## Daily Log
 
@@ -64,6 +75,9 @@ Activity Markdown format:
 ```
 
 Session suggestions come from the current weekly plan first, then app-local session history.
+Sessions planned during the current week are marked with `*` in the suggestion list. The marker is display-only and is never stored in Markdown.
+
+Daily session and activity context menus provide text editing, movement, and deletion actions where applicable. Daily and weekly note editors provide Cut, Copy, and Paste.
 
 ## Weekly Planning
 
@@ -87,17 +101,43 @@ Weekly plan rows have stable IDs and editable activity details:
 
 Plan card subject and time summaries are derived from planned activities. Weekly actuals are derived from daily logs and remain read-only.
 
+Clicking a day header collapses or expands that day in both Weekly Plan and Weekly Actual. At least one day remains expanded, and the collapse state is temporary UI state rather than workspace data.
+
+Weekly objectives support indentation levels `0` through `2`:
+
+```markdown
+- {subjects: (tracker), status: open} Improve tracker
+  - {subjects: (ui), status: partial} Refine objective layout
+    - {subjects: (parser), status: done} Preserve nested Markdown
+```
+
+- `Tab` / `Shift + Tab`: indent or outdent the objective being edited.
+- Foldable objectives hide consecutive, more deeply indented rows without changing Markdown.
+- Objective context menus provide Indent, Outdent, Move Up, Move Down, Delete, and text clipboard actions.
+
 ## Settings
 
 - Workspace folder.
 - Frontmatter mode: `Off` or `Personal`.
 - Rebuild subject history.
 - Rebuild session history.
+- Developer Mode for the app-controlled DevTools shortcuts and Inspect Element action.
 
 History files are app-local and ignored by git:
 
 - `subject-history.json`
 - `session-history.json`
+
+## Migrating Older Objective Metadata
+
+v1.2.0 objectives no longer use `origin: planned` or `origin: unplanned`. Preview the included migration before applying it to an older workspace:
+
+```bash
+npm run migrate:objectives -- <workspace-path>
+npm run migrate:objectives -- <workspace-path> --write
+```
+
+Back up the workspace and review the dry-run output before applying the migration.
 
 ## Development
 
