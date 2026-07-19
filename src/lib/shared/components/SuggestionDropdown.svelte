@@ -7,6 +7,7 @@
     onHighlight = () => {},
     ariaLabel = "Suggestions",
     width = "anchor",
+    top = "100%",
     showPlannedMarkers = false
   } = $props();
 
@@ -23,7 +24,7 @@
   }
 </script>
 
-<div class="suggestion-dropdown" class:bounded={width === "bounded"} role="listbox" aria-label={ariaLabel}>
+<div class="suggestion-dropdown" class:bounded={width === "bounded"} style:top role="listbox" aria-label={ariaLabel}>
   {#each suggestions as suggestion, index}
     {@const label = labelFor(suggestion)}
     <button
@@ -37,10 +38,7 @@
       onmouseenter={() => onHighlight(index)}
       onclick={() => onSelect(suggestion)}
     >
-      {#if showPlannedMarkers && isPlanned(suggestion)}
-        <span class="planned-marker" aria-hidden="true" title="Planned this week">*</span>
-      {/if}
-      <span class="suggestion-label">{label}</span>
+      {#if showPlannedMarkers && isPlanned(suggestion)}<span class="planned-marker" aria-hidden="true" title="Planned this week">*</span>{/if}<span class="suggestion-label">{label}</span>
     </button>
   {/each}
 </div>
@@ -48,7 +46,6 @@
 <style>
   .suggestion-dropdown {
     position: absolute;
-    top: 100%;
     left: 0;
     z-index: var(--layer-autocomplete);
     display: grid;

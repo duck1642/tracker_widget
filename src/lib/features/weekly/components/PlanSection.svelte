@@ -3,6 +3,7 @@
   import { GripVertical, ListTodo, Plus, Trash2 } from "@lucide/svelte";
   import { sortableDragHandle, sortableDropTarget } from "$lib/shared/actions/sortableDrag.js";
   import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
+  import SuggestionDropdown from "$lib/shared/components/SuggestionDropdown.svelte";
   import { planSummary } from "../weeklyIndexParser.js";
   import PlanDetailsModal from "./PlanDetailsModal.svelte";
 
@@ -269,21 +270,13 @@
                         spellcheck="false"
                       />
                       {#if showSessionSuggestions && filteredSessionSuggestions.length > 0}
-                        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-                        <ul class="session-suggestions" onmousedown={(event) => event.preventDefault()}>
-                          {#each filteredSessionSuggestions as suggestion, index}
-                            <!-- svelte-ignore a11y_click_events_have_key_events -->
-                            <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
-                            <li
-                              class:highlighted={index === highlightedSessionIndex}
-                              onmouseenter={() => highlightedSessionIndex = index}
-                              onclick={() => selectSessionSuggestion(entry, suggestion)}
-                              role="option"
-                              aria-selected={index === highlightedSessionIndex}
-                              title={suggestion.name}
-                            >{suggestion.name}</li>
-                          {/each}
-                        </ul>
+                        <SuggestionDropdown
+                          suggestions={filteredSessionSuggestions}
+                          highlightedIndex={highlightedSessionIndex}
+                          onHighlight={(index) => highlightedSessionIndex = index}
+                          onSelect={(suggestion) => selectSessionSuggestion(entry, suggestion)}
+                          ariaLabel="Session suggestions"
+                        />
                       {/if}
                     </div>
                   {:else}
@@ -339,11 +332,6 @@
   }
   .session-edit-wrapper { position: relative; flex: 1; min-width: 0; }
   .session-edit-wrapper .session-input { width: 100%; box-sizing: border-box; }
-  .session-suggestions { position: absolute; top: 100%; left: 0; z-index: 50; width: 100%; max-height: 156px; margin: 0; padding: 4px 0; overflow-y: auto; scrollbar-width: none; list-style: none; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #181818; box-shadow: 0 4px 12px rgba(0, 0, 0, .4); box-sizing: border-box; }
-  .session-suggestions::-webkit-scrollbar { display: none; }
-  .session-suggestions li { padding: 8px 12px; overflow: hidden; color: var(--text-muted); font-size: var(--text-sm); text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-  .session-suggestions li:hover, .session-suggestions li.highlighted { background: var(--surface-hover); color: var(--text-color); }
-
   .day-column {
     display: flex;
     flex-direction: column;

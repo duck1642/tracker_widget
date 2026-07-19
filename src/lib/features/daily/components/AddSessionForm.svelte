@@ -1,5 +1,6 @@
 <script>
   import { Plus } from "@lucide/svelte";
+  import SuggestionDropdown from "$lib/shared/components/SuggestionDropdown.svelte";
 
   let { suggestions = [], existingSessions = [], onAdd } = $props();
   let name = $state("");
@@ -101,6 +102,16 @@
     submitName(name);
   }
 
+  /** @param {number} index */
+  function highlightSuggestion(index) {
+    highlightedIndex = index;
+  }
+
+  /** @param {{ name: string }} suggestion */
+  function selectSuggestionEntry(suggestion) {
+    selectSuggestion(suggestion.name);
+  }
+
   function cancelEditing() {
     name = "";
     editing = false;
@@ -129,24 +140,14 @@
             spellcheck="false"
           />
           {#if showDropdown && filteredSuggestions.length > 0}
-            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-            <ul class="suggestions-dropdown" onmousedown={(e) => e.preventDefault()}>
-              {#each filteredSuggestions as suggestion, index}
-                <!-- svelte-ignore a11y_click_events_have_key_events -->
-                <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
-                <li
-                  class="suggestion-item"
-                  class:highlighted={index === highlightedIndex}
-                  onmouseenter={() => highlightedIndex = index}
-                  onclick={() => selectSuggestion(suggestion.name)}
-                  role="option"
-                  aria-selected={index === highlightedIndex}
-                  title={suggestion.name}
-                >
-                  {#if suggestion.plannedThisWeek}<span class="planned-marker" aria-hidden="true" title="Planned this week">*</span>{/if}{suggestion.name}
-                </li>
-              {/each}
-            </ul>
+            <SuggestionDropdown
+              suggestions={filteredSuggestions}
+              highlightedIndex={highlightedIndex}
+              onHighlight={highlightSuggestion}
+              onSelect={selectSuggestionEntry}
+              ariaLabel="Session suggestions"
+              showPlannedMarkers={true}
+            />
           {/if}
         </div>
         <button class="submit-btn" type="submit">Add</button>
@@ -240,41 +241,4 @@
     color: var(--accent);
     cursor: pointer;
   }
-  .suggestions-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: 50;
-    width: 100%;
-    max-height: 156px;
-    overflow-y: auto;
-    scrollbar-width: none;
-    margin: 4px 0 0 0;
-    padding: 4px 0;
-    list-style: none;
-    background: #181818;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    box-sizing: border-box;
-  }
-  .suggestions-dropdown::-webkit-scrollbar {
-    display: none;
-  }
-  .suggestion-item {
-    padding: 8px 12px;
-    font-size: var(--text-sm);
-    color: var(--text-muted);
-    cursor: pointer;
-    text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    transition: background 0.1s ease, color 0.1s ease;
-  }
-  .suggestion-item:hover, .suggestion-item.highlighted {
-    background: var(--surface-hover);
-    color: var(--text-color);
-  }
-  .planned-marker { display: inline-block; width: 12px; color: var(--accent); font-weight: 700; }
 </style>
