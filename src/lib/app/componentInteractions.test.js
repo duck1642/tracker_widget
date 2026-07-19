@@ -892,6 +892,7 @@ describe("logger editing", () => {
     expect(cut.disabled).toBe(false);
     expect(copy.disabled).toBe(false);
     expect(screen.getByRole("menuitem", { name: "Paste" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Select All" })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: "Delete" })).toBeTruthy();
     expect(await fireEvent.pointerDown(copy)).toBe(false);
     expect(document.activeElement).toBe(description);
@@ -912,6 +913,25 @@ describe("logger editing", () => {
     readText.mockRejectedValueOnce(new Error("denied"));
     await fireEvent.click(screen.getByRole("menuitem", { name: "Paste" }));
     await vi.waitFor(() => expect(appStore.statusMessage).toContain("Clipboard failed: Error: denied"));
+  });
+
+  it("selects all text in the active objective editor from its context menu", async () => {
+    const { default: ObjectivesSection } = await import("$lib/features/weekly/components/ObjectivesSection.svelte");
+    render(ObjectivesSection, {
+      objectives: [{ id: "objective", subjects: [], status: "open", description: "Select this objective", indent: 0 }],
+      onAdd: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn(), onMove: vi.fn(), onIndent: vi.fn(), onOutdent: vi.fn()
+    });
+
+    await fireEvent.click(screen.getByText("Select this objective"));
+    const description = screen.getByPlaceholderText("Objective description");
+    description.setSelectionRange(4, 4);
+    await fireEvent.contextMenu(description);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Select All" }));
+
+    expect(document.activeElement).toBe(description);
+    expect(description.selectionStart).toBe(0);
+    expect(description.selectionEnd).toBe(description.value.length);
+    expect(screen.queryByRole("menu", { name: "Objective actions" })).toBeNull();
   });
 
   it("routes objective Cut and Paste through existing input updates", async () => {

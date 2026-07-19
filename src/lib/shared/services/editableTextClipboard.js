@@ -51,6 +51,14 @@ export async function pasteIntoEditable(context) {
   return true;
 }
 
+/** @param {EditableTextContext | null | undefined} context */
+export function selectAllEditableText(context) {
+  if (!context) return false;
+  context.target.focus();
+  context.target.setSelectionRange(0, context.target.value.length);
+  return true;
+}
+
 /** @param {EditableTextContext} context */
 function restoreSelection(context) {
   context.target.focus();

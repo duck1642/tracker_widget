@@ -1,9 +1,9 @@
 <script>
   // @ts-nocheck
-  import { ChevronDown, ChevronUp, ClipboardPaste, Copy, IndentDecrease, IndentIncrease, Plus, Scissors, Trash2 } from "@lucide/svelte";
+  import { ChevronDown, ChevronUp, ClipboardPaste, Copy, IndentDecrease, IndentIncrease, Plus, Scissors, TextSelect, Trash2 } from "@lucide/svelte";
   import { appStore } from "$lib/app/appStore.svelte.js";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
-  import { captureEditableText, copyEditableSelection, cutEditableSelection, hasEditableSelection, pasteIntoEditable } from "$lib/shared/services/editableTextClipboard.js";
+  import { captureEditableText, copyEditableSelection, cutEditableSelection, hasEditableSelection, pasteIntoEditable, selectAllEditableText } from "$lib/shared/services/editableTextClipboard.js";
   import ObjectiveRow from "./ObjectiveRow.svelte";
   import { buildVisibleObjectiveRows } from "../objectiveFolding.js";
   let { objectives, onAdd, onUpdate, onDelete, onMove, onIndent, onOutdent } = $props();
@@ -21,6 +21,7 @@
         { label: "Cut", icon: Scissors, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(cutEditableSelection, editable) },
         { label: "Copy", icon: Copy, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(copyEditableSelection, editable) },
         { label: "Paste", icon: ClipboardPaste, onclick: () => runTextAction(pasteIntoEditable, editable) },
+        { label: "Select All", icon: TextSelect, disabled: !editable.target.value, onclick: () => runTextAction(selectAllEditableText, editable) },
         { separator: true }
       ] : []),
       { label: "Indent", icon: IndentIncrease, disabled: (contextObjective.indent || 0) >= 2, onclick: () => runContextAction(onIndent, contextObjective.id) },

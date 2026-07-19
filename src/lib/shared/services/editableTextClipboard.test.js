@@ -2,7 +2,7 @@
 // @ts-nocheck
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { captureEditableText, copyEditableSelection, cutEditableSelection, pasteIntoEditable } from "./editableTextClipboard.js";
+import { captureEditableText, copyEditableSelection, cutEditableSelection, pasteIntoEditable, selectAllEditableText } from "./editableTextClipboard.js";
 
 vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
   readText: vi.fn(),
@@ -96,5 +96,19 @@ describe("editable text clipboard", () => {
 
     await expect(cutEditableSelection(captureEditableText(input))).rejects.toThrow("denied");
     expect(input.value).toBe("Alpha Beta");
+  });
+
+  it("selects all text in only the captured editor", () => {
+    const input = editable();
+    input.setSelectionRange(3, 3);
+    const other = editable("Other");
+    other.setSelectionRange(2, 2);
+
+    expect(selectAllEditableText(captureEditableText(input))).toBe(true);
+    expect(document.activeElement).toBe(input);
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(input.value.length);
+    expect(other.selectionStart).toBe(2);
+    expect(other.selectionEnd).toBe(2);
   });
 });
