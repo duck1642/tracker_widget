@@ -10,13 +10,14 @@
   import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
   import TodoList from "./TodoList.svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
-  import { CheckSquare2, ChevronDown, ChevronUp, ClipboardList, Flag, IndentDecrease, IndentIncrease, ListTodo, Square, Trash2, X, Terminal } from "@lucide/svelte";
+  import { CheckSquare2, ChevronDown, ChevronUp, ClipboardList, ClipboardPaste, Copy, Flag, IndentDecrease, IndentIncrease, ListTodo, Scissors, Square, TextSelect, Trash2, X, Terminal } from "@lucide/svelte";
+  import { captureEditableText, copyEditableSelection, cutEditableSelection, hasEditableSelection, pasteIntoEditable, selectAllEditableText } from "$lib/shared/services/editableTextClipboard.js";
   import { invoke } from "@tauri-apps/api/core";
   import TodoSendSessionMenu from "./TodoSendSessionMenu.svelte";
   import TodoSendWeeklyPlanMenu from "./TodoSendWeeklyPlanMenu.svelte";
 
   let focusedTodoId = $state("");
-  /** @type {{ x: number, y: number } | null} */
+  /** @type {{ x: number, y: number, editable: ReturnType<typeof captureEditableText> } | null} */
   let contextMenu = $state(null);
   /** @type {{ x: number, y: number, sessions: any[] } | null} */
   let sessionMenu = $state(null);
@@ -40,9 +41,23 @@
   let contextMenuItems = $derived.by(() => {
     if (!contextMenu) return [];
     const selectedCount = todoUiState.selectedTodoIds.length;
+    const editable = contextMenu.editable;
     /** @type {ContextMenuItem[]} */
     const items = [
-      { label: `${selectedCount} selected`, isHeader: true },
+      { label: `${selectedCount} selected`, isHeader: true }
+    ];
+
+    if (editable) {
+      items.push(
+        { label: "Cut", icon: Scissors, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(cutEditableSelection, editable) },
+        { label: "Copy", icon: Copy, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(copyEditableSelection, editable) },
+        { label: "Paste", icon: ClipboardPaste, onclick: () => runTextAction(pasteIntoEditable, editable) },
+        { label: "Select All", icon: TextSelect, disabled: !editable.target.value, onclick: () => runTextAction(selectAllEditableText, editable) },
+        { separator: true }
+      );
+    }
+
+    items.push(
       {
         label: "Send to today's activity",
         icon: ClipboardList,
@@ -79,7 +94,7 @@
         icon: IndentDecrease,
         onclick: () => handleShiftSelectedIndent(-1)
       }
-    ];
+    );
 
     if (selectedCount === 1) {
       items.push(
@@ -241,16 +256,28 @@
    */
   function openContextMenu(event, id) {
     event.preventDefault();
+    const editable = captureEditableText(event.target);
     if (!todoUiState.isSelected(id)) {
       todoUiState.setSelection([id], id);
     }
-    contextMenu = { x: event.clientX, y: event.clientY };
+    contextMenu = { x: event.clientX, y: event.clientY, editable };
     sessionMenu = null;
     weeklyPlanMenu = null;
   }
 
   function handleClearSelectionFromMenu() {
     clearSelection();
+  }
+
+  /** @param {any} action @param {any} editable */
+  async function runTextAction(action, editable) {
+    closeContextMenu();
+    todoUiState.clearSelection();
+    try {
+      await action(editable);
+    } catch (error) {
+      appStore.showStatus(`Clipboard failed: ${error}`);
+    }
   }
 
   function selectedTodoDescriptions() {
@@ -607,6 +634,7 @@
       y={contextMenu.y}
       items={contextMenuItems}
       ariaLabel="Todo selection actions"
+      preserveFocus={Boolean(contextMenu.editable)}
     />
   {/if}
   {#if sessionMenu}

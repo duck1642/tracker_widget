@@ -1449,6 +1449,42 @@ describe("todo actions", () => {
       expect(menu).toBeTruthy();
       expect(menu.dispatchEvent(nativeMenuEvent)).toBe(false);
       expect(screen.getByText("2 selected")).toBeTruthy();
+      expect(screen.queryByRole("menuitem", { name: "Copy" })).toBeNull();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it("adds clipboard actions to editable todos while retaining Todo actions", async () => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [{ id: "todo-1", isTodo: true, text: "First todo", checked: false, indent: 0 }];
+    try {
+      vi.spyOn(todoStore, "scheduleSave").mockResolvedValue(true);
+      render(TodoPanel);
+      let textarea = screen.getByDisplayValue("First todo");
+      textarea.focus();
+      textarea.setSelectionRange(0, 5);
+      await fireEvent.contextMenu(textarea, { clientX: 10, clientY: 12 });
+
+      expect(screen.getByRole("menuitem", { name: "Cut" }).disabled).toBe(false);
+      expect(screen.getByRole("menuitem", { name: "Copy" }).disabled).toBe(false);
+      expect(screen.getByRole("menuitem", { name: "Paste" })).toBeTruthy();
+      expect(screen.getByRole("menuitem", { name: "Select All" })).toBeTruthy();
+      expect(screen.getByRole("menuitem", { name: "Delete selected" })).toBeTruthy();
+      await fireEvent.click(screen.getByRole("menuitem", { name: "Cut" }));
+
+      await vi.waitFor(() => expect(todoStore.todos[0].text).toBe(" todo"));
+      expect(writeText).toHaveBeenCalledWith("First");
+      expect(todoUiState.selectedTodoIds).toEqual([]);
+
+      readText.mockResolvedValueOnce("Updated");
+      expect(textarea.value).toBe(" todo");
+      textarea.setSelectionRange(0, 1);
+      await fireEvent.contextMenu(textarea, { clientX: 10, clientY: 12 });
+      await fireEvent.click(screen.getByRole("menuitem", { name: "Paste" }));
+
+      await vi.waitFor(() => expect(todoStore.todos[0].text).toBe("Updatedtodo"));
+      expect(todoUiState.selectedTodoIds).toEqual([]);
     } finally {
       todoStore.todos = originalTodos;
     }
