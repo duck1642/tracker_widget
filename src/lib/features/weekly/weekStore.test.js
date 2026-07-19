@@ -23,9 +23,9 @@ describe("WeekStore editing", () => {
   it("persists objective state changes", async () => {
     const { store, files } = harness();
     await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
-    store.updateObjective(store.objectives[0].id, { origin: "unplanned", status: "partial" });
+    store.updateObjective(store.objectives[0].id, { status: "partial" });
     await store.flushSave();
-    expect(files.get("week.md")).toContain("origin: unplanned, status: partial");
+    expect(files.get("week.md")).toContain("origin: planned, status: partial");
   });
 
   it("accepts an edit after a clean external reload without a false conflict", async () => {
@@ -86,9 +86,10 @@ describe("WeekStore editing", () => {
     await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
     expect(store.addObjectives(["One", "Two"])).toBe(true);
     expect(store.objectives.slice(-2)).toMatchObject([
-      { subjects: ["general"], origin: "planned", status: "open", description: "One" },
-      { subjects: ["general"], origin: "planned", status: "open", description: "Two" }
+      { subjects: ["general"], status: "open", description: "One", indent: 0 },
+      { subjects: ["general"], status: "open", description: "Two", indent: 0 }
     ]);
+    expect(store.objectives.slice(-2).every((objective) => !("origin" in objective) && !("legacyOrigin" in objective))).toBe(true);
   });
 
   it("does not add objectives from empty descriptions", async () => {
@@ -109,6 +110,46 @@ describe("WeekStore editing", () => {
     expect(store.moveObjective("missing", "down")).toBe(false);
     await store.flushSave();
     expect(files.get("week.md").indexOf("Second")).toBeLessThan(files.get("week.md").indexOf("Ship."));
+  });
+
+  it("indents and outdents only the selected objective within level bounds", async () => {
+    const { store, files } = harness();
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    store.addObjectives(["Second"]);
+    const [first, second] = store.objectives;
+
+    expect(store.indentObjective(second.id)).toBe(true);
+    expect(store.indentObjective(second.id)).toBe(true);
+    expect(store.indentObjective(second.id)).toBe(false);
+    expect(store.objectives.map((objective) => objective.indent)).toEqual([0, 2]);
+    expect(store.outdentObjective(second.id)).toBe(true);
+    expect(store.outdentObjective(second.id)).toBe(true);
+    expect(store.outdentObjective(second.id)).toBe(false);
+    expect(store.objectives.map((objective) => objective.indent)).toEqual([0, 0]);
+    expect(store.indentObjective("missing")).toBe(false);
+    expect(first.indent).toBe(0);
+
+    store.indentObjective(second.id);
+    await store.flushSave();
+    expect(files.get("week.md")).toContain("  - {subjects: (general), status: open} Second");
+  });
+
+  it("preserves independent indentation when moving and deleting objectives", async () => {
+    const { store } = harness();
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    store.addObjectives(["Second", "Third"]);
+    const [first, second, third] = store.objectives;
+    second.indent = 1;
+    third.indent = 2;
+
+    expect(store.moveObjective(third.id, "up")).toBe(true);
+    expect(store.objectives.map(({ description, indent }) => ({ description, indent }))).toEqual([
+      { description: "Ship.", indent: 0 },
+      { description: "Third", indent: 2 },
+      { description: "Second", indent: 1 }
+    ]);
+    store.removeObjective(first.id);
+    expect(store.objectives.map((objective) => objective.indent)).toEqual([2, 1]);
   });
 
   it("edits and reorders planned activities", async () => {

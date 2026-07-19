@@ -98,7 +98,7 @@ export class WeekStore {
   }
 
   addObjective() {
-    this.objectives.push({ id: id("objective"), subjects: ["general"], origin: "planned", status: "open", description: "" });
+    this.objectives.push({ id: id("objective"), subjects: ["general"], status: "open", description: "", indent: 0 });
     void this.save();
   }
 
@@ -108,9 +108,9 @@ export class WeekStore {
     this.objectives.push(...cleaned.map((description) => ({
       id: id("objective"),
       subjects: ["general"],
-      origin: "planned",
       status: "open",
-      description
+      description,
+      indent: 0
     })));
     void this.save();
     return true;
@@ -132,6 +132,22 @@ export class WeekStore {
     const next = movedByDirection(this.objectives, objectiveId, direction);
     if (!next) return false;
     this.objectives = next;
+    void this.save(true);
+    return true;
+  }
+
+  indentObjective(objectiveId) {
+    const objective = this.objectives.find((item) => item.id === objectiveId);
+    if (!objective || (objective.indent || 0) >= 2) return false;
+    objective.indent = (objective.indent || 0) + 1;
+    void this.save(true);
+    return true;
+  }
+
+  outdentObjective(objectiveId) {
+    const objective = this.objectives.find((item) => item.id === objectiveId);
+    if (!objective || (objective.indent || 0) <= 0) return false;
+    objective.indent -= 1;
     void this.save(true);
     return true;
   }
