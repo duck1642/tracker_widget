@@ -3,6 +3,7 @@
   import { X } from "@lucide/svelte";
   import { subjectHistoryStore } from "$lib/app/subjectHistoryStore.svelte.js";
   import { isValidSubject } from "$lib/shared/parsers/inlineMetadata.js";
+  import SuggestionDropdown from "$lib/shared/components/SuggestionDropdown.svelte";
 
   let { subjects = [], onChange, label = "Subjects", variant = "default" } = $props();
   let invalid = $state(false);
@@ -239,21 +240,14 @@
               use:focus
             />
             {#if showSuggestions && editingIndex === index && filteredSuggestions.length > 0}
-              <div class="subject-suggestions" role="listbox" aria-label="Subject suggestions">
-                {#each filteredSuggestions as suggestion, suggestionIndex}
-                  <button
-                    type="button"
-                    class:highlighted={suggestionIndex === highlightedSuggestion}
-                    role="option"
-                    aria-selected={suggestionIndex === highlightedSuggestion}
-                    title={suggestion}
-                    onpointerdown={(event) => event.preventDefault()}
-                    onclick={(event) => { event.stopPropagation(); selectSuggestion(suggestion); }}
-                  >
-                    {suggestion}
-                  </button>
-                {/each}
-              </div>
+              <SuggestionDropdown
+                suggestions={filteredSuggestions}
+                highlightedIndex={highlightedSuggestion}
+                onHighlight={(index) => highlightedSuggestion = index}
+                onSelect={selectSuggestion}
+                ariaLabel="Subject suggestions"
+                width="bounded"
+              />
             {/if}
           </span>
         {:else}
@@ -286,21 +280,14 @@
           placeholder="+"
         />
         {#if showSuggestions && editingIndex === null && filteredSuggestions.length > 0}
-          <div class="subject-suggestions" role="listbox" aria-label="Subject suggestions">
-            {#each filteredSuggestions as suggestion, index}
-              <button
-                type="button"
-                class:highlighted={index === highlightedSuggestion}
-                role="option"
-                aria-selected={index === highlightedSuggestion}
-                title={suggestion}
-                onpointerdown={(event) => event.preventDefault()}
-                onclick={(event) => { event.stopPropagation(); selectSuggestion(suggestion); }}
-              >
-                {suggestion}
-              </button>
-            {/each}
-          </div>
+          <SuggestionDropdown
+            suggestions={filteredSuggestions}
+            highlightedIndex={highlightedSuggestion}
+            onHighlight={(index) => highlightedSuggestion = index}
+            onSelect={selectSuggestion}
+            ariaLabel="Subject suggestions"
+            width="bounded"
+          />
         {/if}
       </span>
     </div>
@@ -488,47 +475,5 @@
     color: var(--danger);
     font-size: 9px;
     margin-top: 1px;
-  }
-  .subject-suggestions {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: 300;
-    display: grid;
-    width: max(100%, 126px);
-    max-width: 180px;
-    max-height: 156px;
-    overflow-y: auto;
-    scrollbar-width: none;
-    padding: 4px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: #181818;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    box-sizing: border-box;
-  }
-  .subject-suggestions::-webkit-scrollbar {
-    display: none;
-  }
-  .subject-suggestions button {
-    min-width: 0;
-    height: 26px;
-    padding: 0 8px;
-    border: 0;
-    border-radius: 4px;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 11px;
-    font-weight: 600;
-    text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    cursor: pointer;
-  }
-  .subject-suggestions button:hover,
-  .subject-suggestions button.highlighted {
-    background: var(--surface-hover);
-    color: var(--text-color);
   }
 </style>
