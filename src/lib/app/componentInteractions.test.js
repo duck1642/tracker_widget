@@ -2255,6 +2255,32 @@ describe("NotesEditor interactions", () => {
     expect(textarea.value).toBe("- [ ] Item 1\n- Item 2\n\nSome text here");
   });
 
+  it("offers only cut, copy, and paste in the notes editor", async () => {
+    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
+    const onChange = vi.fn();
+    render(NotesEditor, { value: "Alpha text", onChange, label: "Weekly notes" });
+
+    await fireEvent.click(screen.getByText("Alpha text"));
+    const textarea = screen.getByRole("textbox", { name: "Weekly notes" });
+    textarea.setSelectionRange(6, 10);
+    await fireEvent.contextMenu(textarea, { clientX: 20, clientY: 30 });
+
+    const menu = screen.getByRole("menu", { name: "Notes text actions" });
+    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent.trim())).toEqual(["Cut", "Copy", "Paste"]);
+    expect(within(menu).queryByText("Select All")).toBeNull();
+
+    await fireEvent.pointerDown(within(menu).getByRole("menuitem", { name: "Cut" }));
+    await fireEvent.click(within(menu).getByRole("menuitem", { name: "Cut" }));
+    expect(writeText).toHaveBeenCalledWith("text");
+    expect(onChange).toHaveBeenCalledWith("Alpha ");
+
+    readText.mockResolvedValue("notes");
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await fireEvent.contextMenu(textarea, { clientX: 20, clientY: 30 });
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Paste" }));
+    expect(onChange).toHaveBeenLastCalledWith("Alpha notes");
+  });
+
   it("reveals the configured bottom gap when notes grow at the caret", async () => {
     const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {

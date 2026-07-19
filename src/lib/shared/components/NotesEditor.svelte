@@ -1,5 +1,10 @@
 <script>
   // @ts-nocheck
+  import { ClipboardPaste, Copy, Scissors } from "@lucide/svelte";
+  import { appStore } from "$lib/app/appStore.svelte.js";
+  import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
+  import { captureEditableText, copyEditableSelection, cutEditableSelection, hasEditableSelection, pasteIntoEditable } from "$lib/shared/services/editableTextClipboard.js";
+
   let { value = "", onChange, label = "Notes" } = $props();
 
   let editing = $state(false);
@@ -7,7 +12,17 @@
   let containerEl = $state(null);
   let textareaEl = $state(null);
   let pendingCaretPosition = $state(-1);
+  let contextMenu = $state(null);
   let measuredTextareaHeight = 0;
+  let contextMenuItems = $derived.by(() => {
+    const editable = contextMenu?.editable;
+    if (!editable) return [];
+    return [
+      { label: "Cut", icon: Scissors, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(cutEditableSelection, editable) },
+      { label: "Copy", icon: Copy, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(copyEditableSelection, editable) },
+      { label: "Paste", icon: ClipboardPaste, onclick: () => runTextAction(pasteIntoEditable, editable) }
+    ];
+  });
 
   // Parse raw markdown text into structured blocks
   function parseMarkdown(text) {
@@ -272,6 +287,28 @@
       onChange(target.value);
     }
   }
+
+  function openContextMenu(event) {
+    event.preventDefault();
+    contextMenu = {
+      x: event.clientX,
+      y: event.clientY,
+      editable: captureEditableText(event.currentTarget)
+    };
+  }
+
+  function closeContextMenu() {
+    contextMenu = null;
+  }
+
+  async function runTextAction(action, editable) {
+    closeContextMenu();
+    try {
+      await action(editable);
+    } catch (error) {
+      appStore.showStatus(`Clipboard failed: ${error}`);
+    }
+  }
 </script>
 
 <div class="notes-container" bind:this={containerEl} onfocusout={handleFocusOut}>
@@ -307,6 +344,7 @@
       value={value}
       oninput={(e) => onChange(e.currentTarget.value)}
       onkeydown={handleKeyDown}
+      oncontextmenu={openContextMenu}
       placeholder="Type notes here..."
     ></textarea>
   {:else}
@@ -353,7 +391,33 @@
       {/each}
     </div>
   {/if}
+
+  {#if contextMenu}
+    <ContextMenu
+      x={contextMenu.x}
+      y={contextMenu.y}
+      items={contextMenuItems}
+      ariaLabel="Notes text actions"
+      preserveFocus={true}
+    />
+  {/if}
 </div>
+
+<svelte:window
+  onpointerdown={(event) => {
+    if (!contextMenu) return;
+    if (event.target instanceof Element && event.target.closest(".todo-context-menu")) return;
+    closeContextMenu();
+  }}
+  onkeydown={(event) => {
+    if (contextMenu && event.key === "Escape") {
+      event.preventDefault();
+      closeContextMenu();
+    }
+  }}
+  onscrollcapture={closeContextMenu}
+  onwheel={closeContextMenu}
+/>
 
 <style>
   .notes-container {
