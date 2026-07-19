@@ -142,6 +142,7 @@
     place-items: center;
     width: 18px;
     height: 24px;
+    transform: translate(-2px, 0.5px);
   }
   .objective-fold-btn {
     display: grid;
@@ -160,10 +161,11 @@
     color: var(--text-color);
   }
   .objective-leaf-dot {
-    width: 3px;
-    height: 3px;
+    width: 4px;
+    height: 4px;
     border-radius: 50%;
-    background: var(--border-strong);
+    background: var(--text-muted);
+    box-shadow: 0 0 0 2px var(--surface);
   }
   .objective-content {
     min-width: 0;
