@@ -136,7 +136,6 @@
     align-items: start;
     column-gap: 6px;
     padding: 10px 0;
-    border-bottom: 1px solid var(--border-subtle);
   }
   .objective-marker {
     display: grid;
