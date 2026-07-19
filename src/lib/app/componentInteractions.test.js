@@ -709,7 +709,7 @@ describe("logger editing", () => {
   it("edits objective status and subjects without an origin control", async () => {
     const onUpdate = vi.fn();
     render(ObjectiveRow, {
-      objective: { subjects: ["rust"], legacyOrigin: "planned", status: "open", description: "Ship", indent: 0 },
+      objective: { subjects: ["rust"], status: "open", description: "Ship", indent: 0 },
       onUpdate, onDelete: vi.fn()
     });
     expect(document.querySelector(".origin-badge")).toBeNull();

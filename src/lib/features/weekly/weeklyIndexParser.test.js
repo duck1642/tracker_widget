@@ -2,26 +2,26 @@ import { describe, expect, it } from "vitest";
 import { parseWeeklyIndex, serializeWeeklyIndex } from "./weeklyIndexParser.js";
 import { aggregateWeeklyActual } from "./actualAggregator.js";
 
-const weekly = `---\ntitle: test\n---\n\n# 2026 - Week 26 - June 22-28\n\n## Objectives\n\n- {subjects: (rust), origin: planned, status: open} Build parser.\n\n## Weekly Plan\n\n| ID | Day | Session | Subjects | Target Minutes |\n| --- | --- | --- | --- | ---: |\n| p1 | Mon | Dev \\| Review | rust, test | 120 |\n| p2 | Mon | Reading | reading | 60 |\n\n## Weekly Plan Details\n\n<!-- tracker:plan-details:start -->\n\n### p1\n\n- {subjects: (rust), time: 30m} Draft parser tests\n\n### orphan\n\n- {subjects: (lost), time: 10m} Ignore me\n\n<!-- tracker:plan-details:end -->\n\n## Weekly Actual\n\n<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |\n<!-- tracker:actual:end -->\n\n## Notes\n\nRaw notes.\n`;
+const weekly = `---\ntitle: test\n---\n\n# 2026 - Week 26 - June 22-28\n\n## Objectives\n\n- {subjects: (rust), status: open} Build parser.\n\n## Weekly Plan\n\n| ID | Day | Session | Subjects | Target Minutes |\n| --- | --- | --- | --- | ---: |\n| p1 | Mon | Dev \\| Review | rust, test | 120 |\n| p2 | Mon | Reading | reading | 60 |\n\n## Weekly Plan Details\n\n<!-- tracker:plan-details:start -->\n\n### p1\n\n- {subjects: (rust), time: 30m} Draft parser tests\n\n### orphan\n\n- {subjects: (lost), time: 10m} Ignore me\n\n<!-- tracker:plan-details:end -->\n\n## Weekly Actual\n\n<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |\n<!-- tracker:actual:end -->\n\n## Notes\n\nRaw notes.\n`;
 
 describe("weekly index parser", () => {
   it("parses objectives, plan IDs, details, and escaped table cells", () => {
     const document = parseWeeklyIndex(weekly, { year: 2026, week: 26 });
-    expect(document.objectives[0]).toMatchObject({ legacyOrigin: "planned", status: "open", indent: 0 });
+    expect(document.objectives[0]).toMatchObject({ status: "open", indent: 0 });
     expect(document.plan[0]).toMatchObject({ id: "p1", session: "Dev | Review" });
     expect(document.plan[0].activities[0]).toMatchObject({ subjects: ["rust"], minutes: 30, description: "Draft parser tests" });
   });
 
   it("parses metadata-only objectives as empty objective rows", () => {
     const input = weekly.replace(
-      "- {subjects: (rust), origin: planned, status: open} Build parser.",
-      "- {subjects: (general), origin: planned, status: open}"
+      "- {subjects: (rust), status: open} Build parser.",
+      "- {subjects: (general), status: open}"
     );
     const document = parseWeeklyIndex(input, { year: 2026, week: 26 });
     expect(document.objectives).toHaveLength(1);
-    expect(document.objectives[0]).toMatchObject({ subjects: ["general"], legacyOrigin: "planned", status: "open", description: "", indent: 0 });
+    expect(document.objectives[0]).toMatchObject({ subjects: ["general"], status: "open", description: "", indent: 0 });
     expect(document.objectiveRawLines).toHaveLength(0);
-    expect(serializeWeeklyIndex(document)).toContain("- {subjects: (general), origin: planned, status: open}");
+    expect(serializeWeeklyIndex(document)).toContain("- {subjects: (general), status: open}");
   });
 
   it("parses zero minute table values without dropping rows", () => {
@@ -82,7 +82,7 @@ describe("weekly index parser", () => {
 
   it("preserves malformed objective lines without reclassifying them", () => {
     const malformed = weekly.replace(
-      "- {subjects: (rust), origin: planned, status: open} Build parser.",
+      "- {subjects: (rust), status: open} Build parser.",
       "- {subjects: (rust), orgin: unplanned, status: open} Keep this exact line."
     );
     const document = parseWeeklyIndex(malformed, { year: 2026, week: 26 });
@@ -90,9 +90,19 @@ describe("weekly index parser", () => {
     expect(serializeWeeklyIndex(document)).toContain("orgin: unplanned, status: open");
   });
 
+  it("preserves unsupported origin metadata as raw Markdown", () => {
+    const legacyLine = "- {subjects: (rust), origin: planned, status: open} Preserve imported legacy data.";
+    const input = weekly.replace("- {subjects: (rust), status: open} Build parser.", legacyLine);
+    const document = parseWeeklyIndex(input, { year: 2026, week: 26 });
+
+    expect(document.objectives).toHaveLength(0);
+    expect(document.objectiveRawLines).toEqual([legacyLine]);
+    expect(serializeWeeklyIndex(document)).toContain(legacyLine);
+  });
+
   it("parses and serializes flat objective indentation levels zero through two", () => {
     const input = weekly.replace(
-      "- {subjects: (rust), origin: planned, status: open} Build parser.",
+      "- {subjects: (rust), status: open} Build parser.",
       [
         "- {subjects: (one), status: open} Top.",
         "  - {subjects: (two), status: partial} Child.",
@@ -113,7 +123,7 @@ describe("weekly index parser", () => {
 
   it("preserves malformed and over-depth objective indentation as raw Markdown", () => {
     const input = weekly.replace(
-      "- {subjects: (rust), origin: planned, status: open} Build parser.",
+      "- {subjects: (rust), status: open} Build parser.",
       [
         " - {subjects: (odd), status: open} Odd indentation.",
         "      - {subjects: (deep), status: open} Too deep."

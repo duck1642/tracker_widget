@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { WeekStore } from "./weekStore.svelte.js";
 
-const index = `# 2026 - Week 26 - June 22-28\n\n## Objectives\n\n- {subjects: (rust), origin: planned, status: open} Ship.\n\n## Weekly Plan\n\n| ID | Day | Session | Subjects | Target Minutes |\n| --- | --- | --- | --- | ---: |\n\n## Weekly Plan Details\n\n<!-- tracker:plan-details:start -->\n<!-- tracker:plan-details:end -->\n\n## Weekly Actual\n\n<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |\n<!-- tracker:actual:end -->\n\n## Notes\n`;
+const index = `# 2026 - Week 26 - June 22-28\n\n## Objectives\n\n- {subjects: (rust), status: open} Ship.\n\n## Weekly Plan\n\n| ID | Day | Session | Subjects | Target Minutes |\n| --- | --- | --- | --- | ---: |\n\n## Weekly Plan Details\n\n<!-- tracker:plan-details:start -->\n<!-- tracker:plan-details:end -->\n\n## Weekly Actual\n\n<!-- tracker:actual:start -->\n| Day | Session | Subjects | Actual Minutes |\n| --- | --- | --- | ---: |\n<!-- tracker:actual:end -->\n\n## Notes\n`;
 
 function harness() {
   const files = new Map([["week.md", index]]);
@@ -25,7 +25,7 @@ describe("WeekStore editing", () => {
     await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
     store.updateObjective(store.objectives[0].id, { status: "partial" });
     await store.flushSave();
-    expect(files.get("week.md")).toContain("origin: planned, status: partial");
+    expect(files.get("week.md")).toContain("subjects: (rust), status: partial");
   });
 
   it("accepts an edit after a clean external reload without a false conflict", async () => {
@@ -89,7 +89,7 @@ describe("WeekStore editing", () => {
       { subjects: ["general"], status: "open", description: "One", indent: 0 },
       { subjects: ["general"], status: "open", description: "Two", indent: 0 }
     ]);
-    expect(store.objectives.slice(-2).every((objective) => !("origin" in objective) && !("legacyOrigin" in objective))).toBe(true);
+    expect(store.objectives.slice(-2).every((objective) => !("origin" in objective))).toBe(true);
   });
 
   it("does not add objectives from empty descriptions", async () => {

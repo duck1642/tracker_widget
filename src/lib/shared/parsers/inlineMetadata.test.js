@@ -17,21 +17,14 @@ describe("inline metadata", () => {
     expect(parseActivityLine("- {subjects: (bad subject), time: 30m} Invalid.")).toBeNull();
   });
 
-  it("accepts and retains legacy objective origin as compatibility metadata", () => {
-    expect(parseObjectiveLine("- {subjects: (altyapı), origin: unplanned, status: partial} Beklenmeyen iş."))
-      .toEqual({ subjects: ["altyapı"], legacyOrigin: "unplanned", status: "partial", description: "Beklenmeyen iş." });
-  });
-
-  it("accepts origin-free objectives and serializes legacy origin only when present", () => {
+  it("accepts and serializes origin-free objectives", () => {
     const current = parseObjectiveLine("- {subjects: (rust), status: open} Current objective.");
     expect(current).toEqual({ subjects: ["rust"], status: "open", description: "Current objective." });
     expect(serializeObjectiveLine({ ...current, indent: 1 })).toBe("  - {subjects: (rust), status: open} Current objective.");
-    expect(serializeObjectiveLine({ ...current, indent: 0, legacyOrigin: "planned" }))
-      .toBe("- {subjects: (rust), origin: planned, status: open} Current objective.");
   });
 
   it("rejects invalid objective metadata", () => {
-    expect(parseObjectiveLine("- {subjects: (rust), origin: accidental, status: open} Invalid origin.")).toBeNull();
+    expect(parseObjectiveLine("- {subjects: (rust), origin: planned, status: open} Unsupported origin.")).toBeNull();
     expect(parseObjectiveLine('- [ ] {subjects: (rust), goal: "Legacy"}')).toBeNull();
   });
 });
