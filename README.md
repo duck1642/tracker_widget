@@ -2,7 +2,7 @@
 
 Tracker Widget is a local-first desktop productivity app built with Tauri v2, SvelteKit, and Rust. It uses plain Markdown files for todos, weekly planning, daily logs, and notes.
 
-Current version: `1.1.0`
+Current version: `1.2.0`
 
 ## Features
 
@@ -137,4 +137,4 @@ Build the portable zip:
 npm run package:portable
 ```
 
-The portable zip is written to `build-artifacts/tracker-widget-portable-v1.1.0.zip`.
+The portable zip is written to `build-artifacts/tracker-widget-portable-v1.2.0.zip`.
