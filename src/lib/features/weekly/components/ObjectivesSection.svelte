@@ -2,7 +2,7 @@
   // @ts-nocheck
   import { Plus } from "@lucide/svelte";
   import ObjectiveRow from "./ObjectiveRow.svelte";
-  let { objectives, onAdd, onUpdate, onDelete, onMove } = $props();
+  let { objectives, onAdd, onUpdate, onDelete, onMove, onIndent, onOutdent } = $props();
 </script>
 
 <section id="objectives" class="week-section">
@@ -17,6 +17,8 @@
         onDelete={() => onDelete(objective.id)}
         onMoveUp={() => onMove(objective.id, "up")}
         onMoveDown={() => onMove(objective.id, "down")}
+        onIndent={() => onIndent(objective.id)}
+        onOutdent={() => onOutdent(objective.id)}
       />
     {/each}
     {#if objectives.length === 0}

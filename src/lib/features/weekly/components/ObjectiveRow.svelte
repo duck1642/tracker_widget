@@ -2,16 +2,12 @@
   // @ts-nocheck
   import { ChevronDown, ChevronUp, Trash2 } from "@lucide/svelte";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
-  let { objective, canMoveUp = true, canMoveDown = true, onUpdate, onDelete, onMoveUp, onMoveDown } = $props();
+  let { objective, canMoveUp = true, canMoveDown = true, onUpdate, onDelete, onMoveUp, onMoveDown, onIndent, onOutdent } = $props();
 
   let isEditingDesc = $state(false);
   let showStatusDropdown = $state(false);
   /** @type {HTMLDivElement | undefined} */
   let dropdownEl = $state();
-
-  function toggleOrigin() {
-    onUpdate({ origin: objective.origin === "planned" ? "unplanned" : "planned" });
-  }
 
   function handleOutsideClick(event) {
     if (showStatusDropdown && dropdownEl && !dropdownEl.contains(event.target)) {
@@ -37,9 +33,19 @@
   function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
+
+  function handleDescriptionKeydown(event) {
+    if (event.key === "Enter") {
+      isEditingDesc = false;
+    } else if (event.key === "Tab") {
+      event.preventDefault();
+      if (event.shiftKey) onOutdent?.();
+      else onIndent?.();
+    }
+  }
 </script>
 
-<article class="objective-card">
+<article class="objective-card" style:margin-left={`${(objective.indent || 0) * 24}px`}>
   <div class="row-top">
     {#if isEditingDesc}
       <input
@@ -47,7 +53,7 @@
         value={objective.description}
         oninput={(event) => onUpdate({ description: event.currentTarget.value.replace(/[\r\n]/g, " ") })}
         onblur={() => isEditingDesc = false}
-        onkeydown={(e) => { if (e.key === "Enter") isEditingDesc = false; }}
+        onkeydown={handleDescriptionKeydown}
         placeholder="Objective description"
         use:focus
       />
@@ -71,10 +77,6 @@
     </div>
   </div>
   <div class="row-bottom">
-    <button type="button" class="origin-badge" onclick={toggleOrigin}>
-      {objective.origin === "planned" ? "Planned" : "Unplanned"}
-    </button>
-
     <div class="status-dropdown-container" bind:this={dropdownEl}>
       <button
         type="button"
@@ -176,29 +178,6 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
-  }
-
-  /* Origin badge */
-  .origin-badge {
-    background: transparent;
-    color: #888888;
-    border: 1px solid #3d3d3d;
-    border-radius: 4px;
-    padding: 0 8px;
-    height: 26px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-    box-sizing: border-box;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  .origin-badge:hover {
-    border-color: #555;
-    color: var(--text-color);
   }
 
   /* Status select styling */

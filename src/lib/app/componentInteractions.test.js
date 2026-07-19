@@ -706,20 +706,17 @@ describe("logger editing", () => {
     expect(screen.queryByRole("option")).toBeNull();
   });
 
-  it("emits objective origin and status independently", async () => {
+  it("edits objective status and subjects without an origin control", async () => {
     const onUpdate = vi.fn();
     render(ObjectiveRow, {
-      objective: { subjects: ["rust"], origin: "planned", status: "open", description: "Ship" },
+      objective: { subjects: ["rust"], legacyOrigin: "planned", status: "open", description: "Ship", indent: 0 },
       onUpdate, onDelete: vi.fn()
     });
-    await fireEvent.click(screen.getByRole("button", { name: "Planned" }));
+    expect(document.querySelector(".origin-badge")).toBeNull();
 
-    // Open status dropdown
     await fireEvent.click(screen.getByLabelText("Status"));
-    // Select Partial status
     await fireEvent.click(screen.getByRole("menuitem", { name: "Partial" }));
 
-    expect(onUpdate).toHaveBeenCalledWith({ origin: "unplanned" });
     expect(onUpdate).toHaveBeenCalledWith({ status: "partial" });
 
     await fireEvent.input(screen.getByRole("textbox", { name: "Add subject" }), { target: { value: "weekly" } });
@@ -727,11 +724,32 @@ describe("logger editing", () => {
     expect(onUpdate).toHaveBeenCalledWith({ subjects: ["rust", "weekly"] });
   });
 
+  it("renders objective indentation and uses Tab and Shift+Tab without leaving the editor", async () => {
+    const onIndent = vi.fn();
+    const onOutdent = vi.fn();
+    const { container } = render(ObjectiveRow, {
+      objective: { subjects: ["rust"], status: "open", description: "Nested", indent: 2 },
+      onUpdate: vi.fn(), onDelete: vi.fn(), onIndent, onOutdent
+    });
+
+    expect(container.querySelector(".objective-card").style.marginLeft).toBe("48px");
+    await fireEvent.click(screen.getByText("Nested"));
+    const input = screen.getByPlaceholderText("Objective description");
+    expect(document.activeElement).toBe(input);
+
+    expect(await fireEvent.keyDown(input, { key: "Tab" })).toBe(false);
+    expect(onIndent).toHaveBeenCalledOnce();
+    expect(document.activeElement).toBe(input);
+    expect(await fireEvent.keyDown(input, { key: "Tab", shiftKey: true })).toBe(false);
+    expect(onOutdent).toHaveBeenCalledOnce();
+    expect(document.activeElement).toBe(input);
+  });
+
   it("emits Weekly objective move actions", async () => {
     const onMoveUp = vi.fn();
     const onMoveDown = vi.fn();
     render(ObjectiveRow, {
-      objective: { subjects: ["rust"], origin: "planned", status: "open", description: "Move objective" },
+      objective: { subjects: ["rust"], status: "open", description: "Move objective", indent: 0 },
       canMoveUp: true,
       canMoveDown: true,
       onUpdate: vi.fn(),
@@ -745,6 +763,7 @@ describe("logger editing", () => {
 
     expect(onMoveUp).toHaveBeenCalledOnce();
     expect(onMoveDown).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Delete objective" })).toBeTruthy();
   });
 });
 
