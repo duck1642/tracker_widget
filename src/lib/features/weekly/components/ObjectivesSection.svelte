@@ -123,7 +123,7 @@
 <style>
   .objectives-list { display: flex; flex-direction: column; }
   .objectives-list > :global(.objective-card:last-of-type) { padding-bottom: 18px; }
-  .actions-footer { display: flex; justify-content: flex-start; padding: 10px 0 2px; border-top: 1px solid var(--border-subtle); }
+  .actions-footer { display: flex; justify-content: flex-start; margin: 0 -16px; padding: 10px 16px 2px; border-top: 1px solid var(--border-subtle); }
   .add-activity-btn { display: flex; align-items: center; gap: 6px; min-height: 30px; border: 0; background: transparent; color: var(--accent); cursor: pointer; font-size: var(--text-sm); font-weight: 500; padding: 0; transition: color 0.15s ease; }
   .add-activity-btn:hover { color: var(--text-color); }
 </style>
