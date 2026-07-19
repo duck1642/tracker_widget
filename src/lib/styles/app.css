@@ -27,6 +27,8 @@
   --radius-lg: 10px;
   --shadow-sm: 0 8px 24px rgba(0, 0, 0, .13);
   --sidebar-width: clamp(220px, 24vw, 290px);
+  --layer-autocomplete: 60;
+  --layer-sticky-header: 70;
 }
 
 /* Reset and base styles */
