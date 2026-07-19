@@ -464,6 +464,9 @@
     border-color: #2d2d2d;
     text-align: center;
   }
+  .add-subject .badge-input::placeholder {
+    font-size: 13px;
+  }
   .add-subject .badge-input.empty-add {
     padding: 0;
     line-height: 24px;
