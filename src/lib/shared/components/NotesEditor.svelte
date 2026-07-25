@@ -11,14 +11,12 @@
     keymap,
     placeholder
   } from "@codemirror/view";
-  import {
-    insertNewlineContinueMarkupCommand,
-    markdownKeymap
-  } from "@codemirror/lang-markdown";
+  import { markdownKeymap } from "@codemirror/lang-markdown";
   import { appStore } from "$lib/app/appStore.svelte.js";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
   import { captureCodeMirrorText } from "$lib/shared/editor/noteEditorContext.js";
   import { completeTaskMarkerInput } from "$lib/shared/editor/noteEditorInput.js";
+  import { continueNoteMarkdownList } from "$lib/shared/editor/noteMarkdownCommands.js";
   import { noteEditorTheme } from "$lib/shared/editor/noteEditorTheme.js";
   import {
     createNoteMarkdownExtension,
@@ -38,7 +36,7 @@
   const noteMarkdownKeymap = [
     {
       key: "Enter",
-      run: insertNewlineContinueMarkupCommand({ nonTightLists: false })
+      run: continueNoteMarkdownList
     },
     ...markdownKeymap.filter((binding) => binding.key !== "Enter")
   ];
