@@ -2494,7 +2494,7 @@ describe("NotesEditor interactions", () => {
     expect(onChange).toHaveBeenCalledWith("- [x] Todo item\n* List item");
   });
 
-  it("opens edit mode with focused textarea when clicking a line", async () => {
+  it("edits only the active Markdown block while surrounding blocks stay rendered", async () => {
     const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
     const onChange = vi.fn();
     render(NotesEditor, { value: "- [ ] Item 1\n- Item 2\n\nSome text here", onChange });
@@ -2504,7 +2504,44 @@ describe("NotesEditor interactions", () => {
 
     const textarea = screen.getByRole("textbox");
     expect(textarea).toBeTruthy();
-    expect(textarea.value).toBe("- [ ] Item 1\n- Item 2\n\nSome text here");
+    expect(textarea.value).toBe("Some text here");
+    expect(screen.getByText("Item 1")).toBeTruthy();
+    expect(screen.getByText("Item 2")).toBeTruthy();
+  });
+
+  it("emits the complete Markdown document when the active block changes", async () => {
+    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
+    const onChange = vi.fn();
+    render(NotesEditor, { value: "Before\n**Current**\nAfter", onChange });
+
+    await fireEvent.click(screen.getByText("Current"));
+    const textarea = screen.getByRole("textbox");
+    textarea.value = "**Updated**";
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await fireEvent.input(textarea);
+
+    expect(onChange).toHaveBeenLastCalledWith("Before\n**Updated**\nAfter");
+    expect(screen.getByText("Before")).toBeTruthy();
+    expect(screen.getByText("After")).toBeTruthy();
+  });
+
+  it("opens a fenced code block as one raw multiline editing block", async () => {
+    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
+    const onChange = vi.fn();
+    const result = render(NotesEditor, {
+      value: "Before\n`````js\n```inner```\nconst value = 1;\n`````\nAfter",
+      onChange
+    });
+
+    expect(screen.getByText("js")).toBeTruthy();
+    const code = result.container.querySelector(".note-codeblock code");
+    expect(code.textContent).toBe("```inner```\nconst value = 1;");
+    await fireEvent.click(code);
+
+    const textarea = screen.getByRole("textbox");
+    expect(textarea.value).toBe("`````js\n```inner```\nconst value = 1;\n`````");
+    expect(screen.getByText("Before")).toBeTruthy();
+    expect(screen.getByText("After")).toBeTruthy();
   });
 
   it("offers only cut, copy, and paste in the notes editor", async () => {

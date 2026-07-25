@@ -2,18 +2,35 @@
   // @ts-nocheck
   import { appStore } from "$lib/app/appStore.svelte.js";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
+  import {
+    noteBlockAtOffset,
+    parseNoteMarkdown,
+    replaceNoteBlock,
+    toggleNoteCheckbox
+  } from "$lib/shared/parsers/noteMarkdown.js";
   import { captureEditableText } from "$lib/shared/services/editableTextClipboard.js";
   import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
 
   let { value = "", onChange, label = "Notes" } = $props();
 
+  let editorValue = $state("");
+  let lastIncomingValue = $state(null);
   let editing = $state(false);
+  let activeBlockStart = $state(0);
+  let activeTextarea = $state(null);
+  let pendingSelectionStart = $state(0);
+  let pendingSelectionEnd = $state(0);
   let showHelp = $state(false);
   let containerEl = $state(null);
-  let textareaEl = $state(null);
-  let pendingCaretPosition = $state(-1);
   let contextMenu = $state(null);
-  let measuredTextareaHeight = 0;
+  let measuredTextareaHeight = $state(0);
+
+  let parsedBlocks = $derived(parseNoteMarkdown(editorValue));
+  let activeBlock = $derived(
+    editing
+      ? parsedBlocks.find((block) => block.start === activeBlockStart) ?? parsedBlocks[0] ?? null
+      : null
+  );
   let contextMenuItems = $derived.by(() => {
     return buildEditableTextMenuItems(contextMenu?.editable, {
       beforeAction: closeContextMenu,
@@ -23,189 +40,40 @@
     });
   });
 
-  // Parse raw markdown text into structured blocks
-  function parseMarkdown(text) {
-    if (!text) return [];
-    const lines = text.split("\n");
-    const blocks = [];
-    let inCodeBlock = false;
-    let codeBlockContent = [];
-    let codeBlockIndex = -1;
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-
-      // Handle fenced code blocks (```)
-      if (line.trim().startsWith("```")) {
-        if (inCodeBlock) {
-          // Close code block
-          blocks.push({
-            type: "codeblock",
-            content: codeBlockContent.join("\n"),
-            index: codeBlockIndex
-          });
-          inCodeBlock = false;
-          codeBlockContent = [];
-          codeBlockIndex = -1;
-        } else {
-          // Open code block
-          inCodeBlock = true;
-          codeBlockIndex = i;
-        }
-        continue;
-      }
-
-      if (inCodeBlock) {
-        codeBlockContent.push(line);
-        continue;
-      }
-
-      const trimmed = line.trim();
-
-      // Standalone Markdown headings
-      const heading = /^(#{1,6})\s+(.+?)\s*$/.exec(trimmed);
-      if (heading) {
-        blocks.push({
-          type: "heading",
-          level: heading[1].length,
-          content: heading[2].replace(/\s+#+\s*$/, ""),
-          index: i
-        });
-        continue;
-      }
-
-      // Checkboxes: - [ ] or - [x]
-      if (trimmed.startsWith("- [ ] ") || trimmed.startsWith("- [x] ")) {
-        const checked = trimmed.startsWith("- [x] ");
-        const leadingSpaceCount = line.length - line.trimStart().length;
-        const content = line.substring(leadingSpaceCount + 6);
-        blocks.push({
-          type: "checkbox",
-          checked,
-          content,
-          indent: leadingSpaceCount * 12, // Indentation multiplier in pixels
-          index: i
-        });
-        continue;
-      }
-
-      // Bullet lists: - or *
-      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-        const leadingSpaceCount = line.length - line.trimStart().length;
-        const content = line.substring(leadingSpaceCount + 2);
-        blocks.push({
-          type: "bullet",
-          content,
-          indent: leadingSpaceCount * 12,
-          index: i
-        });
-        continue;
-      }
-
-      // Blockquotes: >
-      if (trimmed.startsWith("> ")) {
-        const leadingSpaceCount = line.length - line.trimStart().length;
-        const content = line.substring(leadingSpaceCount + 2);
-        blocks.push({
-          type: "blockquote",
-          content,
-          indent: leadingSpaceCount * 12,
-          index: i
-        });
-        continue;
-      }
-
-      // Horizontal Rules: ---
-      if (trimmed === "---") {
-        blocks.push({
-          type: "hr",
-          index: i
-        });
-        continue;
-      }
-
-      // Blank lines
-      if (trimmed === "") {
-        blocks.push({
-          type: "blank",
-          index: i
-        });
-        continue;
-      }
-
-      // Regular Paragraph
-      blocks.push({
-        type: "paragraph",
-        content: line,
-        index: i
-      });
-    }
-
-    // If still in code block at EOF, close it
-    if (inCodeBlock) {
-      blocks.push({
-        type: "codeblock",
-        content: codeBlockContent.join("\n"),
-        index: codeBlockIndex
-      });
-    }
-
-    return blocks;
-  }
-
-  // Parse inline styles (bold, italic, inline code)
-  function parseInline(text) {
-    if (!text) return "";
-
-    // Escape HTML to prevent injection
-    let escaped = text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-
-    // Bold: **text**
-    escaped = escaped.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-
-    // Italic: *text* or _text_
-    escaped = escaped.replace(/\*(.*?)\*/g, "<em>$1</em>");
-    escaped = escaped.replace(/_(.*?)_/g, "<em>$1</em>");
-
-    // Inline code: `code`
-    escaped = escaped.replace(/`(.*?)`/g, '<code class="inline-code">$1</code>');
-
-    return escaped;
-  }
-
-  let parsedBlocks = $derived(parseMarkdown(value));
-
-  // Auto-focus and caret positioning effect
   $effect(() => {
-    if (editing && textareaEl) {
-      textareaEl.focus();
-      if (pendingCaretPosition !== -1) {
-        textareaEl.selectionStart = pendingCaretPosition;
-        textareaEl.selectionEnd = pendingCaretPosition;
-        pendingCaretPosition = -1; // Reset
-      }
-    }
+    const incoming = value;
+    if (incoming === lastIncomingValue) return;
+    lastIncomingValue = incoming;
+    editorValue = incoming;
   });
 
-  // Auto-resize effect for textarea height
   $effect(() => {
-    const val = value;
-    if (!textareaEl) {
+    const textarea = activeTextarea;
+    const start = activeBlockStart;
+    if (!editing || !textarea) return;
+
+    textarea.focus();
+    const selectionStart = Math.min(pendingSelectionStart, textarea.value.length);
+    const selectionEnd = Math.min(pendingSelectionEnd, textarea.value.length);
+    textarea.setSelectionRange(selectionStart, selectionEnd);
+  });
+
+  $effect(() => {
+    const currentValue = editorValue;
+    const start = activeBlockStart;
+    const textarea = activeTextarea;
+    if (!editing || !textarea) {
       measuredTextareaHeight = 0;
       return;
     }
 
     const previousHeight = measuredTextareaHeight;
-    textareaEl.style.height = "auto";
-    const nextHeight = textareaEl.scrollHeight;
-    textareaEl.style.height = nextHeight + "px";
+    textarea.style.height = "auto";
+    const nextHeight = Math.max(textarea.scrollHeight, 30);
+    textarea.style.height = `${nextHeight}px`;
     measuredTextareaHeight = nextHeight;
 
-    if (previousHeight <= 0 || nextHeight <= previousHeight) return;
-    const textarea = textareaEl;
+    if (!currentValue || previousHeight <= 0 || nextHeight <= previousHeight) return;
     requestAnimationFrame(() => {
       if (document.activeElement !== textarea || textarea.selectionEnd !== textarea.value.length) return;
       const scrollPanel = textarea.closest(".panel-scroll");
@@ -216,87 +84,125 @@
     });
   });
 
-  function handlePreviewClick(event) {
-    // Skip transition if clicking a link, checkbox input or the help container
-    if (
-      event.target.tagName === "INPUT" ||
-      event.target.tagName === "A" ||
-      event.target.closest(".help-container")
-    ) {
+  function emitValue(nextValue) {
+    editorValue = nextValue;
+    onChange(nextValue);
+  }
+
+  function activateBlock(block, selection = block.contentStart ?? 0) {
+    editing = true;
+    activeBlockStart = block.start;
+    pendingSelectionStart = selection;
+    pendingSelectionEnd = selection;
+  }
+
+  function activateAtGlobalOffset(nextValue, globalOffset) {
+    const nextBlocks = parseNoteMarkdown(nextValue);
+    const nextBlock = noteBlockAtOffset(nextBlocks, globalOffset) ?? nextBlocks.at(-1);
+    if (!nextBlock) return;
+
+    activeBlockStart = nextBlock.start;
+    pendingSelectionStart = Math.max(0, globalOffset - nextBlock.start);
+    pendingSelectionEnd = pendingSelectionStart;
+  }
+
+  function handleSurfaceClick(event) {
+    if (event.target.tagName === "INPUT" || event.target.closest(".help-container")) return;
+    const lineEl = event.target.closest(".note-block");
+    if (!lineEl) {
+      if (!editorValue && parsedBlocks[0]) activateBlock(parsedBlocks[0], 0);
       return;
     }
 
-    editing = true;
-
-    // Detect if they clicked on a specific line
-    const lineEl = event.target.closest(".note-line");
-    if (lineEl) {
-      const lineIndex = parseInt(lineEl.dataset.index, 10);
-      if (!isNaN(lineIndex)) {
-        const lines = value.split("\n");
-        let caretPos = 0;
-        for (let i = 0; i < lineIndex; i++) {
-          caretPos += lines[i].length + 1; // line content + newline character
-        }
-
-        // Offset for leading whitespace to put cursor right at the beginning of text
-        const leadingWhitespace = lines[lineIndex].length - lines[lineIndex].trimStart().length;
-        caretPos += leadingWhitespace;
-
-        pendingCaretPosition = caretPos;
-        return;
-      }
-    }
-
-    // Default fallback: clicked placeholder or empty space, place at end
-    pendingCaretPosition = value.length;
+    const blockStart = Number(lineEl.dataset.start);
+    const block = parsedBlocks.find((item) => item.start === blockStart);
+    if (block) activateBlock(block);
   }
 
-  function handleCheckboxToggle(event, lineIndex) {
-    event.stopPropagation(); // Do not trigger line editing
-    const lines = value.split("\n");
-    const line = lines[lineIndex];
-    if (line) {
-      const trimmed = line.trim();
-      let updatedLine;
-      if (trimmed.startsWith("- [ ] ")) {
-        updatedLine = line.replace("- [ ] ", "- [x] ");
-      } else if (trimmed.startsWith("- [x] ")) {
-        updatedLine = line.replace("- [x] ", "- [ ] ");
-      } else {
-        return;
-      }
-      lines[lineIndex] = updatedLine;
-      onChange(lines.join("\n"));
+  function handleEditorInput(event, block) {
+    const textarea = event.currentTarget;
+    const nextValue = replaceNoteBlock(editorValue, block, textarea.value);
+    const globalOffset = block.start + textarea.selectionStart;
+    activateAtGlobalOffset(nextValue, globalOffset);
+    emitValue(nextValue);
+  }
+
+  function handleCheckboxToggle(event, block) {
+    event.stopPropagation();
+    emitValue(toggleNoteCheckbox(editorValue, block));
+  }
+
+  function moveToSibling(block, direction) {
+    const index = parsedBlocks.findIndex((item) => item.start === block.start);
+    const sibling = parsedBlocks[index + direction];
+    if (!sibling) return false;
+    activateBlock(sibling, direction < 0 ? sibling.raw.length : sibling.contentStart ?? 0);
+    return true;
+  }
+
+  function mergeWithPrevious(block) {
+    const index = parsedBlocks.findIndex((item) => item.start === block.start);
+    const previous = parsedBlocks[index - 1];
+    if (!previous) return false;
+
+    const mergedRaw = `${previous.raw}${block.raw}`;
+    const nextValue = `${editorValue.slice(0, previous.start)}${mergedRaw}${editorValue.slice(block.end)}`;
+    const caretOffset = previous.start + previous.raw.length;
+    activateAtGlobalOffset(nextValue, caretOffset);
+    emitValue(nextValue);
+    return true;
+  }
+
+  function mergeWithNext(block) {
+    const index = parsedBlocks.findIndex((item) => item.start === block.start);
+    const next = parsedBlocks[index + 1];
+    if (!next) return false;
+
+    const mergedRaw = `${block.raw}${next.raw}`;
+    const nextValue = `${editorValue.slice(0, block.start)}${mergedRaw}${editorValue.slice(next.end)}`;
+    const caretOffset = block.end;
+    activateAtGlobalOffset(nextValue, caretOffset);
+    emitValue(nextValue);
+    return true;
+  }
+
+  function handleKeyDown(event, block) {
+    const target = event.currentTarget;
+    const hasSelection = target.selectionStart !== target.selectionEnd;
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      editing = false;
+      return;
+    }
+
+    if (event.key === "Tab") {
+      event.preventDefault();
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      target.setRangeText("  ", start, end, "end");
+      handleEditorInput({ currentTarget: target }, block);
+      return;
+    }
+
+    if (!hasSelection && event.key === "ArrowUp" && target.selectionStart === 0) {
+      if (moveToSibling(block, -1)) event.preventDefault();
+    } else if (!hasSelection && event.key === "ArrowDown" && target.selectionEnd === target.value.length) {
+      if (moveToSibling(block, 1)) event.preventDefault();
+    } else if (!hasSelection && event.key === "Backspace" && target.selectionStart === 0) {
+      if (mergeWithPrevious(block)) event.preventDefault();
+    } else if (!hasSelection && event.key === "Delete" && target.selectionEnd === target.value.length) {
+      if (mergeWithNext(block)) event.preventDefault();
     }
   }
 
   /** @param {FocusEvent} event */
   function handleFocusOut(event) {
-    if (containerEl && event.relatedTarget && containerEl.contains(event.relatedTarget)) {
-      return;
-    }
+    if (containerEl && event.relatedTarget && containerEl.contains(event.relatedTarget)) return;
 
     setTimeout(() => {
-      if (containerEl && !containerEl.contains(document.activeElement)) {
-        editing = false;
-      }
+      if (containerEl && !containerEl.contains(document.activeElement)) editing = false;
     }, 0);
-  }
-
-  /** @param {KeyboardEvent} event */
-  function handleKeyDown(event) {
-    if (event.key === "Escape") {
-      editing = false;
-    } else if (event.key === "Tab") {
-      event.preventDefault();
-      const target = event.currentTarget;
-      const start = target.selectionStart;
-      const end = target.selectionEnd;
-      target.value = `${target.value.slice(0, start)}  ${target.value.slice(end)}`;
-      target.selectionStart = target.selectionEnd = start + 2;
-      onChange(target.value);
-    }
   }
 
   function openContextMenu(event) {
@@ -312,6 +218,17 @@
     contextMenu = null;
   }
 
+  function parseInline(text) {
+    if (!text) return "";
+    let escaped = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    escaped = escaped.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    escaped = escaped.replace(/\*(.*?)\*/g, "<em>$1</em>");
+    escaped = escaped.replace(/_(.*?)_/g, "<em>$1</em>");
+    return escaped.replace(/`(.*?)`/g, '<code class="inline-code">$1</code>');
+  }
 </script>
 
 <div class="notes-container" bind:this={containerEl} onfocusout={handleFocusOut}>
@@ -322,16 +239,17 @@
       <button class="help-btn" type="button" aria-label="Formatting help">?</button>
       {#if showHelp}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="help-popover" onmousedown={(e) => e.preventDefault()}>
+        <div class="help-popover" onmousedown={(event) => event.preventDefault()}>
           <h3>Formatting Guide</h3>
           <ul>
             <li><span>Headings:</span> <code># H1</code> through <code>###### H6</code></li>
             <li><span>Bullets:</span> <code>- item</code> or <code>* item</code></li>
+            <li><span>Numbered:</span> <code>1. item</code></li>
             <li><span>Todo items:</span> <code>- [ ] todo</code> or <code>- [x] done</code></li>
             <li><span>Bold:</span> <code>**text**</code></li>
             <li><span>Italic:</span> <code>*text*</code> or <code>_text_</code></li>
             <li><span>Quote:</span> <code>&gt; text</code></li>
-            <li><span>Code:</span> <code>`code`</code> or <code>``` codeblock ```</code></li>
+            <li><span>Code fence:</span> <code>```js</code> through <code>```</code></li>
           </ul>
           <div class="help-warning">Links are displayed as plain text.</div>
         </div>
@@ -339,64 +257,71 @@
     </div>
   </header>
 
-  {#if editing}
-    <textarea
-      id="notes-area"
-      bind:this={textareaEl}
-      value={value}
-      oninput={(e) => onChange(e.currentTarget.value)}
-      onkeydown={handleKeyDown}
-      oncontextmenu={openContextMenu}
-      placeholder="Type notes here..."
-    ></textarea>
-  {:else}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-    <div class="notes-preview" onclick={handlePreviewClick} role="document" tabindex="0">
-      {#each parsedBlocks as block}
-        {#if block.type === "heading"}
-          <div class="note-line heading-line" data-index={block.index}>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <div
+    class="notes-surface"
+    class:editing
+    onclick={handleSurfaceClick}
+    role="document"
+    aria-label={`${label} live preview`}
+  >
+    {#if !editorValue && !editing}
+      <div class="notes-placeholder">Click to add notes...</div>
+    {:else}
+      {#each parsedBlocks as block (`${block.start}-${block.type}`)}
+        {#if activeBlock?.start === block.start}
+        <textarea
+          id="notes-area"
+          class="block-editor"
+          class:code-editor={block.type === "codeblock"}
+          bind:this={activeTextarea}
+          value={block.raw}
+          aria-label={label}
+          oninput={(event) => handleEditorInput(event, block)}
+          onkeydown={(event) => handleKeyDown(event, block)}
+          oncontextmenu={openContextMenu}
+          placeholder="Type notes here..."
+        ></textarea>
+        {:else if block.type === "heading"}
+          <div class="note-block heading-line" data-start={block.start}>
             <svelte:element this={`h${block.level}`} class="note-heading level-{block.level}">{@html parseInline(block.content)}</svelte:element>
           </div>
         {:else if block.type === "checkbox"}
-          <div class="note-line checkbox-line" style="padding-left: {block.indent}px;" data-index={block.index}>
-            <input
-              type="checkbox"
-              checked={block.checked}
-              onclick={(e) => handleCheckboxToggle(e, block.index)}
-            />
+          <div class="note-block checkbox-line" style="padding-left: {block.indent}px;" data-start={block.start}>
+            <input type="checkbox" checked={block.checked} onclick={(event) => handleCheckboxToggle(event, block)} />
             <span class="note-text" class:checked={block.checked}>{@html parseInline(block.content)}</span>
           </div>
         {:else if block.type === "bullet"}
-          <div class="note-line bullet-line" style="padding-left: {block.indent}px;" data-index={block.index}>
+          <div class="note-block bullet-line" style="padding-left: {block.indent}px;" data-start={block.start}>
             <span class="bullet-dot">•</span>
             <span class="note-text">{@html parseInline(block.content)}</span>
           </div>
+        {:else if block.type === "ordered"}
+          <div class="note-block ordered-line" style="padding-left: {block.indent}px;" data-start={block.start}>
+            <span class="ordered-marker">{block.marker}</span>
+            <span class="note-text">{@html parseInline(block.content)}</span>
+          </div>
         {:else if block.type === "blockquote"}
-          <div class="note-line blockquote-line" style="padding-left: {block.indent}px;" data-index={block.index}>
+          <div class="note-block blockquote-line" style="padding-left: {block.indent}px;" data-start={block.start}>
             <blockquote class="note-blockquote">{@html parseInline(block.content)}</blockquote>
           </div>
         {:else if block.type === "codeblock"}
-          <div class="note-line codeblock-line" data-index={block.index}>
-            <pre class="note-codeblock"><code>{block.content}</code></pre>
+          <div class="note-block codeblock-line" data-start={block.start}>
+            <pre class="note-codeblock">{#if block.language}<span class="code-language">{block.language}</span>{/if}<code>{block.content}</code></pre>
           </div>
         {:else if block.type === "hr"}
-          <div class="note-line hr-line" data-index={block.index}>
-            <hr class="note-hr" />
-          </div>
+          <div class="note-block hr-line" data-start={block.start}><hr class="note-hr" /></div>
         {:else if block.type === "blank"}
-          <div class="note-line blank-line" data-index={block.index}>&nbsp;</div>
+          <div class="note-block blank-line" data-start={block.start}>&nbsp;</div>
         {:else}
-          <div class="note-line paragraph-line" data-index={block.index}>
+          <div class="note-block paragraph-line" data-start={block.start}>
             <p class="note-paragraph">{@html parseInline(block.content)}</p>
           </div>
         {/if}
-      {:else}
-        <div class="notes-placeholder">Click to add notes...</div>
       {/each}
-    </div>
-  {/if}
+    {/if}
+  </div>
 
   {#if contextMenu}
     <ContextMenu
@@ -470,17 +395,16 @@
     pointer-events: auto;
   }
   .help-popover h3 {
-    margin: 0 0 8px 0;
+    margin: 0 0 8px;
     font-size: 12px;
     font-weight: 600;
-    color: var(--text-color);
   }
   .help-popover ul {
-    margin: 0 0 10px 0;
-    padding: 0;
-    list-style: none;
     display: grid;
     gap: 4px;
+    margin: 0 0 10px;
+    padding: 0;
+    list-style: none;
   }
   .help-popover li {
     display: flex;
@@ -489,167 +413,179 @@
     color: var(--text-muted);
   }
   .help-popover code {
-    background: #242424;
     padding: 1px 4px;
     border-radius: 3px;
-    font-family: var(--font-mono);
+    background: #242424;
     color: var(--accent);
+    font-family: var(--font-mono);
   }
   .help-warning {
-    border-top: 1px solid #2d2d2d;
     padding-top: 8px;
+    border-top: 1px solid #2d2d2d;
     color: #e5c07b;
     font-weight: 500;
     line-height: 1.4;
   }
 
-  textarea {
+  .notes-surface {
     width: 100%;
     min-height: 150px;
-    resize: none;
+    padding: 12px;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     background: var(--bg-dark);
     color: var(--text-color);
-    padding: 12px;
-    font: 12px/1.6 var(--font-mono);
     box-sizing: border-box;
-    outline: none;
-    overflow-y: hidden;
-  }
-  textarea:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-soft);
-  }
-
-  /* Preview Mode Styling */
-  .notes-preview {
-    width: 100%;
-    min-height: 150px;
-    padding: 12px;
-    background: var(--bg-dark);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    box-sizing: border-box;
-    cursor: pointer;
+    cursor: text;
     font-size: 13px;
     line-height: 1.6;
-    color: var(--text-color);
-    transition: border-color 0.15s ease, background-color 0.15s ease;
     outline: none;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
   }
-  .notes-preview:hover {
+  .notes-surface:hover {
     border-color: #444;
     background: rgba(255, 255, 255, 0.01);
   }
-  .notes-preview:focus-visible {
+  .notes-surface.editing {
     border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--accent-soft);
   }
 
+  .block-editor {
+    display: block;
+    width: 100%;
+    min-height: 30px;
+    margin: 0;
+    padding: 2px 0;
+    resize: none;
+    overflow: hidden;
+    border: 0;
+    background: transparent;
+    color: var(--text-color);
+    box-sizing: border-box;
+    font: 12px/1.6 var(--font-mono);
+    overflow-wrap: anywhere;
+    outline: none;
+  }
+  .block-editor.code-editor {
+    min-height: 54px;
+    margin: 4px 0;
+    padding: 10px 12px;
+    border: 1px solid #343434;
+    border-radius: var(--radius-md);
+    background: #121212;
+  }
   .notes-placeholder {
+    padding: 8px 0;
     color: var(--text-muted);
     font-style: italic;
-    padding: 8px 0;
   }
-
-  .note-line {
+  .note-block {
     display: flex;
     align-items: flex-start;
     gap: 8px;
+    min-width: 0;
     min-height: 20px;
     padding: 2px 0;
     box-sizing: border-box;
   }
-
   .note-text {
     flex: 1;
-    word-break: break-word;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .note-text.checked {
-    text-decoration: line-through;
     color: var(--text-muted);
+    text-decoration: line-through;
     opacity: 0.6;
   }
-
-  /* List styles */
   .bullet-dot {
-    color: var(--accent);
-    font-weight: bold;
-    user-select: none;
     margin-right: 2px;
+    color: var(--accent);
+    font-weight: 700;
+    user-select: none;
   }
-
-  /* Checkbox lines */
+  .ordered-marker {
+    flex: 0 0 auto;
+    min-width: 1.5em;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+  }
   .checkbox-line input[type="checkbox"] {
     margin-top: 4px;
     cursor: pointer;
     accent-color: var(--accent);
   }
-
-  /* Quote block styling */
   .note-blockquote {
+    width: 100%;
     margin: 0;
     padding: 4px 12px;
     border-left: 2px solid var(--accent);
-    color: var(--text-muted);
-    font-style: italic;
-    background: rgba(255, 255, 255, 0.02);
     border-radius: 0 4px 4px 0;
-    width: 100%;
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-muted);
     box-sizing: border-box;
+    font-style: italic;
+    overflow-wrap: anywhere;
   }
-
-  /* Code block styling */
   .note-codeblock {
+    position: relative;
+    width: 100%;
     margin: 6px 0;
     padding: 10px 14px;
-    background: #121212;
+    overflow-x: auto;
     border: 1px solid #282828;
     border-radius: var(--radius-md);
-    overflow-x: auto;
+    background: #121212;
+    box-sizing: border-box;
     font-family: var(--font-mono);
     font-size: 12px;
     line-height: 1.5;
-    width: 100%;
-    box-sizing: border-box;
   }
-
+  .note-codeblock code {
+    display: block;
+    white-space: pre;
+  }
+  .code-language {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1;
+    text-transform: uppercase;
+  }
   .note-hr {
+    width: 100%;
+    margin: 12px 0;
     border: 0;
     border-top: 1px solid var(--border-color);
-    margin: 12px 0;
-    width: 100%;
   }
-
   .note-paragraph {
-    margin: 0;
     width: 100%;
+    margin: 0;
+    overflow-wrap: anywhere;
   }
-
   .note-heading {
     margin: 0;
     color: var(--text-primary);
     line-height: 1.35;
-    word-break: break-word;
+    overflow-wrap: anywhere;
   }
   .note-heading.level-1 { font-size: 1.45em; }
   .note-heading.level-2 { font-size: 1.3em; }
   .note-heading.level-3 { font-size: 1.18em; }
   .note-heading.level-4 { font-size: 1.08em; }
   .note-heading.level-5 { font-size: 1em; }
-  .note-heading.level-6 { font-size: .92em; color: var(--text-muted); }
-
-  .blank-line {
-    height: 12px;
-  }
+  .note-heading.level-6 { color: var(--text-muted); font-size: .92em; }
+  .blank-line { height: 12px; }
 
   :global(.inline-code) {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    background: #242424;
     padding: 2px 4px;
     border-radius: 3px;
+    background: #242424;
     color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 11px;
   }
 </style>
