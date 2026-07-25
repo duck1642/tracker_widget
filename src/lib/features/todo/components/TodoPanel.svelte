@@ -11,7 +11,7 @@
   import TodoList from "./TodoList.svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
   import { CheckSquare2, ChevronDown, ChevronUp, ClipboardList, ClipboardPaste, Copy, Flag, IndentDecrease, IndentIncrease, ListTodo, Scissors, Square, TextSelect, Trash2, X, Terminal } from "@lucide/svelte";
-  import { captureEditableText, copyEditableSelection, cutEditableSelection, hasEditableSelection, pasteIntoEditable, selectAllEditableText } from "$lib/shared/services/editableTextClipboard.js";
+  import { captureEditableText, copyEditableSelection, cutEditableSelection, editableTextValue, hasEditableSelection, pasteIntoEditable, selectAllEditableText } from "$lib/shared/services/editableTextClipboard.js";
   import { invoke } from "@tauri-apps/api/core";
   import TodoSendSessionMenu from "./TodoSendSessionMenu.svelte";
   import TodoSendWeeklyPlanMenu from "./TodoSendWeeklyPlanMenu.svelte";
@@ -52,7 +52,7 @@
         { label: "Cut", icon: Scissors, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(cutEditableSelection, editable) },
         { label: "Copy", icon: Copy, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(copyEditableSelection, editable) },
         { label: "Paste", icon: ClipboardPaste, onclick: () => runTextAction(pasteIntoEditable, editable) },
-        { label: "Select All", icon: TextSelect, disabled: !editable.target.value, onclick: () => runTextAction(selectAllEditableText, editable) },
+        { label: "Select All", icon: TextSelect, disabled: !editableTextValue(editable), onclick: () => runTextAction(selectAllEditableText, editable) },
         { separator: true }
       );
     }

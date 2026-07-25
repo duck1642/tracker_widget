@@ -2,6 +2,7 @@ import { ClipboardPaste, Copy, Scissors, TextSelect } from "@lucide/svelte";
 import {
   copyEditableSelection,
   cutEditableSelection,
+  editableTextValue,
   hasEditableSelection,
   pasteIntoEditable,
   selectAllEditableText
@@ -50,7 +51,7 @@ export function buildEditableTextMenuItems(context, {
     items.push({
       label: "Select All",
       icon: TextSelect,
-      disabled: !context.target.value,
+      disabled: !editableTextValue(context),
       onclick: run(selectAllEditableText)
     });
   }

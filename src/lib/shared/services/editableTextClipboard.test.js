@@ -96,7 +96,7 @@ describe("editable text clipboard", () => {
   });
 
   it("does not delete text when writing the clipboard fails", async () => {
-    writeText.mockRejectedValue(new Error("denied"));
+    writeText.mockRejectedValueOnce(new Error("denied"));
     const input = editable();
     input.setSelectionRange(0, 5);
 
@@ -118,4 +118,33 @@ describe("editable text clipboard", () => {
     expect(other.selectionEnd).toBe(2);
   });
 
+  it("supports non-input editor adapters through the same clipboard actions", async () => {
+    const replaceSelection = vi.fn();
+    const focus = vi.fn();
+    const setSelectionRange = vi.fn();
+    const context = {
+      value: "Alpha text",
+      selectionStart: 6,
+      selectionEnd: 10,
+      selectedText: "text",
+      replaceSelection,
+      focus,
+      setSelectionRange
+    };
+
+    await copyEditableSelection(context);
+    expect(writeText).toHaveBeenCalledWith("text");
+    expect(focus).toHaveBeenCalled();
+    expect(setSelectionRange).toHaveBeenCalledWith(6, 10);
+
+    await cutEditableSelection(context);
+    expect(replaceSelection).toHaveBeenCalledWith("", "deleteByCut");
+
+    readText.mockResolvedValueOnce("notes");
+    await pasteIntoEditable(context);
+    expect(replaceSelection).toHaveBeenCalledWith("notes", "insertFromPaste");
+
+    expect(selectAllEditableText(context)).toBe(true);
+    expect(setSelectionRange).toHaveBeenLastCalledWith(0, 10);
+  });
 });

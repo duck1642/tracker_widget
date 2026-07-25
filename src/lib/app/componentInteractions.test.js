@@ -33,6 +33,7 @@ import { sessionHistoryStore } from "./sessionHistoryStore.svelte.js";
 import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
 import * as logWorkspaceService from "$lib/shared/services/logWorkspaceService.js";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { EditorView } from "@codemirror/view";
 
 vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
   readText: vi.fn(),
@@ -2452,153 +2453,118 @@ describe("workspace settings and todo recovery", () => {
 });
 
 describe("NotesEditor interactions", () => {
-  it("renders standalone Markdown headings at levels one through six", async () => {
+  async function renderNotes(props) {
     const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
-    render(NotesEditor, {
+    const result = render(NotesEditor, props);
+    await tick();
+    const textbox = screen.getByRole("textbox", { name: props.label ?? "Notes" });
+    const view = EditorView.findFromDOM(textbox);
+    if (!view) throw new Error("CodeMirror editor was not mounted");
+    return { ...result, textbox, view };
+  }
+
+  it("styles all heading levels inside one continuous editor", async () => {
+    const { container } = await renderNotes({
       value: "# One\n## Two\n### Three\n#### Four\n##### Five\n###### Six",
       onChange: vi.fn()
     });
 
-    for (const [level, name] of [[1, "One"], [2, "Two"], [3, "Three"], [4, "Four"], [5, "Five"], [6, "Six"]]) {
-      expect(screen.getByRole("heading", { level, name })).toBeTruthy();
+    for (let level = 1; level <= 6; level += 1) {
+      expect(container.querySelector(`.cm-note-heading-${level}`)).toBeTruthy();
     }
+    expect(container.querySelectorAll('[role="textbox"]')).toHaveLength(1);
+    expect(container.querySelector("textarea")).toBeNull();
   });
 
-  it("renders preview mode by default and shows help on hover", async () => {
-    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
-    const onChange = vi.fn();
-    render(NotesEditor, { value: "- [ ] Buy milk\n- todo 2", onChange, label: "Daily Notes" });
+  it("renders task and bullet widgets and shows help on hover", async () => {
+    const { container } = await renderNotes({
+      value: "- [ ] Buy milk\n- todo 2\n---\n**bold** *italic* `code` [link](https://example.com)",
+      onChange: vi.fn(),
+      label: "Daily Notes"
+    });
 
-    // Expect label to be correct
-    expect(screen.getByText("Daily Notes")).toBeTruthy();
+    expect(container.querySelector(".cm-note-task")).toBeTruthy();
+    expect(container.querySelector(".cm-note-bullet")?.textContent).toBe("•");
+    expect(container.querySelector(".cm-note-rule")).toBeTruthy();
+    expect(container.querySelector(".cm-note-strong")).toBeTruthy();
+    expect(container.querySelector(".cm-note-emphasis")).toBeTruthy();
+    expect(container.querySelector(".cm-note-inline-code")).toBeTruthy();
+    expect(container.querySelector(".cm-note-link")?.textContent).toBe("link");
+    expect(container.textContent).toContain("Buy milk");
+    expect(container.textContent).toContain("todo 2");
 
-    // Check preview items
-    expect(screen.getByText("Buy milk")).toBeTruthy();
-    expect(screen.getByText("todo 2")).toBeTruthy();
-
-    // Trigger help popover hover
     const helpBtn = screen.getByRole("button", { name: "Formatting help" });
     await fireEvent.mouseEnter(helpBtn.parentElement);
     expect(screen.getByText("Formatting Guide")).toBeTruthy();
   });
 
-  it("updates raw text directly when clicking a preview checkbox", async () => {
-    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
+  it("updates the canonical Markdown when clicking a task widget", async () => {
     const onChange = vi.fn();
-    render(NotesEditor, { value: "- [ ] Todo item\n* List item", onChange });
+    await renderNotes({ value: "- [ ] Todo item\n* List item", onChange });
 
-    const checkbox = screen.getByRole("checkbox");
-    expect(checkbox.checked).toBe(false);
-
-    await fireEvent.click(checkbox);
-    expect(onChange).toHaveBeenCalledWith("- [x] Todo item\n* List item");
+    await fireEvent.click(screen.getByRole("checkbox", { name: "Mark task complete" }));
+    expect(onChange).toHaveBeenLastCalledWith("- [x] Todo item\n* List item");
   });
 
-  it("edits only the active Markdown block while surrounding blocks stay rendered", async () => {
-    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
+  it("emits the complete continuous document for an editor transaction", async () => {
     const onChange = vi.fn();
-    render(NotesEditor, { value: "- [ ] Item 1\n- Item 2\n\nSome text here", onChange });
+    const { view } = await renderNotes({ value: "Before\n**Current**\nAfter", onChange });
+    const from = view.state.doc.toString().indexOf("Current");
 
-    // Click the paragraph text to enter edit mode
-    await fireEvent.click(screen.getByText("Some text here"));
+    view.dispatch({ changes: { from, to: from + 7, insert: "Updated" } });
 
-    const textarea = screen.getByRole("textbox");
-    expect(textarea).toBeTruthy();
-    expect(textarea.value).toBe("Some text here");
-    expect(screen.getByText("Item 1")).toBeTruthy();
-    expect(screen.getByText("Item 2")).toBeTruthy();
-  });
-
-  it("emits the complete Markdown document when the active block changes", async () => {
-    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
-    const onChange = vi.fn();
-    render(NotesEditor, { value: "Before\n**Current**\nAfter", onChange });
-
-    await fireEvent.click(screen.getByText("Current"));
-    const textarea = screen.getByRole("textbox");
-    textarea.value = "**Updated**";
-    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    await fireEvent.input(textarea);
-
+    expect(view.state.doc.toString()).toBe("Before\n**Updated**\nAfter");
     expect(onChange).toHaveBeenLastCalledWith("Before\n**Updated**\nAfter");
-    expect(screen.getByText("Before")).toBeTruthy();
-    expect(screen.getByText("After")).toBeTruthy();
   });
 
-  it("opens a fenced code block as one raw multiline editing block", async () => {
-    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
-    const onChange = vi.fn();
-    const result = render(NotesEditor, {
-      value: "Before\n`````js\n```inner```\nconst value = 1;\n`````\nAfter",
-      onChange
-    });
+  it("preserves a five-backtick fenced block and reveals its exact source when active", async () => {
+    const value = "Before\n`````js\n```inner```\nconst value = 1;\n`````\nAfter";
+    const { container, view } = await renderNotes({ value, onChange: vi.fn() });
 
-    expect(screen.getByText("js")).toBeTruthy();
-    const code = result.container.querySelector(".note-codeblock code");
-    expect(code.textContent).toBe("```inner```\nconst value = 1;");
-    await fireEvent.click(code);
+    expect(container.querySelectorAll(".cm-note-codeblock")).toHaveLength(4);
+    expect(view.state.doc.toString()).toBe(value);
 
-    const textarea = screen.getByRole("textbox");
-    expect(textarea.value).toBe("`````js\n```inner```\nconst value = 1;\n`````");
-    expect(screen.getByText("Before")).toBeTruthy();
-    expect(screen.getByText("After")).toBeTruthy();
+    const anchor = value.indexOf("inner");
+    view.focus();
+    view.dispatch({ selection: { anchor } });
+    expect(container.textContent).toContain("`````js");
+    expect(container.textContent).toContain("`````");
+    expect(view.state.doc.toString()).toBe(value);
   });
 
-  it("offers only cut, copy, and paste in the notes editor", async () => {
-    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
+  it("offers cut, copy, and paste through the shared context menu adapter", async () => {
     const onChange = vi.fn();
-    render(NotesEditor, { value: "Alpha text", onChange, label: "Weekly notes" });
+    const { textbox, view } = await renderNotes({ value: "Alpha text", onChange, label: "Weekly notes" });
 
-    await fireEvent.click(screen.getByText("Alpha text"));
-    const textarea = screen.getByRole("textbox", { name: "Weekly notes" });
-    textarea.setSelectionRange(6, 10);
-    await fireEvent.contextMenu(textarea, { clientX: 20, clientY: 30 });
+    view.dispatch({ selection: { anchor: 6, head: 10 } });
+    await fireEvent.contextMenu(textbox, { clientX: 20, clientY: 30 });
 
     const menu = screen.getByRole("menu", { name: "Notes text actions" });
     expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent.trim())).toEqual(["Cut", "Copy", "Paste"]);
     expect(within(menu).queryByText("Select All")).toBeNull();
 
-    await fireEvent.pointerDown(within(menu).getByRole("menuitem", { name: "Cut" }));
     await fireEvent.click(within(menu).getByRole("menuitem", { name: "Cut" }));
     expect(writeText).toHaveBeenCalledWith("text");
-    expect(onChange).toHaveBeenCalledWith("Alpha ");
+    expect(onChange).toHaveBeenLastCalledWith("Alpha ");
 
     readText.mockResolvedValue("notes");
-    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    await fireEvent.contextMenu(textarea, { clientX: 20, clientY: 30 });
+    view.dispatch({ selection: { anchor: view.state.doc.length } });
+    await fireEvent.contextMenu(textbox, { clientX: 20, clientY: 30 });
     await fireEvent.click(screen.getByRole("menuitem", { name: "Paste" }));
     expect(onChange).toHaveBeenLastCalledWith("Alpha notes");
   });
 
-  it("reveals the configured bottom gap when notes grow at the caret", async () => {
-    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
-    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
-      callback(0);
-      return 1;
-    });
+  it("synchronizes a real external value without echoing it through onChange", async () => {
     const onChange = vi.fn();
-    const result = render(NotesEditor, { value: "line", onChange });
-    const scrollPanel = document.createElement("div");
-    scrollPanel.className = "panel-scroll";
-    scrollPanel.style.setProperty("--panel-bottom-gap", "22px");
-    document.body.append(scrollPanel);
-    scrollPanel.append(result.container);
+    const rendered = await renderNotes({ value: "alpha", onChange });
+    rendered.view.dispatch({ selection: { anchor: 3 } });
 
-    await fireEvent.click(screen.getByText("line"));
-    const textarea = screen.getByRole("textbox");
-    let scrollHeight = 150;
-    Object.defineProperty(textarea, "scrollHeight", { configurable: true, get: () => scrollHeight });
-    textarea.getBoundingClientRect = () => ({ top: 30, bottom: 210, left: 0, right: 100, width: 100, height: 180 });
-    scrollPanel.getBoundingClientRect = () => ({ top: 0, bottom: 200, left: 0, right: 100, width: 100, height: 200 });
-    scrollPanel.scrollTop = 0;
-    await result.rerender({ value: "line one", onChange });
+    await rendered.rerender({ value: "a much longer external value", onChange });
+    await tick();
 
-    scrollHeight = 180;
-    textarea.value = "line one\nline two";
-    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    await result.rerender({ value: textarea.value, onChange });
-
-    expect(scrollPanel.scrollTop).toBe(32);
+    expect(rendered.view.state.doc.toString()).toBe("a much longer external value");
+    expect(rendered.view.state.selection.main.head).toBe(3);
+    expect(onChange).not.toHaveBeenCalled();
   });
 });
 
