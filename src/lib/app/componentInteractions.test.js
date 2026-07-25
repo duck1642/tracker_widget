@@ -2538,6 +2538,7 @@ describe("NotesEditor interactions", () => {
       ["1. item", "1. item\n2. "],
       ["9) item", "9) item\n10) "],
       ["- [x] task", "- [x] task\n- [ ] "],
+      ["- Intro\n\n- [ ] first\n- [ ] second", "- Intro\n\n- [ ] first\n- [ ] second\n- [ ] "],
       ["- item\n- ", "- item\n"]
     ];
 
