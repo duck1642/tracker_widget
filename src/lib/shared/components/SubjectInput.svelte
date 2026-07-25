@@ -454,10 +454,6 @@
   .add-subject .badge-input::placeholder {
     font-size: 13px;
   }
-  .add-subject .badge-input.empty-add {
-    padding: 0;
-    line-height: 24px;
-  }
   .add-subject .badge-input:hover {
     border-color: #555;
     color: var(--text-color);
