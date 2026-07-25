@@ -2,7 +2,7 @@
   // @ts-nocheck
   import { onMount } from "svelte";
   import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-  import { EditorState } from "@codemirror/state";
+  import { EditorState, Prec } from "@codemirror/state";
   import {
     drawSelection,
     dropCursor,
@@ -11,7 +11,10 @@
     keymap,
     placeholder
   } from "@codemirror/view";
-  import { markdownKeymap } from "@codemirror/lang-markdown";
+  import {
+    insertNewlineContinueMarkupCommand,
+    markdownKeymap
+  } from "@codemirror/lang-markdown";
   import { appStore } from "$lib/app/appStore.svelte.js";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
   import { captureCodeMirrorText } from "$lib/shared/editor/noteEditorContext.js";
@@ -30,6 +33,14 @@
   let editorView = $state(null);
   let showHelp = $state(false);
   let contextMenu = $state(null);
+
+  const noteMarkdownKeymap = [
+    {
+      key: "Enter",
+      run: insertNewlineContinueMarkupCommand({ nonTightLists: false })
+    },
+    ...markdownKeymap.filter((binding) => binding.key !== "Enter")
+  ];
 
   let contextMenuItems = $derived.by(() => {
     return buildEditableTextMenuItems(contextMenu?.editable, {
@@ -58,7 +69,8 @@
         drawSelection(),
         dropCursor(),
         highlightSpecialChars(),
-        keymap.of([...defaultKeymap, ...historyKeymap, ...markdownKeymap, indentWithTab]),
+        Prec.high(keymap.of(noteMarkdownKeymap)),
+        keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
         placeholder("Click to add notes..."),
         noteLivePreview,
         noteEditorTheme,

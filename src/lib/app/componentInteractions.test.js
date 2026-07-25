@@ -2529,6 +2529,28 @@ describe("NotesEditor interactions", () => {
     expect(onChange).toHaveBeenLastCalledWith("Before\n**Updated**\nAfter");
   });
 
+  it("continues Markdown lists on Enter and exits an empty list item", async () => {
+    const onChange = vi.fn();
+    const { textbox, view } = await renderNotes({ value: "", onChange });
+    const cases = [
+      ["- item", "- item\n- "],
+      ["  - nested", "  - nested\n  - "],
+      ["1. item", "1. item\n2. "],
+      ["9) item", "9) item\n10) "],
+      ["- [x] task", "- [x] task\n- [ ] "],
+      ["- item\n- ", "- item\n"]
+    ];
+
+    for (const [before, after] of cases) {
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: before },
+        selection: { anchor: before.length }
+      });
+      await fireEvent.keyDown(textbox, { key: "Enter", code: "Enter" });
+      expect(view.state.doc.toString()).toBe(after);
+    }
+  });
+
   it("preserves a five-backtick fenced block and reveals its exact source when active", async () => {
     const value = "Before\n`````js\n```inner```\nconst value = 1;\n`````\nAfter";
     const { container, view } = await renderNotes({ value, onChange: vi.fn() });
