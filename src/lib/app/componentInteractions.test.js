@@ -2212,6 +2212,18 @@ describe("workspace settings and todo recovery", () => {
 });
 
 describe("NotesEditor interactions", () => {
+  it("renders standalone Markdown headings at levels one through six", async () => {
+    const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
+    render(NotesEditor, {
+      value: "# One\n## Two\n### Three\n#### Four\n##### Five\n###### Six",
+      onChange: vi.fn()
+    });
+
+    for (const [level, name] of [[1, "One"], [2, "Two"], [3, "Three"], [4, "Four"], [5, "Five"], [6, "Six"]]) {
+      expect(screen.getByRole("heading", { level, name })).toBeTruthy();
+    }
+  });
+
   it("renders preview mode by default and shows help on hover", async () => {
     const { default: NotesEditor } = await import("$lib/shared/components/NotesEditor.svelte");
     const onChange = vi.fn();

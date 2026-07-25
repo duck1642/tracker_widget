@@ -63,6 +63,18 @@
 
       const trimmed = line.trim();
 
+      // Standalone Markdown headings
+      const heading = /^(#{1,6})\s+(.+?)\s*$/.exec(trimmed);
+      if (heading) {
+        blocks.push({
+          type: "heading",
+          level: heading[1].length,
+          content: heading[2].replace(/\s+#+\s*$/, ""),
+          index: i
+        });
+        continue;
+      }
+
       // Checkboxes: - [ ] or - [x]
       if (trimmed.startsWith("- [ ] ") || trimmed.startsWith("- [x] ")) {
         const checked = trimmed.startsWith("- [x] ");
@@ -322,6 +334,7 @@
         <div class="help-popover" onmousedown={(e) => e.preventDefault()}>
           <h3>Formatting Guide</h3>
           <ul>
+            <li><span>Headings:</span> <code># H1</code> through <code>###### H6</code></li>
             <li><span>Bullets:</span> <code>- item</code> or <code>* item</code></li>
             <li><span>Todo items:</span> <code>- [ ] todo</code> or <code>- [x] done</code></li>
             <li><span>Bold:</span> <code>**text**</code></li>
@@ -329,9 +342,7 @@
             <li><span>Quote:</span> <code>&gt; text</code></li>
             <li><span>Code:</span> <code>`code`</code> or <code>``` codeblock ```</code></li>
           </ul>
-          <div class="help-warning">
-            Warning: Do not use headers (#) or links.
-          </div>
+          <div class="help-warning">Links are displayed as plain text.</div>
         </div>
       {/if}
     </div>
@@ -353,7 +364,11 @@
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div class="notes-preview" onclick={handlePreviewClick} role="document" tabindex="0">
       {#each parsedBlocks as block}
-        {#if block.type === "checkbox"}
+        {#if block.type === "heading"}
+          <div class="note-line heading-line" data-index={block.index}>
+            <svelte:element this={`h${block.level}`} class="note-heading level-{block.level}">{@html parseInline(block.content)}</svelte:element>
+          </div>
+        {:else if block.type === "checkbox"}
           <div class="note-line checkbox-line" style="padding-left: {block.indent}px;" data-index={block.index}>
             <input
               type="checkbox"
@@ -635,6 +650,19 @@
     margin: 0;
     width: 100%;
   }
+
+  .note-heading {
+    margin: 0;
+    color: var(--text-primary);
+    line-height: 1.35;
+    word-break: break-word;
+  }
+  .note-heading.level-1 { font-size: 1.45em; }
+  .note-heading.level-2 { font-size: 1.3em; }
+  .note-heading.level-3 { font-size: 1.18em; }
+  .note-heading.level-4 { font-size: 1.08em; }
+  .note-heading.level-5 { font-size: 1em; }
+  .note-heading.level-6 { font-size: .92em; color: var(--text-muted); }
 
   .blank-line {
     height: 12px;

@@ -100,6 +100,17 @@ describe("weekly index parser", () => {
     expect(serializeWeeklyIndex(document)).toContain(legacyLine);
   });
 
+  it("keeps headings inside terminal legacy notes and serializes a wrapped subdocument", () => {
+    const input = weekly.replace("Raw notes.", "# Note title\n\n## Nested note heading\n\nText");
+    const document = parseWeeklyIndex(input, { year: 2026, week: 26 });
+
+    expect(document.notesRaw).toBe("# Note title\n\n## Nested note heading\n\nText");
+    expect(document.unknownSectionsRaw).not.toContain("## Nested note heading\n\nText");
+    expect(serializeWeeklyIndex(document)).toContain(
+      "## Notes\n\n````tracker-notes\n# Note title\n\n## Nested note heading\n\nText\n````"
+    );
+  });
+
   it("parses and serializes flat objective indentation levels zero through two", () => {
     const input = weekly.replace(
       "- {subjects: (rust), status: open} Build parser.",

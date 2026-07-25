@@ -38,8 +38,19 @@ describe("daily log parser", () => {
 
   it("serializes empty daily notes without a starter bullet", () => {
     const serialized = serializeDailyLog(parseDailyLog("# 2026-06-22\n\n## Total Time\n\n0m\n\n## Notes\n"));
-    expect(serialized).toContain("## Notes\n\n\n");
+    expect(serialized).toContain("## Notes\n\n````tracker-notes\n````");
     expect(serialized).not.toContain("## Notes\n\n-");
+  });
+
+  it("keeps headings inside terminal legacy notes instead of creating sessions", () => {
+    const input = "# 2026-06-22\n\n## Work\n\n- {subjects: (rust), time: 15m} Code.\n\n## Total Time\n\n15m\n\n## Notes\n\n# Note title\n\n## Nested note heading\n\nText";
+    const document = parseDailyLog(input);
+
+    expect(document.sessions.map((session) => session.name)).toEqual(["Work"]);
+    expect(document.notesRaw).toBe("# Note title\n\n## Nested note heading\n\nText");
+    expect(serializeDailyLog(document)).toContain(
+      "## Notes\n\n````tracker-notes\n# Note title\n\n## Nested note heading\n\nText\n````"
+    );
   });
 
 });

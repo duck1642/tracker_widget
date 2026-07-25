@@ -1,28 +1,28 @@
 // @ts-nocheck
 import { createId, splitFrontmatter } from "$lib/shared/parsers/markdownSections.js";
 import { parseActivityLine, serializeActivityLine } from "$lib/shared/parsers/inlineMetadata.js";
+import { splitTerminalNotes, wrapNoteContent } from "$lib/shared/parsers/noteSection.js";
 
 const RESERVED = new Set(["notes", "total time"]);
 
 export function parseDailyLog(markdown, fallbackDate = "") {
   const { frontmatterRaw, body } = splitFrontmatter(markdown);
-  const title = /^#\s+(\d{4}-\d{2}-\d{2})\s*$/m.exec(body);
+  const notes = splitTerminalNotes(body);
+  const documentBody = notes.documentBody;
+  const title = /^#\s+(\d{4}-\d{2}-\d{2})\s*$/m.exec(documentBody);
   const date = title?.[1] || fallbackDate;
-  const headings = [...body.matchAll(/^##\s+(.+)\s*$/gm)];
+  const headings = [...documentBody.matchAll(/^##\s+(.+)\s*$/gm)];
   const preambleStart = title ? title.index + title[0].length : 0;
-  const preambleEnd = headings[0]?.index ?? body.length;
-  const preambleRaw = body.slice(preambleStart, preambleEnd).trim();
+  const preambleEnd = headings[0]?.index ?? documentBody.length;
+  const preambleRaw = documentBody.slice(preambleStart, preambleEnd).trim();
   const sessions = [];
-  let notesRaw = "";
 
   headings.forEach((heading, index) => {
     const name = heading[1].trim().normalize("NFC");
     const start = heading.index + heading[0].length;
-    const end = index + 1 < headings.length ? headings[index + 1].index : body.length;
-    const content = body.slice(start, end).replace(/^\n+|\n+$/g, "");
-    if (name.toLowerCase() === "notes") {
-      notesRaw = content;
-    } else if (!RESERVED.has(name.toLowerCase())) {
+    const end = index + 1 < headings.length ? headings[index + 1].index : documentBody.length;
+    const content = documentBody.slice(start, end).replace(/^\n+|\n+$/g, "");
+    if (!RESERVED.has(name.toLowerCase())) {
       const activities = [];
       const rawLines = [];
       for (const line of content.split("\n")) {
@@ -35,7 +35,7 @@ export function parseDailyLog(markdown, fallbackDate = "") {
   });
 
   const totalMinutes = sessions.reduce((total, session) => total + session.activities.reduce((sum, activity) => sum + activity.minutes, 0), 0);
-  return { frontmatterRaw, preambleRaw, date, sessions, totalMinutes, notesRaw };
+  return { frontmatterRaw, preambleRaw, date, sessions, totalMinutes, notesRaw: notes.notesRaw };
 }
 
 export function serializeDailyLog(document) {
@@ -49,6 +49,6 @@ export function serializeDailyLog(document) {
   }
   const total = document.sessions.reduce((sum, session) => sum + session.activities.reduce((inner, activity) => inner + activity.minutes, 0), 0);
   blocks.push(`## Total Time\n\n${total}m`);
-  blocks.push(`---\n\n## Notes\n\n${document.notesRaw || ""}`);
+  blocks.push(`---\n\n## Notes\n\n${wrapNoteContent(document.notesRaw || "")}`);
   return `${blocks.join("\n\n")}\n`;
 }

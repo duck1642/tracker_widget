@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createId, escapeTableCell, splitFrontmatter, splitTableRow } from "$lib/shared/parsers/markdownSections.js";
 import { parseActivityLine, parseObjectiveLine, serializeActivityLine, serializeObjectiveLine } from "$lib/shared/parsers/inlineMetadata.js";
+import { splitTerminalNotes, wrapNoteContent } from "$lib/shared/parsers/noteSection.js";
 
 function section(body, name) {
   const heading = new RegExp(`^## ${name}\\s*$`, "mi").exec(body);
@@ -107,18 +108,20 @@ function planDetails(body, plan) {
 
 export function parseWeeklyIndex(markdown, isoWeek) {
   const { frontmatterRaw, body } = splitFrontmatter(markdown);
-  const preserved = preservedMarkdown(body);
+  const notes = splitTerminalNotes(body);
+  const documentBody = notes.documentBody;
+  const preserved = preservedMarkdown(documentBody);
   const objectives = [];
   const objectiveRawLines = [];
-  for (const line of section(body, "Objectives").split("\n")) {
+  for (const line of section(documentBody, "Objectives").split("\n")) {
     if (!line.trim()) continue;
     const objective = parseIndentedObjective(line);
     if (objective) objectives.push({ id: createId("objective", objectives.length), ...objective });
     else objectiveRawLines.push(line);
   }
-  const plan = planDetails(body, tableRows(section(body, "Weekly Plan"), "plan"));
-  const actualBlock = body.match(/<!-- tracker:actual:start -->([\s\S]*?)<!-- tracker:actual:end -->/)?.[1] || "";
-  return { frontmatterRaw, ...preserved, isoWeek, objectives, objectiveRawLines, plan, actual: tableRows(actualBlock, "actual"), notesRaw: section(body, "Notes") };
+  const plan = planDetails(documentBody, tableRows(section(documentBody, "Weekly Plan"), "plan"));
+  const actualBlock = documentBody.match(/<!-- tracker:actual:start -->([\s\S]*?)<!-- tracker:actual:end -->/)?.[1] || "";
+  return { frontmatterRaw, ...preserved, isoWeek, objectives, objectiveRawLines, plan, actual: tableRows(actualBlock, "actual"), notesRaw: notes.notesRaw };
 }
 
 function planTable(plan) {
@@ -155,6 +158,6 @@ export function serializeWeeklyIndex(document) {
   blocks.push(`## Weekly Plan\n\n${planTable(document.plan)}`);
   blocks.push(`## Weekly Plan Details\n\n${planDetailsBlock(document.plan)}`);
   blocks.push(`## Weekly Actual\n\n<!-- tracker:actual:start -->\n${actualTable(document.actual)}\n<!-- tracker:actual:end -->`);
-  blocks.push(`## Notes\n\n${document.notesRaw || ""}`);
+  blocks.push(`## Notes\n\n${wrapNoteContent(document.notesRaw || "")}`);
   return `${blocks.join("\n\n")}\n`;
 }
