@@ -2202,7 +2202,7 @@ describe("sidebar sorting", () => {
     expect(createNextWeekFiles).toHaveBeenCalledOnce();
   });
 
-  it("chooses and previews a consecutive ISO week range", async () => {
+  it("chooses and previews a consecutive ISO week range with app-styled controls", async () => {
     const createSelectedWeekFiles = vi.spyOn(workspaceStore, "createSelectedWeekFiles").mockResolvedValue(true);
     render(AppSidebar, { selectedPath: "", onSelectWeek: vi.fn(), onSelectDay: vi.fn() });
 
@@ -2210,15 +2210,41 @@ describe("sidebar sorting", () => {
     await fireEvent.click(screen.getByRole("menuitem", { name: "Choose weeks…" }));
 
     expect(screen.getByRole("dialog", { name: "Choose weeks" })).toBeTruthy();
-    await fireEvent.input(screen.getByLabelText("Start week"), { target: { value: "2026-W31" } });
-    await fireEvent.input(screen.getByLabelText("Number of weeks"), { target: { value: "2" } });
+    const current = getWeekDescriptor(new Date());
+    const nextDate = new Date(current.start);
+    nextDate.setDate(nextDate.getDate() + 7);
+    const next = getWeekDescriptor(nextDate);
+    const followingDate = new Date(next.start);
+    followingDate.setDate(followingDate.getDate() + 7);
+    const following = getWeekDescriptor(followingDate);
 
-    expect(screen.getByLabelText("2026w31 · July 27 - August 2")).toBeTruthy();
-    expect(screen.getByLabelText("2026w32 · August 3 - 9")).toBeTruthy();
+    expect(screen.queryByRole("spinbutton")).toBeNull();
+    await fireEvent.click(screen.getByRole("button", { name: "Next start week" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Increase number of weeks" }));
+
+    expect(screen.getByLabelText(`${next.folderName} · ${next.rangeLabel}`)).toBeTruthy();
+    expect(screen.getByLabelText(`${following.folderName} · ${following.rangeLabel}`)).toBeTruthy();
     await fireEvent.click(screen.getByRole("button", { name: "Check/repair 2 weeks" }));
 
-    expect(createSelectedWeekFiles).toHaveBeenCalledWith(2026, 31, 2);
+    expect(createSelectedWeekFiles).toHaveBeenCalledWith(next.year, next.week, 2);
     expect(screen.queryByRole("dialog", { name: "Choose weeks" })).toBeNull();
+  });
+
+  it("opens a readable week calendar and selects a whole week", async () => {
+    render(AppSidebar, { selectedPath: "", onSelectWeek: vi.fn(), onSelectDay: vi.fn() });
+    await fireEvent.click(screen.getByRole("button", { name: "Week files" }));
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Choose weeks…" }));
+
+    const selected = getWeekDescriptor(new Date());
+    await fireEvent.click(screen.getByRole("button", { name: /Choose start week/ }));
+
+    expect(screen.getByRole("group", { name: "Choose start week" })).toBeTruthy();
+    expect(screen.getByRole("button", {
+      name: `Select Week ${selected.week}, ${selected.year}: ${selected.rangeLabel}`
+    })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Previous month" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Next month" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "This week" })).toBeTruthy();
   });
 
   it("dismisses the Week Files menu with Escape", async () => {

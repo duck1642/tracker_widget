@@ -4,7 +4,7 @@
   import { clampContextMenuPosition } from "$lib/shared/services/contextMenuPosition.js";
 
   let { x = 0, y = 0, onCurrent, onNext, onChoose } = $props();
-  const width = 218;
+  const width = 206;
   const height = 118;
   let position = $derived(clampContextMenuPosition({
     x,
@@ -41,7 +41,7 @@
     position: fixed;
     z-index: 1000;
     display: grid;
-    width: 218px;
+    width: 206px;
     padding: 4px;
     border: 1px solid var(--border-strong);
     border-radius: 6px;
