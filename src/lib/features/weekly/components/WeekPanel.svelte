@@ -64,7 +64,9 @@
       onMoveActivity={(entryId, activityId, direction) => weekStore.movePlanActivity(entryId, activityId, direction)}
     />
     <ActualSection actual={weekStore.actual} onRefresh={() => weekStore.refreshActual()} {collapsedDays} {toggleDay} />
-    <section id="week-notes" class="week-section"><header><div><h2>Notes</h2></div></header><NotesEditor value={weekStore.notesRaw} onChange={(value) => weekStore.updateNotes(value)} label="Weekly notes" /></section>
+    <div id="week-notes" class="week-notes">
+      <NotesEditor value={weekStore.notesRaw} onChange={(value) => weekStore.updateNotes(value)} />
+    </div>
   {/if}
 </main>
 
@@ -74,4 +76,5 @@
   .week-hero { position: sticky; top: 0; z-index: var(--layer-sticky-header); display: flex; justify-content: space-between; align-items: end; gap: 20px; padding: 22px 0 14px; background: var(--bg-panel); }
   h1 { margin: 5px 0 2px; font-size: var(--text-xl); } p { margin: 0; color: var(--text-muted); }
   nav { display: flex; gap: 4px; } nav a { padding: 7px 9px; border-radius: 5px; color: var(--text-muted); text-decoration: none; font-size: var(--text-sm); } nav a:hover { background: var(--surface-hover); color: var(--text-color); }
+  .week-notes { scroll-margin-top: 100px; }
 </style>
