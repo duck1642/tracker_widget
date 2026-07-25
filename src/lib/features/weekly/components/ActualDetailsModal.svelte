@@ -2,9 +2,11 @@
   // @ts-nocheck
   import { X } from "@lucide/svelte";
   import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
+  import { formatDurationSummary } from "$lib/shared/utils/durationSummary.js";
 
   let { entry, onClose } = $props();
   const activities = $derived(entry?.activities || []);
+  const durationLabel = $derived(formatDurationSummary({ knownMinutes: entry.actualMinutes, unknownCount: entry.unknownDurationCount }));
 </script>
 
 <svelte:window onkeydown={(event) => { if (event.key === "Escape") onClose(); }} />
@@ -22,7 +24,7 @@
     <header>
       <div>
         <h2 title={entry.session}>{entry.session || "Unnamed session"}</h2>
-        <p>{entry.day} / {entry.actualMinutes}m / {activities.length} activities</p>
+        <p>{entry.day} / {durationLabel} / {activities.length} activities</p>
       </div>
       <button type="button" class="icon-button" onclick={onClose} aria-label="Close actual activities" title="Close">
         <X size={16} />

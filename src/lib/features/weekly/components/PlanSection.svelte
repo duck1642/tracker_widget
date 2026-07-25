@@ -292,7 +292,7 @@
                   {/if}
                 </div>
 
-                <ReadonlyBadges subjects={summary.subjects} minutes={summary.targetMinutes} />
+                <ReadonlyBadges subjects={summary.subjects} minutes={summary.targetMinutes} incomplete={summary.unknownDurationCount > 0} />
 
                 <button type="button" class="details-btn" onclick={() => selectedEntryId = entry.id} aria-label={`Open planned activities for ${entry.session}`} title="Open planned activities">
                   <ListTodo size={13} />

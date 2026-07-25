@@ -7,6 +7,7 @@ import { persistenceRegistry as defaultRegistry } from "$lib/app/persistenceRegi
 import { weekStore as defaultWeekStore } from "$lib/features/weekly/weekStore.svelte.js";
 import { sessionHistoryStore as defaultSessionHistoryStore } from "$lib/app/sessionHistoryStore.svelte.js";
 import { movedByDirection } from "$lib/shared/utils/orderUtils.js";
+import { summarizeDurations } from "$lib/shared/utils/durationSummary.js";
 
 function id(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -42,7 +43,15 @@ export class DailyStore {
   }
 
   get totalMinutes() {
-    return this.sessions.reduce((total, session) => total + session.activities.reduce((sum, activity) => sum + activity.minutes, 0), 0);
+    return this.durationSummary.knownMinutes;
+  }
+
+  get unknownDurationCount() {
+    return this.durationSummary.unknownCount;
+  }
+
+  get durationSummary() {
+    return summarizeDurations(this.sessions.flatMap((session) => session.activities.map((activity) => activity.minutes)));
   }
 
   document() {

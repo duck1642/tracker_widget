@@ -23,13 +23,14 @@ export function parseActivityLine(line) {
   const parts = splitLine(line, { allowEmptyDescription: true });
   if (!parts) return null;
   const subjects = parseSubjects(parts.metadata);
-  const time = parts.metadata.match(/(?:^|,\s*)time:\s*(\d+)m(?:$|,)/u);
-  if (!subjects || !time || Number(time[1]) < 0) return null;
-  return { subjects, minutes: Number(time[1]), description: parts.description };
+  const time = parts.metadata.match(/(?:^|,\s*)time:\s*(?:(\d+)m|(\?))(?:$|,)/u);
+  if (!subjects || !time) return null;
+  return { subjects, minutes: time[2] ? null : Number(time[1]), description: parts.description };
 }
 
 export function serializeActivityLine(activity) {
-  const metadata = `- {subjects: (${activity.subjects.join(", ")}), time: ${activity.minutes}m}`;
+  const duration = activity.minutes === null ? "?" : `${activity.minutes}m`;
+  const metadata = `- {subjects: (${activity.subjects.join(", ")}), time: ${duration}}`;
   return activity.description ? `${metadata} ${activity.description}` : metadata;
 }
 

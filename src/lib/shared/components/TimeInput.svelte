@@ -7,13 +7,17 @@
   // Sync prop changes back to localValue when not editing
   $effect(() => {
     if (!isEditing) {
-      localValue = minutes;
+      localValue = minutes === null ? "?" : minutes;
     }
   });
 
   function handleCommit() {
     const valStr = String(localValue).trim();
-    const next = valStr === "" ? minutes : Math.max(0, Number(valStr) || 0);
+    const next = valStr === "?"
+      ? null
+      : /^\d+$/.test(valStr)
+        ? Number(valStr)
+        : minutes;
     onChange(next);
     isEditing = false;
   }
@@ -27,8 +31,8 @@
   <div class="time-badge-container">
     {#if isEditing}
       <input
-        type="number"
-        min="0"
+        type="text"
+        aria-label="Edit minutes spent"
         class="badge-input"
         bind:value={localValue}
         onblur={handleCommit}
@@ -36,8 +40,8 @@
         use:focus
       />
     {:else}
-      <button type="button" class="time-badge" onclick={() => { localValue = minutes; isEditing = true; }} aria-label="Edit minutes spent">
-        {minutes}m
+      <button type="button" class="time-badge" onclick={() => { localValue = minutes === null ? "?" : minutes; isEditing = true; }} aria-label="Edit minutes spent">
+        {minutes === null ? "?" : `${minutes}m`}
       </button>
     {/if}
   </div>
@@ -45,12 +49,11 @@
   <label>
     <span>Minutes</span>
     <input
-      type="number"
-      min="0"
-      value={minutes}
+      type="text"
+      value={minutes === null ? "?" : minutes}
       onchange={(event) => {
         const valStr = event.currentTarget.value.trim();
-        const next = valStr === "" ? minutes : Math.max(0, Number(valStr) || 0);
+        const next = valStr === "?" ? null : /^\d+$/.test(valStr) ? Number(valStr) : minutes;
         onChange(next);
       }}
     />

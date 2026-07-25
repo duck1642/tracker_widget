@@ -41,7 +41,7 @@
                 <strong title={entry.session || "Unnamed session"}>{entry.session || "Unnamed session"}</strong>
               </div>
 
-              <ReadonlyBadges subjects={entry.subjects} minutes={entry.actualMinutes} />
+              <ReadonlyBadges subjects={entry.subjects} minutes={entry.actualMinutes} incomplete={entry.unknownDurationCount > 0} />
             </button>
           {/each}
 

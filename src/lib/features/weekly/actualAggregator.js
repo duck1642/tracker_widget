@@ -1,11 +1,13 @@
 // @ts-nocheck
+import { summarizeDurations } from "$lib/shared/utils/durationSummary.js";
+
 export function aggregateWeeklyActual(plan, days) {
   const rows = [];
   const bySession = new Map();
   for (const day of days) {
     for (const session of day.sessions) {
-      const minutes = session.activities.reduce((sum, activity) => sum + activity.minutes, 0);
-      if (minutes <= 0) continue;
+      const duration = summarizeDurations(session.activities.map((activity) => activity.minutes));
+      if (duration.knownMinutes <= 0 && duration.unknownCount === 0) continue;
       const key = `${day.day.normalize("NFC").toLowerCase()}\0${session.name.normalize("NFC").toLowerCase()}`;
       let row = bySession.get(key);
       if (!row) {
@@ -14,7 +16,10 @@ export function aggregateWeeklyActual(plan, days) {
         rows.push(row);
         bySession.set(key, row);
       }
-      row.actualMinutes += minutes;
+      row.actualMinutes += duration.knownMinutes;
+      if (duration.unknownCount > 0) {
+        row.unknownDurationCount = (row.unknownDurationCount || 0) + duration.unknownCount;
+      }
       for (const activity of session.activities) {
         for (const subject of activity.subjects) if (!row.subjects.includes(subject)) row.subjects.push(subject);
         row.activities.push({

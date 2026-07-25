@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, it } from "vitest";
 import { parseDailyLog, serializeDailyLog } from "./dailyLogParser.js";
 
@@ -27,6 +28,14 @@ describe("daily log parser", () => {
     expect(document.sessions[0].activities[0]).toMatchObject({ subjects: ["general"], minutes: 0, description: "" });
     expect(document.sessions[0].rawLines).toHaveLength(0);
     expect(serializeDailyLog(document)).toContain("- {subjects: (general), time: 0m}");
+  });
+
+  it("preserves unknown durations and marks the calculated total as incomplete", () => {
+    const input = `# 2026-06-22\n\n## Work\n\n- {subjects: (general), time: 30m} Known.\n- {subjects: (general), time: ?} Unknown.\n\n## Total Time\n\n999m\n\n## Notes\n`;
+    const document = parseDailyLog(input);
+    expect(document.sessions[0].activities.map((activity) => activity.minutes)).toEqual([30, null]);
+    expect(document).toMatchObject({ totalMinutes: 30, unknownDurationCount: 1 });
+    expect(serializeDailyLog(document)).toContain("## Total Time\n\n30m+");
   });
 
   it("preserves preamble and unrecognized lines inside sessions", () => {

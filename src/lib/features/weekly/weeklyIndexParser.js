@@ -2,6 +2,7 @@
 import { createId, escapeTableCell, splitFrontmatter, splitTableRow } from "$lib/shared/parsers/markdownSections.js";
 import { parseActivityLine, parseObjectiveLine, serializeActivityLine, serializeObjectiveLine } from "$lib/shared/parsers/inlineMetadata.js";
 import { splitTerminalNotes, wrapNoteContent } from "$lib/shared/parsers/noteSection.js";
+import { formatDurationCell, parseDurationCell, summarizeDurations } from "$lib/shared/utils/durationSummary.js";
 
 function section(body, name) {
   const heading = new RegExp(`^## ${name}\\s*$`, "mi").exec(body);
@@ -28,7 +29,7 @@ function preservedMarkdown(body) {
 }
 
 function parseMinutesCell(value) {
-  return Math.max(0, Number(value) || 0);
+  return parseDurationCell(value);
 }
 
 function subjectsCell(value) {
@@ -49,13 +50,12 @@ function parseIndentedObjective(line) {
 export function planSummary(entry) {
   const activities = entry.activities || [];
   if (!activities.length) {
-    return { subjects: ["general"], targetMinutes: 0 };
+    return { subjects: ["general"], targetMinutes: 0, unknownDurationCount: 0 };
   }
   const subjects = [];
   const seen = new Set();
-  let targetMinutes = 0;
+  const duration = summarizeDurations(activities.map((activity) => activity.minutes));
   for (const activity of activities) {
-    targetMinutes += activity.minutes || 0;
     for (const subject of activity.subjects || []) {
       const key = subject.toLowerCase();
       if (!seen.has(key)) {
@@ -64,23 +64,36 @@ export function planSummary(entry) {
       }
     }
   }
-  return { subjects: subjects.length ? subjects : ["general"], targetMinutes };
+  return {
+    subjects: subjects.length ? subjects : ["general"],
+    targetMinutes: duration.knownMinutes,
+    unknownDurationCount: duration.unknownCount
+  };
 }
 
 function tableRows(content, type) {
   return content.split("\n").filter((line) => /^\|/.test(line)).slice(2).map(splitTableRow).filter((cells) => cells.length >= 4).map((cells, index) => {
     if (type === "plan") {
       const hasId = cells.length >= 5;
+      const duration = parseMinutesCell(cells[hasId ? 4 : 3]);
       return {
         id: hasId ? cells[0] : createId("plan", index),
         day: cells[hasId ? 1 : 0],
         session: cells[hasId ? 2 : 1],
         subjects: subjectsCell(cells[hasId ? 3 : 2]),
-        targetMinutes: parseMinutesCell(cells[hasId ? 4 : 3]),
+        targetMinutes: duration.knownMinutes,
+        unknownDurationCount: duration.unknownCount,
         activities: []
       };
     }
-    return { day: cells[0], session: cells[1], subjects: subjectsCell(cells[2]), actualMinutes: parseMinutesCell(cells[3]) };
+    const duration = parseMinutesCell(cells[3]);
+    return {
+      day: cells[0],
+      session: cells[1],
+      subjects: subjectsCell(cells[2]),
+      actualMinutes: duration.knownMinutes,
+      unknownDurationCount: duration.unknownCount
+    };
   });
 }
 
@@ -127,7 +140,8 @@ export function parseWeeklyIndex(markdown, isoWeek) {
 function planTable(plan) {
   return ["| ID | Day | Session | Subjects | Target Minutes |", "| --- | --- | --- | --- | ---: |", ...plan.map((entry) => {
     const summary = planSummary(entry);
-    return `| ${escapeTableCell(entry.id)} | ${escapeTableCell(entry.day)} | ${escapeTableCell(entry.session)} | ${escapeTableCell(summary.subjects.join(", "))} | ${summary.targetMinutes} |`;
+    const duration = formatDurationCell({ knownMinutes: summary.targetMinutes, unknownCount: summary.unknownDurationCount });
+    return `| ${escapeTableCell(entry.id)} | ${escapeTableCell(entry.day)} | ${escapeTableCell(entry.session)} | ${escapeTableCell(summary.subjects.join(", "))} | ${duration} |`;
   })].join("\n");
 }
 
@@ -143,7 +157,10 @@ function planDetailsBlock(plan) {
 }
 
 function actualTable(actual) {
-  return ["| Day | Session | Subjects | Actual Minutes |", "| --- | --- | --- | ---: |", ...actual.map((entry) => `| ${escapeTableCell(entry.day)} | ${escapeTableCell(entry.session)} | ${escapeTableCell(entry.subjects.join(", "))} | ${entry.actualMinutes} |`)].join("\n");
+  return ["| Day | Session | Subjects | Actual Minutes |", "| --- | --- | --- | ---: |", ...actual.map((entry) => {
+    const duration = formatDurationCell({ knownMinutes: entry.actualMinutes, unknownCount: entry.unknownDurationCount });
+    return `| ${escapeTableCell(entry.day)} | ${escapeTableCell(entry.session)} | ${escapeTableCell(entry.subjects.join(", "))} | ${duration} |`;
+  })].join("\n");
 }
 
 export function serializeWeeklyIndex(document) {

@@ -11,6 +11,7 @@ import FileTree from "$lib/shared/components/FileTree.svelte";
 import ActivityRow from "$lib/features/daily/components/ActivityRow.svelte";
 import SessionCard from "$lib/features/daily/components/SessionCard.svelte";
 import DailyPanel from "$lib/features/daily/components/DailyPanel.svelte";
+import DailyHeader from "$lib/features/daily/components/DailyHeader.svelte";
 import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
 import AddSessionForm from "$lib/features/daily/components/AddSessionForm.svelte";
 import PlanSection from "$lib/features/weekly/components/PlanSection.svelte";
@@ -304,7 +305,7 @@ describe("logger editing", () => {
 
     // Open minutes editor by clicking the badge
     await fireEvent.click(screen.getByLabelText("Edit minutes spent"));
-    await fireEvent.input(screen.getByRole("spinbutton"), { target: { value: "45" } });
+    await fireEvent.input(screen.getByRole("textbox", { name: "Edit minutes spent" }), { target: { value: "45" } });
 
     // Open description editor by clicking the description text
     await fireEvent.click(screen.getByText("Old"));
@@ -512,6 +513,43 @@ describe("logger editing", () => {
     expect(screen.queryByRole("textbox", { name: "Add subject" })).toBeNull();
   });
 
+  it("edits unknown durations without conflating them with zero", async () => {
+    const onUpdate = vi.fn();
+    render(ActivityRow, {
+      activity: { subjects: ["general"], minutes: null, description: "Estimate later" },
+      onUpdate,
+      onDelete: vi.fn()
+    });
+
+    const badge = screen.getByRole("button", { name: "Edit minutes spent" });
+    expect(badge.textContent.trim()).toBe("?");
+    await fireEvent.click(badge);
+    const input = screen.getByRole("textbox", { name: "Edit minutes spent" });
+    await fireEvent.input(input, { target: { value: "?" } });
+    await fireEvent.keyDown(input, { key: "Enter" });
+    expect(onUpdate).toHaveBeenCalledWith({ minutes: null });
+  });
+
+  it("marks existing Daily totals as incomplete when durations are unknown", () => {
+    render(DailyHeader, { date: "2026-07-25", totalMinutes: 100, unknownDurationCount: 1 });
+    expect(screen.getByText("1h 40m+")).toBeTruthy();
+    expect(screen.getByText("100 known minutes")).toBeTruthy();
+  });
+
+  it("marks Daily session subtotals as incomplete", () => {
+    render(SessionCard, {
+      session: {
+        id: "session",
+        name: "Work",
+        activities: [
+          { id: "known", subjects: ["rust"], minutes: 30, description: "Known" },
+          { id: "unknown", subjects: ["test"], minutes: null, description: "Unknown" }
+        ]
+      }
+    });
+    expect(screen.getByText("30m+ / 2 activities")).toBeTruthy();
+  });
+
   it("shares collapsed days between weekly plan and actual", async () => {
     weekStore.loaded = true;
     weekStore.descriptor = { year: 2026, week: 29, rangeLabel: "Jul 13 – Jul 19" };
@@ -667,6 +705,26 @@ describe("logger editing", () => {
     expect(screen.getByRole("button", { name: "Move planned activity up" }).disabled).toBe(true);
   });
 
+  it("marks Weekly Planned card and detail totals as incomplete", async () => {
+    render(PlanSection, {
+      plan: [{
+        id: "p1",
+        day: "Mon",
+        session: "Development",
+        activities: [
+          { id: "known", subjects: ["rust"], minutes: 30, description: "Known" },
+          { id: "unknown", subjects: ["test"], minutes: null, description: "Unknown" }
+        ]
+      }],
+      onAdd: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn(), onMove: vi.fn(),
+      onAddActivity: vi.fn(), onUpdateActivity: vi.fn(), onDeleteActivity: vi.fn(), onMoveActivity: vi.fn()
+    });
+
+    expect(screen.getByText("30m+")).toBeTruthy();
+    await fireEvent.click(screen.getByRole("button", { name: "Open planned activities for Development" }));
+    expect(screen.getByText("Mon / 30m+ / 2 activities")).toBeTruthy();
+  });
+
   it("lets subject suggestions overflow weekly plan details while the backdrop scrolls", async () => {
     subjectHistoryStore.history = {
       subjects: { backend: { count: 2, last_used: "2026-07-02T00:00:00.000Z" } }
@@ -791,6 +849,28 @@ describe("logger editing", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Open actual activities for Development" }));
     await fireEvent.click(screen.getByRole("presentation"));
     expect(screen.queryByRole("dialog", { name: "Actual activities for Development" })).toBeNull();
+  });
+
+  it("marks Weekly Actual card and detail totals as incomplete", async () => {
+    render(ActualSection, {
+      actual: [{
+        day: "Mon",
+        session: "Development",
+        subjects: ["rust"],
+        actualMinutes: 30,
+        unknownDurationCount: 1,
+        activities: [
+          { description: "Known", subjects: ["rust"], minutes: 30 },
+          { description: "Unknown", subjects: ["test"], minutes: null }
+        ]
+      }],
+      onRefresh: vi.fn()
+    });
+
+    expect(screen.getByText("30m+")).toBeTruthy();
+    await fireEvent.click(screen.getByRole("button", { name: "Open actual activities for Development" }));
+    expect(screen.getByText("Mon / 30m+ / 2 activities")).toBeTruthy();
+    expect(screen.getByText("?")).toBeTruthy();
   });
 
   it("shows filtered weekly session suggestions when adding a daily session", async () => {

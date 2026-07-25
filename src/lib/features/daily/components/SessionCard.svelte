@@ -4,6 +4,7 @@
   import { sortableDragHandle, sortableDropTarget } from "$lib/shared/actions/sortableDrag.js";
   import SuggestionDropdown from "$lib/shared/components/SuggestionDropdown.svelte";
   import ActivityRow from "./ActivityRow.svelte";
+  import { formatDurationSummary, summarizeDurations } from "$lib/shared/utils/durationSummary.js";
   let {
     session,
     dragState = null,
@@ -28,7 +29,7 @@
   let nameEdited = $state(false);
   let showSuggestions = $state(false);
   let highlightedIndex = $state(-1);
-  let subtotal = $derived(session.activities.reduce((sum, activity) => sum + activity.minutes, 0));
+  let subtotal = $derived(formatDurationSummary(summarizeDurations(session.activities.map((activity) => activity.minutes))));
 
   const normalize = (value) => value.trim().toLowerCase();
   let filteredSuggestions = $derived(
@@ -176,7 +177,7 @@
           />
         {/if}
       </div>
-      <small>{subtotal}m / {session.activities.length} activities</small>
+      <small>{subtotal} / {session.activities.length} activities</small>
     {:else}
       <div class="session-title">
         <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -191,7 +192,7 @@
         >
           {session.name}
         </span>
-        <small>{subtotal}m / {session.activities.length} activities</small>
+        <small>{subtotal} / {session.activities.length} activities</small>
       </div>
     {/if}
     <button class="icon-button danger" onclick={onDeleteSession} aria-label="Delete session" title="Delete session"><Trash2 size={15} /></button>

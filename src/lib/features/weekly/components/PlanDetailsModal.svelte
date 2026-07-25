@@ -7,6 +7,7 @@
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
   import TimeInput from "$lib/shared/components/TimeInput.svelte";
   import { planSummary } from "../weeklyIndexParser.js";
+  import { formatDurationSummary } from "$lib/shared/utils/durationSummary.js";
 
   let {
     entry,
@@ -20,6 +21,7 @@
   let editingActivityId = $state(null);
   let contextMenu = $state(null);
   let summary = $derived(planSummary(entry));
+  let durationLabel = $derived(formatDurationSummary({ knownMinutes: summary.targetMinutes, unknownCount: summary.unknownDurationCount }));
   let contextActivityIndex = $derived(contextMenu ? (entry.activities || []).findIndex((activity) => activity.id === contextMenu.activityId) : -1);
   let contextMenuItems = $derived.by(() => {
     if (!contextMenu) return [];
@@ -102,7 +104,7 @@
     <header>
       <div>
         <h2>{entry.session || "Unnamed session"}</h2>
-        <p>{entry.day} / {summary.targetMinutes}m / {(entry.activities || []).length} activities</p>
+        <p>{entry.day} / {durationLabel} / {(entry.activities || []).length} activities</p>
       </div>
       <button type="button" class="icon-button" onclick={onClose} aria-label="Close planned activities" title="Close">
         <X size={16} />

@@ -2,6 +2,7 @@
 import { createId, splitFrontmatter } from "$lib/shared/parsers/markdownSections.js";
 import { parseActivityLine, serializeActivityLine } from "$lib/shared/parsers/inlineMetadata.js";
 import { splitTerminalNotes, wrapNoteContent } from "$lib/shared/parsers/noteSection.js";
+import { formatDurationSummary, summarizeDurations } from "$lib/shared/utils/durationSummary.js";
 
 const RESERVED = new Set(["notes", "total time"]);
 
@@ -34,8 +35,16 @@ export function parseDailyLog(markdown, fallbackDate = "") {
     }
   });
 
-  const totalMinutes = sessions.reduce((total, session) => total + session.activities.reduce((sum, activity) => sum + activity.minutes, 0), 0);
-  return { frontmatterRaw, preambleRaw, date, sessions, totalMinutes, notesRaw: notes.notesRaw };
+  const duration = summarizeDurations(sessions.flatMap((session) => session.activities.map((activity) => activity.minutes)));
+  return {
+    frontmatterRaw,
+    preambleRaw,
+    date,
+    sessions,
+    totalMinutes: duration.knownMinutes,
+    unknownDurationCount: duration.unknownCount,
+    notesRaw: notes.notesRaw
+  };
 }
 
 export function serializeDailyLog(document) {
@@ -47,8 +56,8 @@ export function serializeDailyLog(document) {
     const content = [...session.activities.map(serializeActivityLine), ...(session.rawLines || [])].join("\n");
     blocks.push(`## ${session.name}${content ? `\n\n${content}` : ""}`);
   }
-  const total = document.sessions.reduce((sum, session) => sum + session.activities.reduce((inner, activity) => inner + activity.minutes, 0), 0);
-  blocks.push(`## Total Time\n\n${total}m`);
+  const duration = summarizeDurations(document.sessions.flatMap((session) => session.activities.map((activity) => activity.minutes)));
+  blocks.push(`## Total Time\n\n${formatDurationSummary(duration)}`);
   blocks.push(`---\n\n## Notes\n\n${wrapNoteContent(document.notesRaw || "")}`);
   return `${blocks.join("\n\n")}\n`;
 }

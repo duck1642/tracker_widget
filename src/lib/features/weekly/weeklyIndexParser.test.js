@@ -67,6 +67,27 @@ describe("weekly index parser", () => {
     expect(serialized).toContain("| p1 | Mon | Dev \\| Review | rust, test | 45 |");
   });
 
+  it("round trips incomplete planned and actual duration summaries", () => {
+    const document = parseWeeklyIndex(weekly, { year: 2026, week: 26 });
+    document.plan[0].activities.push({ id: "unknown", subjects: ["test"], minutes: null, description: "Estimate later" });
+    document.actual = [{
+      day: "Mon",
+      session: "Development",
+      subjects: ["rust"],
+      actualMinutes: 30,
+      unknownDurationCount: 1
+    }];
+
+    const serialized = serializeWeeklyIndex(document);
+    expect(serialized).toContain("| p1 | Mon | Dev \\| Review | rust, test | 30+ |");
+    expect(serialized).toContain("- {subjects: (test), time: ?} Estimate later");
+    expect(serialized).toContain("| Mon | Development | rust | 30+ |");
+
+    const reparsed = parseWeeklyIndex(serialized, { year: 2026, week: 26 });
+    expect(reparsed.plan[0].activities.at(-1).minutes).toBeNull();
+    expect(reparsed.actual[0]).toMatchObject({ actualMinutes: 30, unknownDurationCount: 1 });
+  });
+
   it("loads missing plan details as empty planned activities", () => {
     const input = weekly.replace(/## Weekly Plan Details[\s\S]*?## Weekly Actual/, "## Weekly Actual");
     const document = parseWeeklyIndex(input, { year: 2026, week: 26 });
@@ -197,5 +218,27 @@ describe("weekly actual aggregation", () => {
         ]
       }
     ]);
+  });
+
+  it("retains sessions and marks totals when actual durations are unknown", () => {
+    const days = [{ day: "Mon", sessions: [{
+      name: "Work",
+      activities: [
+        { description: "Known", subjects: ["rust"], minutes: 30 },
+        { description: "Unknown", subjects: ["test"], minutes: null }
+      ]
+    }] }];
+
+    expect(aggregateWeeklyActual([], days)).toEqual([{
+      day: "Mon",
+      session: "Work",
+      subjects: ["rust", "test"],
+      actualMinutes: 30,
+      unknownDurationCount: 1,
+      activities: [
+        { description: "Known", subjects: ["rust"], minutes: 30 },
+        { description: "Unknown", subjects: ["test"], minutes: null }
+      ]
+    }]);
   });
 });

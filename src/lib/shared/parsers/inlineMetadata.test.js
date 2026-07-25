@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseActivityLine, parseObjectiveLine, serializeObjectiveLine } from "./inlineMetadata.js";
+import { parseActivityLine, parseObjectiveLine, serializeActivityLine, serializeObjectiveLine } from "./inlineMetadata.js";
 
 describe("inline metadata", () => {
   it("parses Unicode subjects and canonical minutes", () => {
@@ -10,6 +10,12 @@ describe("inline metadata", () => {
   it("parses zero-minute activities", () => {
     expect(parseActivityLine("- {subjects: (general), time: 0m} Later."))
       .toEqual({ subjects: ["general"], minutes: 0, description: "Later." });
+  });
+
+  it("round trips an explicitly unknown activity duration", () => {
+    const activity = parseActivityLine("- {subjects: (general), time: ?} Estimate later.");
+    expect(activity).toEqual({ subjects: ["general"], minutes: null, description: "Estimate later." });
+    expect(serializeActivityLine(activity)).toBe("- {subjects: (general), time: ?} Estimate later.");
   });
 
   it("rejects missing subjects and invalid identifiers", () => {

@@ -1,12 +1,12 @@
 <script>
   // @ts-nocheck
-  let { subjects = [], minutes = null, placeholder = "-" } = $props();
+  let { subjects = [], minutes = undefined, incomplete = false, placeholder = "-" } = $props();
   const visibleSubjects = $derived(subjects.length ? subjects : [placeholder]);
 </script>
 
 <div class="readonly-badges">
-  {#if minutes !== null}
-    <span class="time-badge">{minutes}m</span>
+  {#if minutes !== undefined}
+    <span class="time-badge">{minutes === null ? "?" : `${minutes}m${incomplete ? "+" : ""}`}</span>
   {/if}
   {#each visibleSubjects as subject}
     <span class="subject-badge" class:placeholder={subject === placeholder} title={subject}>{subject}</span>
