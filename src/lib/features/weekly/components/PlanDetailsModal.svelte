@@ -293,10 +293,6 @@
     overflow-wrap: anywhere;
   }
 
-  .desc-text:hover {
-    color: var(--accent);
-  }
-
   .desc-input {
     flex: 1;
     min-width: 0;

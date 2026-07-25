@@ -20,8 +20,8 @@
     <div><h2>Weekly actual</h2></div>
     <div class="header-actions">
       <DurationTotal label="Weekly actual total" summary={totalDuration} />
-      <button type="button" class="refresh-btn" onclick={onRefresh} title="Refresh actual logs">
-        <RefreshCw size={12} /> Refresh
+      <button type="button" class="refresh-btn" onclick={onRefresh} aria-label="Refresh" title="Refresh">
+        <RefreshCw size={13} />
       </button>
     </div>
   </header>
@@ -187,15 +187,13 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    width: 28px;
     height: 28px;
-    padding: 0 12px;
+    padding: 0;
     border: 1px solid var(--border-color);
     border-radius: 5px;
     background: var(--surface-2);
     color: var(--text-muted);
-    font-size: 11px;
-    font-weight: 600;
     cursor: pointer;
     transition: all 0.15s ease;
   }

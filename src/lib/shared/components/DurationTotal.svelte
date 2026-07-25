@@ -17,13 +17,13 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: var(--text-muted);
+    color: var(--accent);
     font-size: var(--text-sm);
     white-space: nowrap;
   }
 
   strong {
-    color: var(--text-color);
+    color: inherit;
     font-variant-numeric: tabular-nums;
   }
 </style>
