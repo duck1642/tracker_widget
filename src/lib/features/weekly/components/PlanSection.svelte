@@ -3,7 +3,9 @@
   import { GripVertical, ListTodo, Plus, Trash2 } from "@lucide/svelte";
   import { sortableDragHandle, sortableDropTarget } from "$lib/shared/actions/sortableDrag.js";
   import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
+  import DurationTotal from "$lib/shared/components/DurationTotal.svelte";
   import SuggestionDropdown from "$lib/shared/components/SuggestionDropdown.svelte";
+  import { summarizeDurations } from "$lib/shared/utils/durationSummary.js";
   import { planSummary } from "../weeklyIndexParser.js";
   import PlanDetailsModal from "./PlanDetailsModal.svelte";
 
@@ -24,6 +26,9 @@
   } = $props();
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   let gridTemplateColumns = $derived(days.map((day) => collapsedDays.includes(day) ? "56px" : "minmax(136px, 1fr)").join(" "));
+  let totalDuration = $derived(summarizeDurations(
+    plan.flatMap((entry) => entry.activities.map((activity) => activity.minutes))
+  ));
 
   let editingSessionId = $state(null);
   let editingOriginalSession = $state("");
@@ -168,6 +173,7 @@
 <section id="plan" class="week-section">
   <header>
     <div><h2>Weekly plan</h2></div>
+    <DurationTotal label="Weekly planned total" summary={totalDuration} />
   </header>
 
   <div class="week-board" style:grid-template-columns={gridTemplateColumns}>

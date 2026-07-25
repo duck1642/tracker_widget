@@ -17,8 +17,12 @@ export function formatDurationSummary(summary, { hours = false } = {}) {
   const knownMinutes = Math.max(0, Number(summary?.knownMinutes) || 0);
   const unknownCount = Math.max(0, Number(summary?.unknownCount) || 0);
   if (knownMinutes === 0 && unknownCount > 0) return "?";
+  const wholeHours = Math.floor(knownMinutes / 60);
+  const remainingMinutes = knownMinutes % 60;
   const value = hours
-    ? `${Math.floor(knownMinutes / 60)}h ${knownMinutes % 60}m`
+    ? wholeHours > 0
+      ? `${wholeHours}h${remainingMinutes > 0 ? ` ${remainingMinutes}m` : ""}`
+      : `${remainingMinutes}m`
     : `${knownMinutes}m`;
   return unknownCount > 0 ? `${value}+` : value;
 }

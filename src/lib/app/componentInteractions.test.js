@@ -720,8 +720,9 @@ describe("logger editing", () => {
       onAddActivity: vi.fn(), onUpdateActivity: vi.fn(), onDeleteActivity: vi.fn(), onMoveActivity: vi.fn()
     });
 
-    expect(screen.getByText("30m+")).toBeTruthy();
-    await fireEvent.click(screen.getByRole("button", { name: "Open planned activities for Development" }));
+    const planCard = screen.getByRole("button", { name: "Open planned activities for Development" });
+    expect(within(planCard.closest(".plan-card")).getByText("30m+")).toBeTruthy();
+    await fireEvent.click(planCard);
     expect(screen.getByText("Mon / 30m+ / 2 activities")).toBeTruthy();
   });
 
@@ -867,10 +868,44 @@ describe("logger editing", () => {
       onRefresh: vi.fn()
     });
 
-    expect(screen.getByText("30m+")).toBeTruthy();
-    await fireEvent.click(screen.getByRole("button", { name: "Open actual activities for Development" }));
+    const actualCard = screen.getByRole("button", { name: "Open actual activities for Development" });
+    expect(within(actualCard).getByText("30m+")).toBeTruthy();
+    await fireEvent.click(actualCard);
     expect(screen.getByText("Mon / 30m+ / 2 activities")).toBeTruthy();
     expect(screen.getByText("?")).toBeTruthy();
+  });
+
+  it("shows the mixed Weekly Planned section total", () => {
+    render(PlanSection, {
+      plan: [{
+        id: "p1", day: "Mon", session: "Development",
+        activities: [
+          { id: "a1", subjects: ["rust"], minutes: 60, description: "Known" },
+          { id: "a2", subjects: ["test"], minutes: null, description: "Unknown" }
+        ]
+      }],
+      onAdd: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn(), onMove: vi.fn(),
+      onMoveToDay: vi.fn(), onAddActivity: vi.fn(), onUpdateActivity: vi.fn(),
+      onDeleteActivity: vi.fn(), onMoveActivity: vi.fn()
+    });
+
+    expect(screen.getByLabelText("Weekly planned total: 1h+")).toBeTruthy();
+  });
+
+  it("shows the mixed Weekly Actual section total", () => {
+    render(ActualSection, {
+      actual: [{
+        day: "Mon",
+        session: "Development",
+        subjects: ["rust"],
+        actualMinutes: 90,
+        unknownDurationCount: 1,
+        activities: []
+      }],
+      onRefresh: vi.fn()
+    });
+
+    expect(screen.getByLabelText("Weekly actual total: 1h 30m+")).toBeTruthy();
   });
 
   it("shows filtered weekly session suggestions when adding a daily session", async () => {

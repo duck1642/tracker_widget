@@ -1,21 +1,29 @@
 <script>
   // @ts-nocheck
   import { RefreshCw } from "@lucide/svelte";
+  import DurationTotal from "$lib/shared/components/DurationTotal.svelte";
   import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
   import ActualDetailsModal from "./ActualDetailsModal.svelte";
 
   let { actual, onRefresh, collapsedDays = [], toggleDay } = $props();
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   let gridTemplateColumns = $derived(days.map((day) => collapsedDays.includes(day) ? "56px" : "minmax(136px, 1fr)").join(" "));
+  let totalDuration = $derived(actual.reduce((summary, entry) => ({
+    knownMinutes: summary.knownMinutes + (Number(entry.actualMinutes) || 0),
+    unknownCount: summary.unknownCount + (Number(entry.unknownDurationCount) || 0)
+  }), { knownMinutes: 0, unknownCount: 0 }));
   let selectedActual = $state(null);
 </script>
 
 <section id="actual" class="week-section">
   <header>
     <div><h2>Weekly actual</h2></div>
-    <button type="button" class="refresh-btn" onclick={onRefresh} title="Refresh actual logs">
-      <RefreshCw size={12} /> Refresh
-    </button>
+    <div class="header-actions">
+      <DurationTotal label="Weekly actual total" summary={totalDuration} />
+      <button type="button" class="refresh-btn" onclick={onRefresh} title="Refresh actual logs">
+        <RefreshCw size={12} /> Refresh
+      </button>
+    </div>
   </header>
 
   <div class="week-board" style:grid-template-columns={gridTemplateColumns}>
@@ -60,6 +68,12 @@
 </section>
 
 <style>
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
   .week-board {
     display: grid;
     gap: 8px;
