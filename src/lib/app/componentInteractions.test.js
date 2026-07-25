@@ -2476,6 +2476,31 @@ describe("NotesEditor interactions", () => {
     expect(container.querySelector("textarea")).toBeNull();
   });
 
+  it("switches between live preview and Markdown source without changing editor state", async () => {
+    const value = "# Heading\n\n- [ ] task\n\n**bold**";
+    const onChange = vi.fn();
+    const { container, view } = await renderNotes({ value, onChange });
+    view.dispatch({ selection: { anchor: value.indexOf("task") + 2 } });
+
+    expect(container.querySelector(".cm-note-heading")).toBeTruthy();
+    expect(container.querySelector(".cm-note-task")).toBeTruthy();
+
+    await fireEvent.click(screen.getByRole("button", { name: "Show Markdown source" }));
+
+    expect(container.querySelector(".cm-note-heading")).toBeNull();
+    expect(container.querySelector(".cm-note-task")).toBeNull();
+    expect(view.state.doc.toString()).toBe(value);
+    expect(view.state.selection.main.head).toBe(value.indexOf("task") + 2);
+    expect(onChange).not.toHaveBeenCalled();
+
+    await fireEvent.click(screen.getByRole("button", { name: "Show live preview" }));
+
+    expect(container.querySelector(".cm-note-heading")).toBeTruthy();
+    expect(container.querySelector(".cm-note-task")).toBeTruthy();
+    expect(view.state.doc.toString()).toBe(value);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("renders task and bullet widgets and shows help on hover", async () => {
     const { container } = await renderNotes({
       value: "- [ ] Buy milk\n- todo 2\n  - nested todo\n---\n**bold** *italic* `code` [link](https://example.com)",

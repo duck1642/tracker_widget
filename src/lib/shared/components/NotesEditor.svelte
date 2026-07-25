@@ -1,8 +1,9 @@
 <script>
   // @ts-nocheck
   import { onMount } from "svelte";
+  import { Code2, Eye } from "@lucide/svelte";
   import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-  import { EditorState, Prec } from "@codemirror/state";
+  import { Compartment, EditorState, Prec } from "@codemirror/state";
   import {
     drawSelection,
     dropCursor,
@@ -32,6 +33,9 @@
   let editorView = $state(null);
   let showHelp = $state(false);
   let contextMenu = $state(null);
+  let livePreviewEnabled = $state(true);
+
+  const previewCompartment = new Compartment();
 
   const noteMarkdownKeymap = [
     {
@@ -71,7 +75,7 @@
         Prec.high(keymap.of(noteMarkdownKeymap)),
         keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
         placeholder("Click to add notes..."),
-        noteLivePreview,
+        previewCompartment.of(noteLivePreview),
         noteEditorTheme,
         EditorView.inputHandler.of(completeTaskMarkerInput),
         EditorView.contentAttributes.of({
@@ -126,31 +130,53 @@
   function closeContextMenu() {
     contextMenu = null;
   }
+
+  function toggleEditorView() {
+    const editor = editorView;
+    if (!editor) return;
+
+    livePreviewEnabled = !livePreviewEnabled;
+    editor.dispatch({
+      effects: previewCompartment.reconfigure(livePreviewEnabled ? noteLivePreview : [])
+    });
+    editor.focus();
+  }
 </script>
 
 <div class="notes-container">
   <header class="notes-header">
     <span class="notes-label">{label}</span>
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="help-container" onmouseenter={() => showHelp = true} onmouseleave={() => showHelp = false}>
-      <button class="help-btn" type="button" aria-label="Formatting help">?</button>
-      {#if showHelp}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="help-popover" onmousedown={(event) => event.preventDefault()}>
-          <h3>Formatting Guide</h3>
-          <ul>
-            <li><span>Headings:</span> <code># H1</code> through <code>###### H6</code></li>
-            <li><span>Bullets:</span> <code>- item</code> or <code>* item</code></li>
-            <li><span>Numbered:</span> <code>1. item</code></li>
-            <li><span>Todo items:</span> <code>- [ ] todo</code> or <code>- [x] done</code></li>
-            <li><span>Bold:</span> <code>**text**</code></li>
-            <li><span>Italic:</span> <code>*text*</code> or <code>_text_</code></li>
-            <li><span>Quote:</span> <code>&gt; text</code></li>
-            <li><span>Code fence:</span> <code>```js</code> through <code>```</code></li>
-          </ul>
-          <div class="help-note">Formatting marks appear when you edit their text.</div>
-        </div>
-      {/if}
+    <div class="notes-actions">
+      <button
+        class="view-btn"
+        type="button"
+        onclick={toggleEditorView}
+        aria-label={livePreviewEnabled ? "Show Markdown source" : "Show live preview"}
+        title={livePreviewEnabled ? "Show Markdown source" : "Show live preview"}
+      >
+        {#if livePreviewEnabled}<Code2 size={12} />{:else}<Eye size={12} />{/if}
+      </button>
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="help-container" onmouseenter={() => showHelp = true} onmouseleave={() => showHelp = false}>
+        <button class="help-btn" type="button" aria-label="Formatting help">?</button>
+        {#if showHelp}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="help-popover" onmousedown={(event) => event.preventDefault()}>
+            <h3>Formatting Guide</h3>
+            <ul>
+              <li><span>Headings:</span> <code># H1</code> through <code>###### H6</code></li>
+              <li><span>Bullets:</span> <code>- item</code> or <code>* item</code></li>
+              <li><span>Numbered:</span> <code>1. item</code></li>
+              <li><span>Todo items:</span> <code>- [ ] todo</code> or <code>- [x] done</code></li>
+              <li><span>Bold:</span> <code>**text**</code></li>
+              <li><span>Italic:</span> <code>*text*</code> or <code>_text_</code></li>
+              <li><span>Quote:</span> <code>&gt; text</code></li>
+              <li><span>Code fence:</span> <code>```js</code> through <code>```</code></li>
+            </ul>
+            <div class="help-note">Formatting marks appear when you edit their text.</div>
+          </div>
+        {/if}
+      </div>
     </div>
   </header>
 
@@ -189,28 +215,46 @@
     letter-spacing: .08em;
     text-transform: uppercase;
   }
+  .notes-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
   .help-container {
     position: relative;
     display: flex;
     align-items: center;
   }
-  .help-btn {
+  .help-btn,
+  .view-btn {
     display: grid;
     place-items: center;
     width: 18px;
     height: 18px;
+    padding: 0;
     border: 1px solid var(--border-color);
-    border-radius: 50%;
     background: transparent;
     color: var(--text-muted);
     font-size: 11px;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
   }
-  .help-btn:hover {
+  .help-btn {
+    border-radius: 50%;
+  }
+  .view-btn {
+    border-radius: 4px;
+  }
+  .help-btn:hover,
+  .view-btn:hover {
     border-color: var(--text-muted);
     color: var(--text-color);
     background: var(--surface-hover);
+  }
+  .help-btn:focus-visible,
+  .view-btn:focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: 2px;
   }
   .help-popover {
     position: absolute;
