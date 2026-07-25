@@ -32,7 +32,7 @@ export const noteEditorTheme = [
         backgroundColor: "color-mix(in srgb, var(--accent) 28%, transparent)"
       },
       ".cm-note-heading": {
-        color: "var(--text-primary)",
+        color: "var(--text-color)",
         fontWeight: "700",
         lineHeight: "1.35"
       },
