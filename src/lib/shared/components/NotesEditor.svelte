@@ -11,6 +11,7 @@
     keymap,
     placeholder
   } from "@codemirror/view";
+  import { foldKeymap } from "@codemirror/language";
   import { markdownKeymap } from "@codemirror/lang-markdown";
   import { appStore } from "$lib/app/appStore.svelte.js";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
@@ -20,6 +21,7 @@
     createNoteMarkdownExtension,
     externalDocumentAnnotation,
     externalDocumentUpdate,
+    noteEditorFolding,
     noteLivePreview
   } from "$lib/shared/editor/noteLivePreview.js";
   import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
@@ -58,8 +60,9 @@
         drawSelection(),
         dropCursor(),
         highlightSpecialChars(),
-        keymap.of([...defaultKeymap, ...historyKeymap, ...markdownKeymap, indentWithTab]),
+        keymap.of([...defaultKeymap, ...historyKeymap, ...markdownKeymap, ...foldKeymap, indentWithTab]),
         placeholder("Click to add notes..."),
+        noteEditorFolding,
         noteLivePreview,
         noteEditorTheme,
         EditorView.contentAttributes.of({

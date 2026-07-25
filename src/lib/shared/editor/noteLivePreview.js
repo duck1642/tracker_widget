@@ -1,6 +1,13 @@
-import { syntaxTree } from "@codemirror/language";
+import {
+  codeFolding,
+  foldEffect,
+  foldable,
+  foldedRanges,
+  syntaxTree,
+  unfoldEffect
+} from "@codemirror/language";
 import { markdownLanguage } from "@codemirror/lang-markdown";
-import { Annotation, Transaction } from "@codemirror/state";
+import { Annotation, EditorSelection, Transaction } from "@codemirror/state";
 import { Decoration, ViewPlugin, WidgetType } from "@codemirror/view";
 
 const syntaxParentNames = new Set([
@@ -47,6 +54,34 @@ function constructIsActive(state, node) {
 /** @param {string} source @param {number} from @param {number} to */
 function includeFollowingSpace(source, from, to) {
   return source[to] === " " ? { from, to: to + 1 } : { from, to };
+}
+
+/** @param {import("@lezer/common").SyntaxNode} node */
+function listDepth(node) {
+  let depth = -1;
+  for (let current = node.parent; current; current = current.parent) {
+    if (current.name === "BulletList" || current.name === "OrderedList") depth += 1;
+  }
+  return Math.max(0, depth);
+}
+
+/** @param {import("@lezer/common").SyntaxNode} listItem */
+function listItemHeaderEnd(listItem) {
+  for (let child = listItem.firstChild; child; child = child.nextSibling) {
+    if (child.name === "BulletList" || child.name === "OrderedList") {
+      return Math.max(listItem.from, child.from - 1);
+    }
+  }
+  return listItem.to;
+}
+
+/** @param {import("@codemirror/state").EditorState} state @param {number} from @param {number} to */
+function rangeIsFolded(state, from, to) {
+  let found = false;
+  foldedRanges(state).between(from, from, (foldedFrom, foldedTo) => {
+    if (foldedFrom === from && foldedTo === to) found = true;
+  });
+  return found;
 }
 
 /**
@@ -106,6 +141,22 @@ export function collectNotePreviewRanges(state, selectionActive = true) {
         return;
       }
 
+      if (name === "ListItem") {
+        const line = state.doc.lineAt(ref.from);
+        const foldRange = foldable(state, line.from, line.to);
+        if (foldRange && foldRange.to > foldRange.from) {
+          ranges.push({
+            kind: "listFold",
+            from: ref.from,
+            to: ref.from,
+            foldFrom: foldRange.from,
+            foldTo: foldRange.to,
+            folded: rangeIsFolded(state, foldRange.from, foldRange.to)
+          });
+        }
+        return;
+      }
+
       if (name === "HeaderMark" && !active) {
         ranges.push({ kind: "hide", ...includeFollowingSpace(source, ref.from, ref.to) });
         return;
@@ -124,10 +175,19 @@ export function collectNotePreviewRanges(state, selectionActive = true) {
       if (name === "ListMark") {
         const listItem = syntaxConstruct(node);
         const task = listItem?.name === "ListItem" ? listItem.getChild("Task") : null;
-        if (task || !active) {
+        const listItemActive = Boolean(
+          selectionActive &&
+          listItem?.name === "ListItem" &&
+          selectionIntersectsRange(state, listItem.from, listItemHeaderEnd(listItem))
+        );
+        if (task || !listItemActive) {
+          const marker = source.slice(ref.from, ref.to);
           ranges.push({
-            kind: task ? "hide" : "bullet",
-            ...includeFollowingSpace(source, ref.from, ref.to)
+            kind: task ? "hide" : "listMarker",
+            ...(task ? includeFollowingSpace(source, ref.from, ref.to) : { from: ref.from, to: ref.to }),
+            marker,
+            ordered: /^\d+[.)]$/.test(marker),
+            depth: listDepth(node)
           });
         }
         return;
@@ -183,11 +243,40 @@ export function taskMarkerChange(state, from, to) {
 
 /** @param {import("@codemirror/state").EditorState} state @param {string} value */
 export function externalDocumentUpdate(state, value) {
-  if (state.doc.toString() === value) return null;
+  const current = state.doc.toString();
+  if (current === value) return null;
+
+  let prefix = 0;
+  while (prefix < current.length && prefix < value.length && current[prefix] === value[prefix]) {
+    prefix += 1;
+  }
+
+  let suffix = 0;
+  while (
+    suffix < current.length - prefix &&
+    suffix < value.length - prefix &&
+    current[current.length - 1 - suffix] === value[value.length - 1 - suffix]
+  ) {
+    suffix += 1;
+  }
+
+  const selection = EditorSelection.create(
+    state.selection.ranges.map((range) =>
+      EditorSelection.range(
+        Math.min(range.anchor, value.length),
+        Math.min(range.head, value.length)
+      )
+    ),
+    state.selection.mainIndex
+  );
 
   return {
-    changes: { from: 0, to: state.doc.length, insert: value },
-    selection: { anchor: Math.min(state.selection.main.head, value.length) },
+    changes: {
+      from: prefix,
+      to: current.length - suffix,
+      insert: value.slice(prefix, value.length - suffix)
+    },
+    selection,
     annotations: [
       Transaction.addToHistory.of(false),
       externalDocumentAnnotation.of(true)
@@ -195,13 +284,94 @@ export function externalDocumentUpdate(state, value) {
   };
 }
 
-class BulletWidget extends WidgetType {
+const bulletGlyphs = ["•", "◦", "▪"];
+
+class ListMarkerWidget extends WidgetType {
+  constructor(
+    /** @type {string} */ marker,
+    /** @type {boolean} */ ordered,
+    /** @type {number} */ depth
+  ) {
+    super();
+    this.marker = marker;
+    this.ordered = ordered;
+    this.depth = depth;
+  }
+
+  /** @param {ListMarkerWidget} other */
+  eq(other) {
+    return other.marker === this.marker && other.ordered === this.ordered && other.depth === this.depth;
+  }
+
   toDOM() {
-    const bullet = document.createElement("span");
-    bullet.className = "cm-note-bullet";
-    bullet.textContent = "•";
-    bullet.setAttribute("aria-hidden", "true");
-    return bullet;
+    const marker = document.createElement("span");
+    marker.className = "cm-note-list-marker";
+    marker.dataset.depth = String(this.depth);
+    marker.setAttribute("aria-hidden", "true");
+
+    const source = document.createElement("span");
+    source.className = "cm-note-list-marker-source";
+    source.textContent = this.marker;
+
+    const visual = document.createElement("span");
+    visual.className = "cm-note-list-marker-visual";
+    visual.textContent = this.ordered ? this.marker : bulletGlyphs[this.depth % bulletGlyphs.length];
+
+    marker.append(source, visual);
+    return marker;
+  }
+}
+
+class ListFoldWidget extends WidgetType {
+  constructor(
+    /** @type {number} */ from,
+    /** @type {number} */ to,
+    /** @type {boolean} */ folded
+  ) {
+    super();
+    this.from = from;
+    this.to = to;
+    this.folded = folded;
+  }
+
+  /** @param {ListFoldWidget} other */
+  eq(other) {
+    return other.from === this.from && other.to === this.to && other.folded === this.folded;
+  }
+
+  /** @param {import("@codemirror/view").EditorView} view */
+  toDOM(view) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `cm-note-list-fold${this.folded ? " folded" : ""}`;
+    button.setAttribute("aria-label", this.folded ? "Expand nested list" : "Collapse nested list");
+    button.setAttribute("aria-expanded", String(!this.folded));
+    button.title = this.folded ? "Expand nested list" : "Collapse nested list";
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", "10");
+    svg.setAttribute("height", "10");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2.5");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "m6 9 6 6 6-6");
+    svg.append(path);
+    button.append(svg);
+
+    button.addEventListener("mousedown", (event) => event.preventDefault());
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      view.dispatch({
+        effects: (this.folded ? unfoldEffect : foldEffect).of({ from: this.from, to: this.to })
+      });
+    });
+    return button;
   }
 }
 
@@ -279,8 +449,23 @@ function buildNoteDecorations(view) {
   for (const range of /** @type {any[]} */ (collectNotePreviewRanges(view.state, view.hasFocus))) {
     if (range.kind === "hide") {
       decorations.push(Decoration.replace({}).range(range.from, range.to));
-    } else if (range.kind === "bullet") {
-      decorations.push(Decoration.replace({ widget: new BulletWidget() }).range(range.from, range.to));
+    } else if (range.kind === "listMarker") {
+      decorations.push(
+        Decoration.replace({
+          widget: new ListMarkerWidget(String(range.marker), Boolean(range.ordered), Number(range.depth))
+        }).range(range.from, range.to)
+      );
+    } else if (range.kind === "listFold") {
+      decorations.push(
+        Decoration.widget({
+          widget: new ListFoldWidget(
+            Number(range.foldFrom),
+            Number(range.foldTo),
+            Boolean(range.folded)
+          ),
+          side: -1
+        }).range(range.from)
+      );
     } else if (range.kind === "task") {
       decorations.push(
         Decoration.replace({
@@ -345,8 +530,16 @@ export const noteLivePreview = ViewPlugin.fromClass(
     update(/** @type {import("@codemirror/view").ViewUpdate} */ update) {
       if (update.docChanged || update.viewportChanged || update.selectionSet || update.focusChanged) {
         this.decorations = buildNoteDecorations(update.view);
+      } else if (
+        update.transactions.some((transaction) =>
+          transaction.effects.some((effect) => effect.is(foldEffect) || effect.is(unfoldEffect))
+        )
+      ) {
+        this.decorations = buildNoteDecorations(update.view);
       }
     }
   },
   { decorations: (plugin) => plugin.decorations }
 );
+
+export const noteEditorFolding = codeFolding({ placeholderText: "…" });
