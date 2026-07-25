@@ -8,6 +8,7 @@
   import { summarizeDurations } from "$lib/shared/utils/durationSummary.js";
   import { planSummary } from "../weeklyIndexParser.js";
   import PlanDetailsModal from "./PlanDetailsModal.svelte";
+  import WeekDayHeader from "./WeekDayHeader.svelte";
 
   let {
     plan,
@@ -179,15 +180,17 @@
   <div class="week-board" style:grid-template-columns={gridTemplateColumns}>
     {#each days as day}
       {@const entries = plan.filter((entry) => entry.day === day)}
-      {#if entries.length === 0}
-        <section class="day-column" class:collapsed={collapsedDays.includes(day)} aria-label={`${day} plan`}>
-          <header class="day-header">
-            <button type="button" onclick={() => toggleDay(day)} aria-expanded={!collapsedDays.includes(day)} aria-label={`${collapsedDays.includes(day) ? "Expand" : "Collapse"} ${day}`} disabled={!collapsedDays.includes(day) && collapsedDays.length === 6}>
-              <span class="day-name">{day}</span><span>{entries.length}</span>
-            </button>
-          </header>
+      <section class="day-column" class:collapsed={collapsedDays.includes(day)} aria-label={`${day} plan`}>
+        <WeekDayHeader
+          {day}
+          count={entries.length}
+          collapsed={collapsedDays.includes(day)}
+          collapseDisabled={!collapsedDays.includes(day) && collapsedDays.length === 6}
+          onToggle={toggleDay}
+        />
 
-          {#if !collapsedDays.includes(day)}
+        {#if !collapsedDays.includes(day)}
+          {#if entries.length === 0}
           <div class="card-list empty">
             <div
               class="day-drop-target"
@@ -206,21 +209,7 @@
               {/if}
             </div>
           </div>
-
-          <button type="button" class="add-day-btn" onclick={() => onAdd(day)} title={`Add planned session to ${day}`}>
-            <Plus size={13} /> Add
-          </button>
-          {/if}
-        </section>
-      {:else}
-        <section class="day-column" class:collapsed={collapsedDays.includes(day)} aria-label={`${day} plan`}>
-          <header class="day-header">
-            <button type="button" onclick={() => toggleDay(day)} aria-expanded={!collapsedDays.includes(day)} aria-label={`${collapsedDays.includes(day) ? "Expand" : "Collapse"} ${day}`} disabled={!collapsedDays.includes(day) && collapsedDays.length === 6}>
-              <span class="day-name">{day}</span><span>{entries.length}</span>
-            </button>
-          </header>
-
-          {#if !collapsedDays.includes(day)}
+          {:else}
           <div class="card-list">
             {#each entries as entry (entry.id)}
               {@const summary = planSummary(entry)}
@@ -307,13 +296,13 @@
               </article>
             {/each}
           </div>
+          {/if}
 
           <button type="button" class="add-day-btn" onclick={() => onAdd(day)} title={`Add planned session to ${day}`}>
             <Plus size={13} /> Add
           </button>
-          {/if}
-        </section>
-      {/if}
+        {/if}
+      </section>
     {/each}
   </div>
 
@@ -350,42 +339,6 @@
   }
 
   .day-column.collapsed { min-height: 0; overflow: hidden; }
-
-  .day-header {
-    min-height: 38px;
-    border-bottom: 1px solid var(--border-subtle);
-    background: var(--surface-2);
-  }
-
-  .day-column.collapsed .day-header { border-bottom: 0; }
-
-  .day-header button {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    min-height: 38px;
-    padding: 0 9px;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-  }
-
-  .day-header button:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
-  .day-header button:disabled { cursor: default; }
-
-  .day-name {
-    margin: 0;
-    color: var(--accent);
-    font-size: var(--text-sm);
-    font-weight: 750;
-  }
-
-  .day-header span {
-    color: var(--text-muted);
-    font-size: var(--text-xs);
-  }
 
   .card-list {
     display: grid;

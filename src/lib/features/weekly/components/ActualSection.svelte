@@ -4,6 +4,7 @@
   import DurationTotal from "$lib/shared/components/DurationTotal.svelte";
   import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
   import ActualDetailsModal from "./ActualDetailsModal.svelte";
+  import WeekDayHeader from "./WeekDayHeader.svelte";
 
   let { actual, onRefresh, collapsedDays = [], toggleDay } = $props();
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -30,11 +31,13 @@
     {#each days as day}
       {@const entries = actual.filter((entry) => entry.day === day)}
       <section class="day-column" class:collapsed={collapsedDays.includes(day)} aria-label={`${day} actual`}>
-        <header class="day-header">
-          <button type="button" onclick={() => toggleDay(day)} aria-expanded={!collapsedDays.includes(day)} aria-label={`${collapsedDays.includes(day) ? "Expand" : "Collapse"} ${day}`} disabled={!collapsedDays.includes(day) && collapsedDays.length === 6}>
-            <span class="day-name">{day}</span><span>{entries.length}</span>
-          </button>
-        </header>
+        <WeekDayHeader
+          {day}
+          count={entries.length}
+          collapsed={collapsedDays.includes(day)}
+          collapseDisabled={!collapsedDays.includes(day) && collapsedDays.length === 6}
+          onToggle={toggleDay}
+        />
 
         {#if !collapsedDays.includes(day)}
         <div class="card-list">
@@ -93,42 +96,6 @@
   }
 
   .day-column.collapsed { min-height: 0; }
-
-  .day-header {
-    min-height: 38px;
-    border-bottom: 1px solid var(--border-subtle);
-    background: var(--surface-2);
-  }
-
-  .day-column.collapsed .day-header { border-bottom: 0; }
-
-  .day-header button {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    min-height: 38px;
-    padding: 0 9px;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-  }
-
-  .day-header button:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
-  .day-header button:disabled { cursor: default; }
-
-  .day-name {
-    margin: 0;
-    color: var(--accent);
-    font-size: var(--text-sm);
-    font-weight: 750;
-  }
-
-  .day-header span {
-    color: var(--text-muted);
-    font-size: var(--text-xs);
-  }
 
   .card-list {
     display: grid;

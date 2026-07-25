@@ -595,6 +595,41 @@ describe("logger editing", () => {
     expect(screen.getByRole("button", { name: "Open actual activities for Actual session" })).toBeTruthy();
   });
 
+  it("keeps day counts and empty-day actions consistent in weekly columns", async () => {
+    const onAdd = vi.fn();
+    render(PlanSection, {
+      plan: [
+        { id: "p1", day: "Mon", session: "First", activities: [] },
+        { id: "p2", day: "Mon", session: "Second", activities: [] }
+      ],
+      collapsedDays: [],
+      toggleDay: vi.fn(),
+      onAdd,
+      onUpdate: vi.fn(),
+      onDelete: vi.fn()
+    });
+
+    expect(screen.getByRole("button", { name: "Collapse Mon" }).textContent).toContain("2");
+    expect(screen.getByRole("button", { name: "Collapse Tue" }).textContent).toContain("0");
+    await fireEvent.click(screen.getByTitle("Add planned session to Tue"));
+    expect(onAdd).toHaveBeenCalledWith("Tue");
+
+    cleanup();
+    render(ActualSection, {
+      actual: [
+        { day: "Mon", session: "First", subjects: [], actualMinutes: 10, activities: [] },
+        { day: "Mon", session: "Second", subjects: [], actualMinutes: 20, activities: [] }
+      ],
+      collapsedDays: [],
+      toggleDay: vi.fn(),
+      onRefresh: vi.fn()
+    });
+
+    expect(screen.getByRole("button", { name: "Collapse Mon" }).textContent).toContain("2");
+    expect(screen.getByRole("button", { name: "Collapse Tue" }).textContent).toContain("0");
+    expect(screen.getAllByText("No records").length).toBeGreaterThan(0);
+  });
+
   it("keeps one weekly day expanded", async () => {
     weekStore.loaded = true;
     weekStore.descriptor = { year: 2026, week: 29, rangeLabel: "Jul 13 – Jul 19" };
