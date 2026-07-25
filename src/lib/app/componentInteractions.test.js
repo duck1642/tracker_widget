@@ -2487,6 +2487,7 @@ describe("NotesEditor interactions", () => {
 
     await fireEvent.click(screen.getByRole("button", { name: "Show Markdown source" }));
 
+    expect(container.querySelector(".notes-surface").classList.contains("source-view")).toBe(true);
     expect(container.querySelector(".cm-note-heading")).toBeNull();
     expect(container.querySelector(".cm-note-task")).toBeNull();
     expect(view.state.doc.toString()).toBe(value);
@@ -2495,6 +2496,7 @@ describe("NotesEditor interactions", () => {
 
     await fireEvent.click(screen.getByRole("button", { name: "Show live preview" }));
 
+    expect(container.querySelector(".notes-surface").classList.contains("source-view")).toBe(false);
     expect(container.querySelector(".cm-note-heading")).toBeTruthy();
     expect(container.querySelector(".cm-note-task")).toBeTruthy();
     expect(view.state.doc.toString()).toBe(value);

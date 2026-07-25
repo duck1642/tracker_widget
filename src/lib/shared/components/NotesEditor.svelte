@@ -180,7 +180,7 @@
     </div>
   </header>
 
-  <div class="notes-surface" bind:this={editorHost}></div>
+  <div class="notes-surface" class:source-view={!livePreviewEnabled} bind:this={editorHost}></div>
 
   {#if contextMenu}
     <ContextMenu
@@ -322,5 +322,8 @@
   .notes-surface:has(:global(.cm-focused)) {
     border-color: var(--border-strong);
     box-shadow: 0 0 0 1px var(--border-subtle);
+  }
+  .notes-surface.source-view :global(.cm-scroller) {
+    font-family: var(--font-mono);
   }
 </style>
