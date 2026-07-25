@@ -7,11 +7,19 @@
  * @param {string} text
  */
 export function taskMarkerCompletion(state, from, to, text) {
-  if (text !== "]" || from !== to) return null;
+  if (from !== to) return null;
 
   const line = state.doc.lineAt(from);
   if (to !== line.to) return null;
 
+  if (
+    text === " " &&
+    /^\s*[-+*]\s+\[[ xX]\] $/.test(state.sliceDoc(line.from, line.to))
+  ) {
+    return "";
+  }
+
+  if (text !== "]") return null;
   const completedLine = state.sliceDoc(line.from, from) + text;
   return /^\s*[-+*]\s+\[[ xX]\]$/.test(completedLine) ? "] " : null;
 }
@@ -24,7 +32,7 @@ export function taskMarkerCompletion(state, from, to, text) {
  */
 export function completeTaskMarkerInput(view, from, to, text) {
   const insert = taskMarkerCompletion(view.state, from, to, text);
-  if (!insert) return false;
+  if (insert === null) return false;
 
   view.dispatch({
     changes: { from, to, insert },

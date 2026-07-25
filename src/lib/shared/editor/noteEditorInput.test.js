@@ -29,4 +29,9 @@ describe("note editor task-marker input", () => {
     expect(taskMarkerCompletion(state, 2, 4, "]")).toBeNull();
     expect(taskMarkerCompletion(state, 4, 4, "x")).toBeNull();
   });
+
+  it("consumes the manually typed space after an auto-completed task marker", () => {
+    const state = EditorState.create({ doc: "- [ ] " });
+    expect(taskMarkerCompletion(state, state.doc.length, state.doc.length, " ")).toBe("");
+  });
 });
