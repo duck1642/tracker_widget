@@ -1,13 +1,11 @@
 // @ts-nocheck
 import { history, undo, undoDepth } from "@codemirror/commands";
-import { foldEffect, unfoldEffect } from "@codemirror/language";
 import { EditorState, Transaction } from "@codemirror/state";
 import { describe, expect, it } from "vitest";
 import {
   collectNotePreviewRanges,
   createNoteMarkdownExtension,
   externalDocumentUpdate,
-  noteEditorFolding,
   taskMarkerChange
 } from "./noteLivePreview.js";
 
@@ -63,20 +61,19 @@ describe("note live-preview ranges", () => {
     expect(state.doc.toString()).toBe(doc);
   });
 
-  it("preserves marker widths and records the depth of mixed nested lists", () => {
+  it("preserves marker widths across mixed indented lists", () => {
     const doc = "- parent\n  * child\n    1. numbered\n  - sibling\n\nafter";
     const state = stateFor(doc, doc.indexOf("after"));
     const markers = rangesOfKind(state, "listMarker").map((range) => ({
       source: doc.slice(range.from, range.to),
-      depth: range.depth,
       ordered: range.ordered
     }));
 
     expect(markers).toEqual([
-      { source: "-", depth: 0, ordered: false },
-      { source: "*", depth: 1, ordered: false },
-      { source: "1.", depth: 2, ordered: true },
-      { source: "-", depth: 1, ordered: false }
+      { source: "-", ordered: false },
+      { source: "*", ordered: false },
+      { source: "1.", ordered: true },
+      { source: "-", ordered: false }
     ]);
     expect(state.doc.toString()).toBe(doc);
   });
@@ -87,36 +84,6 @@ describe("note live-preview ranges", () => {
     const markers = rangesOfKind(state, "listMarker");
 
     expect(markers.map((range) => doc.slice(range.from, range.to))).toEqual(["-"]);
-    expect(markers[0].depth).toBe(0);
-  });
-
-  it("exposes native fold ranges only for list items with foldable content", () => {
-    const doc = "- parent\n  - child\n  - sibling\n\noutside";
-    const state = stateFor(doc, doc.indexOf("outside"), undefined, [noteEditorFolding]);
-    const folds = rangesOfKind(state, "listFold");
-
-    expect(folds).toHaveLength(1);
-    expect(doc.slice(folds[0].foldFrom, folds[0].foldTo)).toContain("- child");
-    expect(doc.slice(folds[0].foldFrom, folds[0].foldTo)).toContain("- sibling");
-    expect(folds[0].folded).toBe(false);
-  });
-
-  it("tracks fold and unfold effects without changing the Markdown source", () => {
-    const doc = "- parent\n  - child\n  - sibling\n\noutside";
-    const initial = stateFor(doc, doc.indexOf("outside"), undefined, [noteEditorFolding]);
-    const range = rangesOfKind(initial, "listFold")[0];
-    const folded = initial.update({
-      effects: foldEffect.of({ from: range.foldFrom, to: range.foldTo })
-    }).state;
-
-    expect(rangesOfKind(folded, "listFold")[0].folded).toBe(true);
-    expect(folded.doc.toString()).toBe(doc);
-
-    const unfolded = folded.update({
-      effects: unfoldEffect.of({ from: range.foldFrom, to: range.foldTo })
-    }).state;
-    expect(rangesOfKind(unfolded, "listFold")[0].folded).toBe(false);
-    expect(unfolded.doc.toString()).toBe(doc);
   });
 
   it("keeps a recognized task rendered while its text is actively edited", () => {

@@ -103,38 +103,6 @@ export const noteEditorTheme = [
         placeItems: "center",
         fontWeight: "700"
       },
-      ".cm-note-list-fold": {
-        position: "relative",
-        display: "inline-grid",
-        placeItems: "center",
-        width: "14px",
-        height: "1.4em",
-        marginLeft: "-14px",
-        padding: "0",
-        border: "0",
-        background: "transparent",
-        color: "var(--text-muted)",
-        cursor: "pointer",
-        opacity: "0",
-        verticalAlign: "middle"
-      },
-      ".cm-note-list-fold svg": {
-        transition: "transform 0.12s ease"
-      },
-      ".cm-note-list-fold.folded svg": {
-        transform: "rotate(-90deg)"
-      },
-      ".cm-line:hover .cm-note-list-fold, .cm-note-list-fold:focus-visible, .cm-note-list-fold.folded": {
-        opacity: "1"
-      },
-      ".cm-foldPlaceholder": {
-        margin: "0 3px",
-        padding: "0 4px",
-        border: "0",
-        borderRadius: "var(--radius-sm)",
-        background: "var(--surface)",
-        color: "var(--text-muted)"
-      },
       ".cm-note-task": {
         display: "inline-flex",
         margin: "0 8px 0 0",

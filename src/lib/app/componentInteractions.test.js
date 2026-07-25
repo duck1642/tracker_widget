@@ -2478,13 +2478,15 @@ describe("NotesEditor interactions", () => {
 
   it("renders task and bullet widgets and shows help on hover", async () => {
     const { container } = await renderNotes({
-      value: "- [ ] Buy milk\n- todo 2\n---\n**bold** *italic* `code` [link](https://example.com)",
+      value: "- [ ] Buy milk\n- todo 2\n  - nested todo\n---\n**bold** *italic* `code` [link](https://example.com)",
       onChange: vi.fn(),
       label: "Daily Notes"
     });
 
     expect(container.querySelector(".cm-note-task")).toBeTruthy();
-    expect(container.querySelector(".cm-note-list-marker-visual")?.textContent).toBe("•");
+    expect(
+      Array.from(container.querySelectorAll(".cm-note-list-marker-visual"), (marker) => marker.textContent)
+    ).toEqual(["•", "•"]);
     expect(container.querySelector(".cm-note-rule")).toBeTruthy();
     expect(container.querySelector(".cm-note-strong")).toBeTruthy();
     expect(container.querySelector(".cm-note-emphasis")).toBeTruthy();
@@ -2514,25 +2516,6 @@ describe("NotesEditor interactions", () => {
     expect(checkedButton.classList.contains("checked")).toBe(true);
     expect(checkedButton.querySelector("svg")).toBeTruthy();
     expect(checkedButton.querySelector("svg").style.visibility).toBe("");
-  });
-
-  it("folds and expands nested lists without changing the Markdown", async () => {
-    const value = "- Parent\n  - Child\n  - Sibling\n\nOutside";
-    const onChange = vi.fn();
-    const { container, view } = await renderNotes({ value, onChange });
-
-    await fireEvent.click(screen.getByRole("button", { name: "Collapse nested list" }));
-
-    expect(container.textContent).not.toContain("Child");
-    expect(container.textContent).toContain("Outside");
-    expect(screen.getByRole("button", { name: "Expand nested list" })).toBeTruthy();
-    expect(view.state.doc.toString()).toBe(value);
-    expect(onChange).not.toHaveBeenCalled();
-
-    await fireEvent.click(screen.getByRole("button", { name: "Expand nested list" }));
-    expect(container.textContent).toContain("Child");
-    expect(view.state.doc.toString()).toBe(value);
-    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("emits the complete continuous document for an editor transaction", async () => {
