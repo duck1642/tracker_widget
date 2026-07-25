@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getISOWeek, getWeekDescriptor } from "./logWorkspaceService.js";
+import {
+  dateForISOWeek,
+  getConsecutiveWeekDescriptors,
+  getISOWeek,
+  getWeekDescriptor
+} from "./logWorkspaceService.js";
 
 describe("ISO week descriptors", () => {
   it("handles a week crossing month boundaries", () => {
@@ -12,5 +17,27 @@ describe("ISO week descriptors", () => {
     expect(getISOWeek(new Date(2025, 11, 29))).toEqual({ year: 2026, week: 1 });
     expect(getWeekDescriptor(new Date(2025, 11, 29)).rangeLabel)
       .toBe("December 29, 2025 - January 4, 2026");
+  });
+
+  it("converts an ISO week selection to its Monday", () => {
+    const date = dateForISOWeek(2026, 31);
+    expect(getWeekDescriptor(date)).toMatchObject({
+      year: 2026,
+      week: 31,
+      folderName: "2026w31",
+      rangeLabel: "July 27 - August 2"
+    });
+  });
+
+  it("builds consecutive week descriptors across ISO years", () => {
+    expect(getConsecutiveWeekDescriptors(dateForISOWeek(2025, 52), 3)
+      .map(({ folderName }) => folderName))
+      .toEqual(["2025w52", "2026w01", "2026w02"]);
+  });
+
+  it("rejects invalid ISO weeks and unsafe range sizes", () => {
+    expect(() => dateForISOWeek(2026, 54)).toThrow("Invalid ISO week");
+    expect(() => getConsecutiveWeekDescriptors(new Date(2026, 0, 1), 0)).toThrow("between 1 and 12");
+    expect(() => getConsecutiveWeekDescriptors(new Date(2026, 0, 1), 13)).toThrow("between 1 and 12");
   });
 });

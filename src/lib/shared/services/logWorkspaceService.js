@@ -56,6 +56,38 @@ export function getWeekDescriptor(date) {
   };
 }
 
+export function dateForISOWeek(year, week) {
+  const isoYear = Number(year);
+  const isoWeek = Number(week);
+  if (!Number.isInteger(isoYear) || !Number.isInteger(isoWeek) || isoWeek < 1 || isoWeek > 53) {
+    throw new Error("Invalid ISO week");
+  }
+
+  const januaryFourth = new Date(isoYear, 0, 4);
+  const firstMonday = mondayFor(januaryFourth);
+  const result = new Date(firstMonday);
+  result.setDate(result.getDate() + (isoWeek - 1) * 7);
+  const resolved = getISOWeek(result);
+  if (resolved.year !== isoYear || resolved.week !== isoWeek) {
+    throw new Error("Invalid ISO week");
+  }
+  return result;
+}
+
+export function getConsecutiveWeekDescriptors(startDate, count) {
+  const weekCount = Number(count);
+  if (!Number.isInteger(weekCount) || weekCount < 1 || weekCount > 12) {
+    throw new Error("Week count must be between 1 and 12");
+  }
+
+  const firstMonday = mondayFor(startDate);
+  return Array.from({ length: weekCount }, (_, index) => {
+    const date = new Date(firstMonday);
+    date.setDate(date.getDate() + index * 7);
+    return getWeekDescriptor(date);
+  });
+}
+
 export function dayLabel(date) {
   return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()];
 }

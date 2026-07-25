@@ -126,17 +126,43 @@ class WorkspaceStore {
     }
   }
 
-  async createCurrentWeekFiles() {
+  async createWeekFiles(startDate, count = 1) {
     if (!appStore.logsRootPath) return false;
     try {
-      const created = await workspaceService.createWeek(appStore.logsRootPath, new Date(), appStore.frontmatterMode);
-      appStore.showStatus(created.length ? `Created ${created.length} files` : "Nothing missing");
+      const descriptors = workspaceService.getConsecutiveWeekDescriptors(startDate, count);
+      let createdCount = 0;
+      for (const descriptor of descriptors) {
+        const created = await workspaceService.createWeek(
+          appStore.logsRootPath,
+          descriptor.start,
+          appStore.frontmatterMode
+        );
+        createdCount += created.length;
+      }
+      const weekLabel = descriptors.length === 1 ? "1 week" : `${descriptors.length} weeks`;
+      appStore.showStatus(createdCount
+        ? `Created ${createdCount} files across ${weekLabel}`
+        : `Nothing missing across ${weekLabel}`);
       await this.refresh();
       return true;
     } catch (error) {
       appStore.showStatus("Week creation failed: " + error);
       return false;
     }
+  }
+
+  createCurrentWeekFiles(referenceDate = new Date()) {
+    return this.createWeekFiles(referenceDate, 1);
+  }
+
+  createNextWeekFiles(referenceDate = new Date()) {
+    const nextMonday = workspaceService.getWeekDescriptor(referenceDate).start;
+    nextMonday.setDate(nextMonday.getDate() + 7);
+    return this.createWeekFiles(nextMonday, 1);
+  }
+
+  createSelectedWeekFiles(year, week, count = 1) {
+    return this.createWeekFiles(workspaceService.dateForISOWeek(year, week), count);
   }
 }
 

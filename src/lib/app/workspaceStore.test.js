@@ -27,7 +27,20 @@ vi.mock("$lib/shared/services/logWorkspaceService.js", () => ({
   selectTodoFile: vi.fn(async () => "C:\\old.md"),
   createWorkspaceTodo: vi.fn(async (rootPath) => ({ path: `${rootPath}\\todo.md`, todoCount: 4, rawLineCount: 0, replaced: false })),
   importWorkspaceTodo: vi.fn(async (rootPath) => ({ path: `${rootPath}\\todo.md`, todoCount: 1, rawLineCount: 0, replaced: false })),
-  countTodoItems: vi.fn((content) => content.includes("- [ ]") ? 1 : 0)
+  countTodoItems: vi.fn((content) => content.includes("- [ ]") ? 1 : 0),
+  createWeek: vi.fn(async () => []),
+  dateForISOWeek: vi.fn((year, week) => new Date(year, 0, week)),
+  getConsecutiveWeekDescriptors: vi.fn((startDate, count) =>
+    Array.from({ length: count }, (_, index) => ({
+      start: new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + index * 7),
+      folderName: `week-${index + 1}`
+    }))
+  ),
+  getWeekDescriptor: vi.fn((date) => {
+    const start = new Date(date);
+    start.setDate(start.getDate() - ((start.getDay() || 7) - 1));
+    return { start };
+  })
 }));
 
 import { appStore } from "./appStore.svelte.js";
@@ -76,5 +89,36 @@ describe("WorkspaceStore workspace status", () => {
     expect(await workspaceStore.refresh()).toBe(false);
     expect(workspaceStore.unavailable).toBe(true);
     expect(workspaceStore.todoExists).toBe(false);
+  });
+
+  it("creates or repairs a selected consecutive week range and refreshes once", async () => {
+    appStore.logsRootPath = "C:\\Tracker";
+    appStore.frontmatterMode = "personal";
+    workspaceService.createWeek
+      .mockResolvedValueOnce(["week-1/index.md", "week-1/day.md"])
+      .mockResolvedValueOnce([]);
+    vi.spyOn(workspaceStore, "refresh").mockResolvedValue(true);
+
+    expect(await workspaceStore.createSelectedWeekFiles(2026, 31, 2)).toBe(true);
+
+    expect(workspaceService.dateForISOWeek).toHaveBeenCalledWith(2026, 31);
+    expect(workspaceService.createWeek).toHaveBeenCalledTimes(2);
+    expect(workspaceService.createWeek).toHaveBeenNthCalledWith(
+      1, "C:\\Tracker", expect.any(Date), "personal"
+    );
+    expect(workspaceService.createWeek).toHaveBeenNthCalledWith(
+      2, "C:\\Tracker", expect.any(Date), "personal"
+    );
+    expect(workspaceStore.refresh).toHaveBeenCalledOnce();
+    expect(appStore.showStatus).toHaveBeenCalledWith("Created 2 files across 2 weeks");
+  });
+
+  it("creates the next calendar week rather than the selected sidebar week", async () => {
+    appStore.logsRootPath = "C:\\Tracker";
+    const createWeekFiles = vi.spyOn(workspaceStore, "createWeekFiles").mockResolvedValue(true);
+
+    await workspaceStore.createNextWeekFiles(new Date(2026, 6, 25));
+
+    expect(createWeekFiles).toHaveBeenCalledWith(new Date(2026, 6, 27), 1);
   });
 });
