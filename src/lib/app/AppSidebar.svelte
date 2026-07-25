@@ -3,6 +3,8 @@
   import { CalendarPlus, ArrowDownUp, ChevronsDownUp, ChevronsUpDown, ExternalLink } from "@lucide/svelte";
   import { openPath } from "@tauri-apps/plugin-opener";
   import FileTree from "$lib/shared/components/FileTree.svelte";
+  import WeekFilesDialog from "./WeekFilesDialog.svelte";
+  import WeekFilesMenu from "./WeekFilesMenu.svelte";
   import { workspaceStore } from "./workspaceStore.svelte.js";
   import { appStore } from "$lib/app/appStore.svelte.js";
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
@@ -20,6 +22,8 @@
     : "Week order: newest first — click for oldest first");
   let queuedNavigationPath = "";
   let navigationQueue = Promise.resolve();
+  let weekFilesMenu = $state(null);
+  let showWeekFilesDialog = $state(false);
 
   const EDITOR_BLUR_SETTLE_MS = 160;
 
@@ -46,6 +50,10 @@
   }
 
   function handleKeyboardNavigation(event) {
+    if (event.key === "Escape" && weekFilesMenu) {
+      weekFilesMenu = null;
+      return;
+    }
     if (!event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
     if (event.key !== "PageUp" && event.key !== "PageDown") return;
 
@@ -76,6 +84,26 @@
       });
   }
 
+  function toggleWeekFilesMenu(event) {
+    if (weekFilesMenu) {
+      weekFilesMenu = null;
+      return;
+    }
+    const rect = event.currentTarget.getBoundingClientRect();
+    weekFilesMenu = { x: rect.left, y: rect.bottom + 5 };
+  }
+
+  function dismissWeekFilesMenu(event) {
+    if (!weekFilesMenu) return;
+    if (event.target instanceof Element && event.target.closest("[data-week-files-menu], [data-week-files-trigger]")) return;
+    weekFilesMenu = null;
+  }
+
+  async function runWeekFilesAction(action) {
+    weekFilesMenu = null;
+    await action();
+  }
+
   function toggleAllWeeks() {
     allWeeksExpanded = !allWeeksExpanded;
     expansionCommand = { id: ++expansionCommandId, expanded: allWeeksExpanded };
@@ -103,21 +131,47 @@
   }
 </script>
 
-<svelte:window onkeydown={handleKeyboardNavigation} />
+<svelte:window onkeydown={handleKeyboardNavigation} onpointerdown={dismissWeekFilesMenu} />
 
 <aside class:closed={!open}>
   <div class="actions">
-    <button onclick={() => workspaceStore.createCurrentWeekFiles()} aria-label="Create week files" title="Create week files"><CalendarPlus size={15} /></button>
+    <button
+      data-week-files-trigger
+      onclick={toggleWeekFilesMenu}
+      aria-label="Week files"
+      title="Week files"
+      aria-haspopup="menu"
+      aria-expanded={Boolean(weekFilesMenu)}
+    ><CalendarPlus size={15} /></button>
     <button onclick={() => sortAscending = !sortAscending} aria-label={sortDescription} title={sortDescription}><ArrowDownUp size={15} /></button>
     <button onclick={toggleAllWeeks} aria-label={allWeeksExpanded ? "Collapse all weeks" : "Expand all weeks"} title={allWeeksExpanded ? "Collapse all weeks" : "Expand all weeks"}>{#if allWeeksExpanded}<ChevronsDownUp size={15} />{:else}<ChevronsUpDown size={15} />{/if}</button>
     <button onclick={openActiveMarkdown} aria-label="Open active file in system editor" title="Open active file in system editor"><ExternalLink size={15} /></button>
   </div>
+  {#if weekFilesMenu}
+    <WeekFilesMenu
+      x={weekFilesMenu.x}
+      y={weekFilesMenu.y}
+      onCurrent={() => runWeekFilesAction(() => workspaceStore.createCurrentWeekFiles())}
+      onNext={() => runWeekFilesAction(() => workspaceStore.createNextWeekFiles())}
+      onChoose={() => {
+        weekFilesMenu = null;
+        showWeekFilesDialog = true;
+      }}
+    />
+  {/if}
   {#if workspaceStore.unavailable}
     <div class="unavailable"><strong>Workspace unavailable</strong><span>Locate the existing workspace folder, select another one, or retry the configured path.</span><button onclick={() => workspaceStore.chooseRoot()}>Locate existing</button><button onclick={() => workspaceStore.chooseRoot()}>Select new</button><button onclick={() => workspaceStore.refresh()}>Retry</button></div>
   {:else}
     <FileTree weeks={sortedWeeks} {selectedPath} {onSelectWeek} {onSelectDay} {expansionCommand} />
   {/if}
 </aside>
+
+{#if showWeekFilesDialog}
+  <WeekFilesDialog
+    onClose={() => showWeekFilesDialog = false}
+    onSubmit={(year, week, count) => workspaceStore.createSelectedWeekFiles(year, week, count)}
+  />
+{/if}
 
 <style>
   aside { position: relative; display: grid; grid-template-rows: auto 1fr; flex: 0 0 180px; width: 180px; height: 100%; border-right: 1px solid var(--border-color); background: var(--surface); overflow: hidden; }

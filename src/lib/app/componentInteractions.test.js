@@ -2176,7 +2176,7 @@ describe("unavailable logs folder", () => {
 });
 
 describe("sidebar sorting", () => {
-  it("keeps workspace selection out of the sidebar and creates week files from one action", async () => {
+  it("opens the Week Files menu and runs the current-week shortcut", async () => {
     const createCurrentWeekFiles = vi.spyOn(workspaceStore, "createCurrentWeekFiles").mockResolvedValue(true);
     render(AppSidebar, { selectedPath: "", onSelectWeek: vi.fn(), onSelectDay: vi.fn() });
 
@@ -2184,9 +2184,48 @@ describe("sidebar sorting", () => {
     expect(screen.queryByRole("button", { name: /Initialize current week/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Fill in missing files/ })).toBeNull();
 
-    await fireEvent.click(screen.getByRole("button", { name: "Create week files" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Week files" }));
+    expect(screen.getByRole("menu", { name: "Week files" })).toBeTruthy();
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Current week — check/repair" }));
 
     expect(createCurrentWeekFiles).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("menu", { name: "Week files" })).toBeNull();
+  });
+
+  it("runs the next-week shortcut from the Week Files menu", async () => {
+    const createNextWeekFiles = vi.spyOn(workspaceStore, "createNextWeekFiles").mockResolvedValue(true);
+    render(AppSidebar, { selectedPath: "", onSelectWeek: vi.fn(), onSelectDay: vi.fn() });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Week files" }));
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Next week — create" }));
+
+    expect(createNextWeekFiles).toHaveBeenCalledOnce();
+  });
+
+  it("chooses and previews a consecutive ISO week range", async () => {
+    const createSelectedWeekFiles = vi.spyOn(workspaceStore, "createSelectedWeekFiles").mockResolvedValue(true);
+    render(AppSidebar, { selectedPath: "", onSelectWeek: vi.fn(), onSelectDay: vi.fn() });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Week files" }));
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Choose weeks…" }));
+
+    expect(screen.getByRole("dialog", { name: "Choose weeks" })).toBeTruthy();
+    await fireEvent.input(screen.getByLabelText("Start week"), { target: { value: "2026-W31" } });
+    await fireEvent.input(screen.getByLabelText("Number of weeks"), { target: { value: "2" } });
+
+    expect(screen.getByLabelText("2026w31 · July 27 - August 2")).toBeTruthy();
+    expect(screen.getByLabelText("2026w32 · August 3 - 9")).toBeTruthy();
+    await fireEvent.click(screen.getByRole("button", { name: "Check/repair 2 weeks" }));
+
+    expect(createSelectedWeekFiles).toHaveBeenCalledWith(2026, 31, 2);
+    expect(screen.queryByRole("dialog", { name: "Choose weeks" })).toBeNull();
+  });
+
+  it("dismisses the Week Files menu with Escape", async () => {
+    render(AppSidebar, { selectedPath: "", onSelectWeek: vi.fn(), onSelectDay: vi.fn() });
+    await fireEvent.click(screen.getByRole("button", { name: "Week files" }));
+    await fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("menu", { name: "Week files" })).toBeNull();
   });
 
   it("toggles between newest-first and oldest-first", async () => {
