@@ -6,7 +6,8 @@
     y = 0,
     items = [],
     ariaLabel = "Context actions",
-    preserveFocus = false
+    preserveFocus = false,
+    onDismiss = null
   } = $props();
 
   let menuElement = $state();
@@ -26,7 +27,33 @@
     menuLeft = position.x;
     menuTop = position.y;
   });
+
+  function dismiss() {
+    onDismiss?.();
+  }
+
+  /** @param {PointerEvent} event */
+  function handleWindowPointerDown(event) {
+    if (!onDismiss) return;
+    if (event.target instanceof Node && menuElement?.contains(event.target)) return;
+    dismiss();
+  }
+
+  /** @param {KeyboardEvent} event */
+  function handleWindowKeydown(event) {
+    if (!onDismiss || event.key !== "Escape") return;
+    event.preventDefault();
+    event.stopPropagation();
+    dismiss();
+  }
 </script>
+
+<svelte:window
+  onpointerdown={handleWindowPointerDown}
+  onkeydown={handleWindowKeydown}
+  onscrollcapture={dismiss}
+  onwheel={dismiss}
+/>
 
 <div
   bind:this={menuElement}

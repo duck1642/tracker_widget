@@ -1,9 +1,10 @@
 <script>
   // @ts-nocheck
-  import { ChevronDown, ChevronUp, ClipboardPaste, Copy, Plus, Scissors, TextSelect, Trash2, X } from "@lucide/svelte";
+  import { ChevronDown, ChevronUp, Plus, Trash2, X } from "@lucide/svelte";
   import { appStore } from "$lib/app/appStore.svelte.js";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
-  import { captureEditableText, copyEditableSelection, cutEditableSelection, hasEditableSelection, pasteIntoEditable, selectAllEditableText } from "$lib/shared/services/editableTextClipboard.js";
+  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.js";
+  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
   import TimeInput from "$lib/shared/components/TimeInput.svelte";
   import { planSummary } from "../weeklyIndexParser.js";
@@ -28,13 +29,10 @@
     const activityId = contextMenu.activityId;
     const editable = contextMenu.editable;
     return [
-      ...(editable ? [
-        { label: "Cut", icon: Scissors, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(cutEditableSelection, editable) },
-        { label: "Copy", icon: Copy, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(copyEditableSelection, editable) },
-        { label: "Paste", icon: ClipboardPaste, onclick: () => runTextAction(pasteIntoEditable, editable) },
-        { label: "Select All", icon: TextSelect, disabled: !editable.target.value, onclick: () => runTextAction(selectAllEditableText, editable) },
-        { separator: true }
-      ] : []),
+      ...buildEditableTextMenuItems(editable, {
+        beforeAction: closeContextMenu,
+        onError: (error) => appStore.showStatus(`Clipboard failed: ${error}`)
+      }),
       { label: "Move Up", icon: ChevronUp, disabled: contextActivityIndex <= 0, onclick: () => runEntityAction(onMoveActivity, activityId, "up") },
       { label: "Move Down", icon: ChevronDown, disabled: contextActivityIndex < 0 || contextActivityIndex >= (entry.activities || []).length - 1, onclick: () => runEntityAction(onMoveActivity, activityId, "down") },
       { separator: true },
@@ -60,34 +58,12 @@
     action(...args);
   }
 
-  async function runTextAction(action, editable) {
-    closeContextMenu();
-    try {
-      await action(editable);
-    } catch (error) {
-      appStore.showStatus(`Clipboard failed: ${error}`);
-    }
-  }
 </script>
 
 <svelte:window
-  onpointerdown={(event) => {
-    if (!contextMenu) return;
-    if (event.target instanceof Element && event.target.closest(".todo-context-menu")) return;
-    closeContextMenu();
-  }}
   onkeydown={(event) => {
-    if (event.key !== "Escape") return;
-    if (contextMenu) {
-      event.preventDefault();
-      event.stopPropagation();
-      closeContextMenu();
-    } else {
-      onClose();
-    }
+    if (event.key === "Escape" && !contextMenu) onClose();
   }}
-  onscrollcapture={closeContextMenu}
-  onwheel={closeContextMenu}
 />
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -172,6 +148,7 @@
     items={contextMenuItems}
     ariaLabel="Planned activity actions"
     preserveFocus={Boolean(contextMenu.editable)}
+    onDismiss={closeContextMenu}
   />
 {/if}
 

@@ -6,9 +6,10 @@
   import NotesEditor from "$lib/shared/components/NotesEditor.svelte";
   import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
-  import { ChevronDown, ChevronUp, ClipboardPaste, Copy, Scissors, TextSelect, Trash2 } from "@lucide/svelte";
+  import { ChevronDown, ChevronUp, Trash2 } from "@lucide/svelte";
   import { appStore } from "$lib/app/appStore.svelte.js";
-  import { captureEditableText, copyEditableSelection, cutEditableSelection, hasEditableSelection, pasteIntoEditable, selectAllEditableText } from "$lib/shared/services/editableTextClipboard.js";
+  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.js";
+  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { sessionHistoryStore } from "$lib/app/sessionHistoryStore.svelte.js";
@@ -53,14 +54,10 @@
   });
 
   function editableMenuItems(editable) {
-    if (!editable) return [];
-    return [
-      { label: "Cut", icon: Scissors, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(cutEditableSelection, editable) },
-      { label: "Copy", icon: Copy, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(copyEditableSelection, editable) },
-      { label: "Paste", icon: ClipboardPaste, onclick: () => runTextAction(pasteIntoEditable, editable) },
-      { label: "Select All", icon: TextSelect, disabled: !editable.target.value, onclick: () => runTextAction(selectAllEditableText, editable) },
-      { separator: true }
-    ];
+    return buildEditableTextMenuItems(editable, {
+      beforeAction: closeContextMenu,
+      onError: (error) => appStore.showStatus(`Clipboard failed: ${error}`)
+    });
   }
 
   function openSessionContextMenu(event, sessionId) {
@@ -80,15 +77,6 @@
   function runEntityAction(action, ...args) {
     closeContextMenu();
     action(...args);
-  }
-
-  async function runTextAction(action, editable) {
-    closeContextMenu();
-    try {
-      await action(editable);
-    } catch (error) {
-      appStore.showStatus(`Clipboard failed: ${error}`);
-    }
   }
 
   function moveSession(sessionId, direction) {
@@ -172,26 +160,11 @@
         items={contextMenuItems}
         ariaLabel={contextMenu.kind === "session" ? "Session actions" : "Activity actions"}
         preserveFocus={Boolean(contextMenu.editable)}
+        onDismiss={closeContextMenu}
       />
     {/if}
   {/if}
 </main>
-
-<svelte:window
-  onpointerdown={(event) => {
-    if (!contextMenu) return;
-    if (event.target instanceof Element && event.target.closest(".todo-context-menu")) return;
-    closeContextMenu();
-  }}
-  onkeydown={(event) => {
-    if (contextMenu && event.key === "Escape") {
-      event.preventDefault();
-      closeContextMenu();
-    }
-  }}
-  onscrollcapture={closeContextMenu}
-  onwheel={closeContextMenu}
-/>
 
 <style>
   .daily-panel { --panel-bottom-gap: 22px; display: grid; align-content: start; gap: 18px; width: min(100%, 1040px); margin: 0 auto; padding: 0 22px var(--panel-bottom-gap) 22px; box-sizing: border-box; }

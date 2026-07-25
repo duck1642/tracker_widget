@@ -1,9 +1,10 @@
 <script>
   // @ts-nocheck
-  import { ChevronDown, ChevronUp, ClipboardPaste, Copy, IndentDecrease, IndentIncrease, Plus, Scissors, TextSelect, Trash2 } from "@lucide/svelte";
+  import { ChevronDown, ChevronUp, IndentDecrease, IndentIncrease, Plus, Trash2 } from "@lucide/svelte";
   import { appStore } from "$lib/app/appStore.svelte.js";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
-  import { captureEditableText, copyEditableSelection, cutEditableSelection, hasEditableSelection, pasteIntoEditable, selectAllEditableText } from "$lib/shared/services/editableTextClipboard.js";
+  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.js";
+  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
   import ObjectiveRow from "./ObjectiveRow.svelte";
   import { buildVisibleObjectiveRows } from "../objectiveFolding.js";
   let { objectives, onAdd, onUpdate, onDelete, onMove, onIndent, onOutdent } = $props();
@@ -17,13 +18,10 @@
     if (!contextObjective) return [];
     const editable = contextMenu?.editable;
     return [
-      ...(editable ? [
-        { label: "Cut", icon: Scissors, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(cutEditableSelection, editable) },
-        { label: "Copy", icon: Copy, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(copyEditableSelection, editable) },
-        { label: "Paste", icon: ClipboardPaste, onclick: () => runTextAction(pasteIntoEditable, editable) },
-        { label: "Select All", icon: TextSelect, disabled: !editable.target.value, onclick: () => runTextAction(selectAllEditableText, editable) },
-        { separator: true }
-      ] : []),
+      ...buildEditableTextMenuItems(editable, {
+        beforeAction: closeContextMenu,
+        onError: (error) => appStore.showStatus(`Clipboard failed: ${error}`)
+      }),
       { label: "Indent", icon: IndentIncrease, disabled: (contextObjective.indent || 0) >= 2, onclick: () => runContextAction(onIndent, contextObjective.id) },
       { label: "Outdent", icon: IndentDecrease, disabled: (contextObjective.indent || 0) <= 0, onclick: () => runContextAction(onOutdent, contextObjective.id) },
       { label: "Move Up", icon: ChevronUp, disabled: contextObjectiveIndex <= 0, onclick: () => runContextAction(onMove, contextObjective.id, "up") },
@@ -60,14 +58,6 @@
     action(...args);
   }
 
-  async function runTextAction(action, editable) {
-    closeContextMenu();
-    try {
-      await action(editable);
-    } catch (error) {
-      appStore.showStatus(`Clipboard failed: ${error}`);
-    }
-  }
 </script>
 
 <section id="objectives" class="week-section">
@@ -100,25 +90,9 @@
     </div>
   </div>
   {#if contextMenu && contextObjective}
-    <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenuItems} ariaLabel="Objective actions" preserveFocus={Boolean(contextMenu.editable)} />
+    <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenuItems} ariaLabel="Objective actions" preserveFocus={Boolean(contextMenu.editable)} onDismiss={closeContextMenu} />
   {/if}
 </section>
-
-<svelte:window
-  onpointerdown={(event) => {
-    if (!contextMenu) return;
-    if (event.target instanceof Element && event.target.closest(".todo-context-menu")) return;
-    closeContextMenu();
-  }}
-  onkeydown={(event) => {
-    if (contextMenu && event.key === "Escape") {
-      event.preventDefault();
-      closeContextMenu();
-    }
-  }}
-  onscrollcapture={closeContextMenu}
-  onwheel={closeContextMenu}
-/>
 
 <style>
   .objectives-list { display: flex; flex-direction: column; }

@@ -8,6 +8,7 @@ import AppHeader from "./AppHeader.svelte";
 import AppSidebar from "./AppSidebar.svelte";
 import SettingsPanel from "./SettingsPanel.svelte";
 import FileTree from "$lib/shared/components/FileTree.svelte";
+import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
 import ActivityRow from "$lib/features/daily/components/ActivityRow.svelte";
 import SessionCard from "$lib/features/daily/components/SessionCard.svelte";
 import DailyPanel from "$lib/features/daily/components/DailyPanel.svelte";
@@ -141,6 +142,28 @@ describe("window controls", () => {
     await fireEvent.keyDown(window, { key: "Escape" });
     expect(onDismissModeMenu).toHaveBeenCalledTimes(2);
     expect(document.activeElement).toBe(trigger);
+  });
+});
+
+describe("shared context menu behavior", () => {
+  it("owns standard outside-click, Escape, scroll, and wheel dismissal when requested", async () => {
+    const onDismiss = vi.fn();
+    render(ContextMenu, {
+      items: [{ label: "Example", onclick: vi.fn() }],
+      ariaLabel: "Example actions",
+      onDismiss
+    });
+
+    const menu = screen.getByRole("menu", { name: "Example actions" });
+    await fireEvent.pointerDown(menu);
+    expect(onDismiss).not.toHaveBeenCalled();
+
+    await fireEvent.pointerDown(document.body);
+    await fireEvent.keyDown(window, { key: "Escape" });
+    await fireEvent.scroll(window);
+    await fireEvent.wheel(window);
+
+    expect(onDismiss).toHaveBeenCalledTimes(4);
   });
 });
 
@@ -819,6 +842,8 @@ describe("logger editing", () => {
     await fireEvent.contextMenu(screen.getByRole("button", { name: "Second planned" }).closest(".planned-activity"));
     await fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
     expect(onDeleteActivity).toHaveBeenCalledWith("p1", "a2");
+    await fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Planned activities for Development" })).toBeNull();
   });
 
   it("opens weekly actual read-only details and closes the modal", async () => {

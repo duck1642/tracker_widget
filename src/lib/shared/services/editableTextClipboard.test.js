@@ -2,7 +2,13 @@
 // @ts-nocheck
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { captureEditableText, copyEditableSelection, cutEditableSelection, pasteIntoEditable, selectAllEditableText } from "./editableTextClipboard.js";
+import {
+  captureEditableText,
+  copyEditableSelection,
+  cutEditableSelection,
+  pasteIntoEditable,
+  selectAllEditableText
+} from "./editableTextClipboard.js";
 
 vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
   readText: vi.fn(),
@@ -111,4 +117,5 @@ describe("editable text clipboard", () => {
     expect(other.selectionStart).toBe(2);
     expect(other.selectionEnd).toBe(2);
   });
+
 });
