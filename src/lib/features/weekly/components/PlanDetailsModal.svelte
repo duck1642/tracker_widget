@@ -274,6 +274,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    min-width: 0;
   }
 
   .desc-text {
@@ -287,6 +288,7 @@
     font-size: var(--text-sm);
     text-align: left;
     cursor: pointer;
+    overflow-wrap: anywhere;
   }
 
   .desc-text:hover {

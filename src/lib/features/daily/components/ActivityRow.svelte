@@ -62,6 +62,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 12px;
+    min-width: 0;
   }
   .activity-actions {
     display: inline-flex;
@@ -97,15 +98,18 @@
   }
   .desc-text {
     flex: 1;
+    min-width: 0;
     font-size: var(--text-sm);
     color: var(--text-color);
     cursor: pointer;
     min-height: 24px;
     display: flex;
     align-items: center;
+    overflow-wrap: anywhere;
   }
   .desc-input {
     flex: 1;
+    min-width: 0;
     color: var(--text-color);
     font-size: var(--text-sm);
     min-height: 28px;
