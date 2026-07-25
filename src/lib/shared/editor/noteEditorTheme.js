@@ -96,14 +96,10 @@ export const noteEditorTheme = [
         textAlign: "center"
       },
       ".cm-note-task": {
-        width: "14px",
-        height: "14px",
-        margin: "0 7px 0 0",
-        padding: "0",
-        border: "0",
+        display: "inline-flex",
+        margin: "0 8px 0 0",
         verticalAlign: "-2px",
-        accentColor: "var(--accent)",
-        cursor: "pointer"
+        flexShrink: "0"
       },
       ".cm-note-rule": {
         display: "inline-block",
