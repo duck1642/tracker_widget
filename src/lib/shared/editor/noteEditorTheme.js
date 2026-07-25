@@ -98,7 +98,7 @@ export const noteEditorTheme = [
       ".cm-note-task": {
         display: "inline-flex",
         margin: "0 8px 0 0",
-        verticalAlign: "-2px",
+        verticalAlign: "middle",
         flexShrink: "0"
       },
       ".cm-note-rule": {

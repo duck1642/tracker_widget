@@ -232,22 +232,21 @@ class TaskWidget extends WidgetType {
     checkbox.setAttribute("aria-label", this.checked ? "Mark task incomplete" : "Mark task complete");
     checkbox.title = this.checked ? "Mark active" : "Mark completed";
 
-    if (this.checked) {
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.setAttribute("width", "10");
-      svg.setAttribute("height", "10");
-      svg.setAttribute("viewBox", "0 0 24 24");
-      svg.setAttribute("fill", "none");
-      svg.setAttribute("stroke", "currentColor");
-      svg.setAttribute("stroke-width", "4");
-      svg.setAttribute("stroke-linecap", "round");
-      svg.setAttribute("stroke-linejoin", "round");
-      svg.setAttribute("aria-hidden", "true");
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", "M20 6 9 17l-5-5");
-      svg.append(path);
-      checkbox.append(svg);
-    }
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", "10");
+    svg.setAttribute("height", "10");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "4");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("aria-hidden", "true");
+    if (!this.checked) svg.style.visibility = "hidden";
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M20 6 9 17l-5-5");
+    svg.append(path);
+    checkbox.append(svg);
 
     checkbox.addEventListener("mousedown", (event) => event.preventDefault());
     checkbox.addEventListener("click", (event) => {
