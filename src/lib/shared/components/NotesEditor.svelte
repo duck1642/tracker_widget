@@ -260,11 +260,11 @@
     transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
   }
   .notes-surface:hover {
-    border-color: #444;
+    border-color: var(--border-strong);
     background: rgba(255, 255, 255, 0.01);
   }
   .notes-surface:has(:global(.cm-focused)) {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-soft);
+    border-color: var(--border-strong);
+    box-shadow: 0 0 0 1px var(--border-subtle);
   }
 </style>

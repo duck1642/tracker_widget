@@ -67,10 +67,26 @@ export const noteEditorTheme = [
       ".cm-note-codeblock": {
         paddingLeft: "12px",
         paddingRight: "12px",
-        background: "#121212",
+        background: "var(--surface)",
         color: "var(--text-color)",
         fontFamily: "var(--font-mono)",
-        fontSize: "12px"
+        fontSize: "12px",
+        boxShadow: "inset 1px 0 var(--border-subtle), inset -1px 0 var(--border-subtle)"
+      },
+      ".cm-note-codeblock-first": {
+        marginTop: "6px",
+        paddingTop: "7px",
+        borderRadius: "var(--radius-md) var(--radius-md) 0 0",
+        boxShadow: "inset 1px 0 var(--border-subtle), inset -1px 0 var(--border-subtle), inset 0 1px var(--border-subtle)"
+      },
+      ".cm-note-codeblock-last": {
+        marginBottom: "6px",
+        paddingBottom: "7px",
+        borderRadius: "0 0 var(--radius-md) var(--radius-md)",
+        boxShadow: "inset 1px 0 var(--border-subtle), inset -1px 0 var(--border-subtle), inset 0 -1px var(--border-subtle)"
+      },
+      ".cm-note-codeblock-first.cm-note-codeblock-last": {
+        borderRadius: "var(--radius-md)"
       },
       ".cm-note-bullet": {
         display: "inline-block",

@@ -2522,6 +2522,8 @@ describe("NotesEditor interactions", () => {
     const { container, view } = await renderNotes({ value, onChange: vi.fn() });
 
     expect(container.querySelectorAll(".cm-note-codeblock")).toHaveLength(4);
+    expect(container.querySelector(".cm-note-codeblock-first")).toBeTruthy();
+    expect(container.querySelector(".cm-note-codeblock-last")).toBeTruthy();
     expect(view.state.doc.toString()).toBe(value);
 
     const anchor = value.indexOf("inner");

@@ -281,7 +281,18 @@ function buildNoteDecorations(view) {
       const className = range.kind === "blockquote" ? "cm-note-blockquote" : "cm-note-codeblock";
       let line = view.state.doc.lineAt(range.from);
       while (line.from <= range.to) {
-        decorations.push(Decoration.line({ attributes: { class: className } }).range(line.from));
+        const lineClasses = [className];
+        if (range.kind === "codeblock") {
+          if (line.from === view.state.doc.lineAt(range.from).from) {
+            lineClasses.push("cm-note-codeblock-first");
+          }
+          if (line.to >= range.to) {
+            lineClasses.push("cm-note-codeblock-last");
+          }
+        }
+        decorations.push(
+          Decoration.line({ attributes: { class: lineClasses.join(" ") } }).range(line.from)
+        );
         if (line.to >= range.to || line.number >= view.state.doc.lines) break;
         line = view.state.doc.line(line.number + 1);
       }
