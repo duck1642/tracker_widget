@@ -261,7 +261,7 @@
   }
   .notes-surface:hover {
     border-color: var(--border-strong);
-    background: rgba(255, 255, 255, 0.01);
+    background: var(--bg-dark);
   }
   .notes-surface:has(:global(.cm-focused)) {
     border-color: var(--border-strong);
