@@ -60,6 +60,15 @@ describe("note live-preview ranges", () => {
     expect(state.doc.toString()).toBe(doc);
   });
 
+  it("keeps a recognized task rendered while its text is actively edited", () => {
+    const doc = "- [ ] active task";
+    const state = stateFor(doc, doc.indexOf("task") + 2);
+    const ranges = collectNotePreviewRanges(state);
+
+    expect(ranges.some((range) => range.kind === "task")).toBe(true);
+    expect(ranges.some((range) => range.kind === "hide" && doc.slice(range.from, range.to) === "- ")).toBe(true);
+  });
+
   it.each([3, 4, 5])("preserves a %s-backtick fence, its language, and shorter inner runs", (fenceLength) => {
     const fence = "`".repeat(fenceLength);
     const inner = "`".repeat(Math.max(1, fenceLength - 1));

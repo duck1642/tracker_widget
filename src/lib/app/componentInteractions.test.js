@@ -2500,7 +2500,11 @@ describe("NotesEditor interactions", () => {
 
   it("updates the canonical Markdown when clicking a task widget", async () => {
     const onChange = vi.fn();
-    await renderNotes({ value: "- [ ] Todo item\n* List item", onChange });
+    const { view } = await renderNotes({ value: "- [ ] Todo item\n* List item", onChange });
+
+    view.focus();
+    view.dispatch({ selection: { anchor: 8 } });
+    expect(screen.getByRole("checkbox", { name: "Mark task complete" })).toBeTruthy();
 
     await fireEvent.click(screen.getByRole("checkbox", { name: "Mark task complete" }));
     expect(onChange).toHaveBeenLastCalledWith("- [x] Todo item\n* List item");

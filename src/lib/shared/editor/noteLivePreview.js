@@ -121,17 +121,19 @@ export function collectNotePreviewRanges(state, selectionActive = true) {
         return;
       }
 
-      if (name === "ListMark" && !active) {
+      if (name === "ListMark") {
         const listItem = syntaxConstruct(node);
         const task = listItem?.name === "ListItem" ? listItem.getChild("Task") : null;
-        ranges.push({
-          kind: task ? "hide" : "bullet",
-          ...includeFollowingSpace(source, ref.from, ref.to)
-        });
+        if (task || !active) {
+          ranges.push({
+            kind: task ? "hide" : "bullet",
+            ...includeFollowingSpace(source, ref.from, ref.to)
+          });
+        }
         return;
       }
 
-      if (name === "TaskMarker" && !active) {
+      if (name === "TaskMarker") {
         ranges.push({
           kind: "task",
           from: ref.from,
