@@ -18,6 +18,7 @@
   import { appStore } from "$lib/app/appStore.svelte.js";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
   import { captureCodeMirrorText } from "$lib/shared/editor/noteEditorContext.js";
+  import { completeTaskMarkerInput } from "$lib/shared/editor/noteEditorInput.js";
   import { noteEditorTheme } from "$lib/shared/editor/noteEditorTheme.js";
   import {
     createNoteMarkdownExtension,
@@ -74,6 +75,7 @@
         placeholder("Click to add notes..."),
         noteLivePreview,
         noteEditorTheme,
+        EditorView.inputHandler.of(completeTaskMarkerInput),
         EditorView.contentAttributes.of({
           "aria-label": label,
           "aria-multiline": "true",
