@@ -139,6 +139,19 @@ npm run migrate:objectives -- <workspace-path> --write
 
 Back up the workspace and review the dry-run output before applying the migration.
 
+## Migrating Notes for v1.3.0
+
+v1.3.0 stores the terminal `## Notes` section in a dynamically sized `tracker-notes` fence so note headings cannot be mistaken for Daily or Weekly sections. Preview the migration first:
+
+```bash
+npm run migrate:notes -- <workspace-path>
+npm run migrate:notes -- <workspace-path> --write
+```
+
+The write pass creates a timestamped backup under `<workspace-path>/.tracker-backups/` before changing recognized Daily logs or Weekly indexes. It skips already-wrapped files and malformed wrappers, and a second pass is a no-op.
+
+Downgrade warning: v1.2.0 does not understand the `tracker-notes` boundary. Restore the timestamped backup before editing migrated files with v1.2.0, especially when notes contain `##` headings.
+
 ## Development
 
 Install Node.js and Rust, then:
