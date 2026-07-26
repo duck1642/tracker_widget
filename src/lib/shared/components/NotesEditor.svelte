@@ -18,7 +18,7 @@
   import { captureCodeMirrorText } from "$lib/shared/editor/noteEditorContext.js";
   import { completeTaskMarkerInput } from "$lib/shared/editor/noteEditorInput.js";
   import { continueNoteMarkdownList } from "$lib/shared/editor/noteMarkdownCommands.js";
-  import { noteEditorTheme } from "$lib/shared/editor/noteEditorTheme.js";
+  import { noteEditorFillTheme, noteEditorTheme } from "$lib/shared/editor/noteEditorTheme.js";
   import {
     createNoteMarkdownExtension,
     externalDocumentAnnotation,
@@ -27,7 +27,7 @@
   } from "$lib/shared/editor/noteLivePreview.js";
   import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
 
-  let { value = "", onChange, label = "Notes" } = $props();
+  let { value = "", onChange, label = "Notes", fillHeight = false } = $props();
 
   let editorHost = $state(null);
   let editorView = $state(null);
@@ -77,6 +77,7 @@
         placeholder("Click to add notes..."),
         previewCompartment.of(noteLivePreview),
         noteEditorTheme,
+        ...(fillHeight ? [noteEditorFillTheme] : []),
         EditorView.inputHandler.of(completeTaskMarkerInput),
         EditorView.contentAttributes.of({
           "aria-label": label,
@@ -143,7 +144,7 @@
   }
 </script>
 
-<div class="notes-container">
+<div class="notes-container" class:fill-height={fillHeight}>
   <header class="notes-header">
     <span class="notes-label">{label}</span>
     <div class="notes-actions">
@@ -201,6 +202,11 @@
     position: relative;
     width: 100%;
     box-sizing: border-box;
+  }
+  .notes-container.fill-height {
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
   }
   .notes-header {
     display: flex;
@@ -314,6 +320,10 @@
     box-sizing: border-box;
     cursor: text;
     transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .fill-height .notes-surface {
+    height: 100%;
+    min-height: 0;
   }
   .notes-surface:hover {
     border-color: var(--border-strong);

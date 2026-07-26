@@ -1,5 +1,5 @@
 // @ts-nocheck
-const VALID_VIEWS = new Set(["todo", "week", "day"]);
+const VALID_VIEWS = new Set(["todo", "scratchpad", "week", "day"]);
 
 function normalizeDestination(destination) {
   const view = VALID_VIEWS.has(destination?.view) ? destination.view : "todo";

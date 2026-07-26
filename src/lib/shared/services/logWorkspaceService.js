@@ -128,6 +128,12 @@ export function todoPathForWorkspace(rootPath) {
   return `${rootPath.replace(/[\\/]$/, "")}${separator}todo.md`;
 }
 
+export function scratchpadPathForWorkspace(rootPath) {
+  if (!rootPath) return "";
+  const separator = rootPath.includes("\\") ? "\\" : "/";
+  return `${rootPath.replace(/[\\/]$/, "")}${separator}scratchpad.md`;
+}
+
 export function pathBelongsToWeek(path, weekPath) {
   const normalizedPath = String(path || "").replaceAll("\\", "/").replace(/\/+$/, "").toLowerCase();
   const normalizedWeek = String(weekPath || "").replaceAll("\\", "/").replace(/\/+$/, "").toLowerCase();

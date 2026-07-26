@@ -13,6 +13,7 @@
     Layers,
     Minus,
     Settings,
+    StickyNote,
     X
   } from "@lucide/svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
@@ -65,6 +66,7 @@
     if (appMenu?.kind === "view") {
       return [
         { label: "Todo", icon: CheckSquare2, disabled: currentView === "todo", onclick: () => runMenuAction(onOpenView, "todo") },
+        { label: "Scratchpad", icon: StickyNote, disabled: currentView === "scratchpad", onclick: () => runMenuAction(onOpenView, "scratchpad") },
         { label: "Current Week", icon: CalendarRange, disabled: currentView === "week", onclick: () => runMenuAction(onOpenView, "week") },
         { label: "Today", icon: CalendarCheck, disabled: currentView === "day", onclick: () => runMenuAction(onOpenView, "day") },
         { separator: true },

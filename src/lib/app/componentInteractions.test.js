@@ -32,9 +32,11 @@ import { workspaceStore } from "./workspaceStore.svelte.js";
 import { appStore } from "./appStore.svelte.js";
 import { subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
 import { sessionHistoryStore } from "./sessionHistoryStore.svelte.js";
+import { scratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.js";
 import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
 import * as logWorkspaceService from "$lib/shared/services/logWorkspaceService.js";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { openPath } from "@tauri-apps/plugin-opener";
 import { EditorView } from "@codemirror/view";
 
 vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
@@ -42,11 +44,17 @@ vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
   writeText: vi.fn()
 }));
 
+vi.mock("@tauri-apps/plugin-opener", () => ({
+  openPath: vi.fn()
+}));
+
 beforeEach(() => {
   readText.mockReset();
   writeText.mockReset();
+  openPath.mockReset();
   readText.mockResolvedValue("");
   writeText.mockResolvedValue();
+  openPath.mockResolvedValue();
 });
 
 afterEach(() => {
@@ -71,6 +79,9 @@ afterEach(() => {
   weekStore.objectives = [];
   weekStore.plan = [];
   weekStore.actual = [];
+  scratchpadStore.path = "";
+  scratchpadStore.content = "";
+  scratchpadStore.loaded = false;
   subjectHistoryStore.history = { subjects: {} };
   subjectHistoryStore.loaded = false;
   subjectHistoryStore.rebuilding = false;
@@ -228,8 +239,46 @@ describe("window controls", () => {
 
     await fireEvent.click(screen.getByRole("button", { name: "View" }));
     expect(screen.getByRole("menuitem", { name: "Todo" }).disabled).toBe(true);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Scratchpad" }));
+    expect(onOpenView).toHaveBeenCalledWith("scratchpad");
+
+    await fireEvent.click(screen.getByRole("button", { name: "View" }));
     await fireEvent.click(screen.getByRole("menuitem", { name: "Current Week" }));
     expect(onOpenView).toHaveBeenCalledWith("week");
+  });
+
+  it("opens the fixed scratchpad entry from the sidebar", async () => {
+    const onSelectScratchpad = vi.fn();
+    render(AppSidebar, {
+      open: true,
+      currentView: "todo",
+      selectedPath: "",
+      onSelectScratchpad,
+      onSelectWeek: vi.fn(),
+      onSelectDay: vi.fn()
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Scratchpad" }));
+
+    expect(onSelectScratchpad).toHaveBeenCalledOnce();
+  });
+
+  it("opens the active scratchpad Markdown from the sidebar action", async () => {
+    appStore.currentView = "scratchpad";
+    scratchpadStore.path = "C:\\Tracker\\scratchpad.md";
+    render(AppSidebar, {
+      open: true,
+      currentView: "scratchpad",
+      selectedPath: scratchpadStore.path,
+      onSelectScratchpad: vi.fn(),
+      onSelectWeek: vi.fn(),
+      onSelectDay: vi.fn()
+    });
+
+    expect(screen.getByRole("button", { name: "Scratchpad" }).getAttribute("aria-current")).toBe("page");
+    await fireEvent.click(screen.getByRole("button", { name: "Open active file in system editor" }));
+
+    expect(openPath).toHaveBeenCalledWith("C:\\Tracker\\scratchpad.md");
   });
 
   it("exposes stateful sidebar and history controls", async () => {

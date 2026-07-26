@@ -4,7 +4,8 @@ import {
   getConsecutiveWeekDescriptors,
   getISOWeek,
   getWeekDescriptor,
-  pathBelongsToWeek
+  pathBelongsToWeek,
+  scratchpadPathForWorkspace
 } from "./logWorkspaceService.js";
 
 describe("ISO week descriptors", () => {
@@ -47,5 +48,11 @@ describe("ISO week descriptors", () => {
     expect(pathBelongsToWeek("/logs/2026w31/day.md", "/logs/2026w31/")).toBe(true);
     expect(pathBelongsToWeek("/logs/2026w310/day.md", "/logs/2026w31")).toBe(false);
     expect(pathBelongsToWeek("", "/logs/2026w31")).toBe(false);
+  });
+
+  it("places the global scratchpad directly in the workspace root", () => {
+    expect(scratchpadPathForWorkspace("C:\\Tracker")).toBe("C:\\Tracker\\scratchpad.md");
+    expect(scratchpadPathForWorkspace("/logs/")).toBe("/logs/scratchpad.md");
+    expect(scratchpadPathForWorkspace("")).toBe("");
   });
 });

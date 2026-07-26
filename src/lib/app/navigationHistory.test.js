@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { NavigationHistory } from "./navigationHistory.svelte.js";
 
 const todo = { view: "todo", path: "" };
+const scratchpad = { view: "scratchpad", path: "scratchpad.md" };
 const week = { view: "week", path: "2026w30/index.md" };
 const day = { view: "day", path: "2026w30/2026-07-25.md" };
 
@@ -59,6 +60,16 @@ describe("NavigationHistory", () => {
     const restarted = new NavigationHistory(todo);
     expect(restarted.entries).toEqual([todo]);
     expect(restarted.canGoBack).toBe(false);
+  });
+
+  it("preserves scratchpad as an exact navigable destination", () => {
+    const history = new NavigationHistory(todo);
+    history.visit(scratchpad);
+    history.visit(week);
+
+    expect(history.back()).toEqual(scratchpad);
+    expect(history.back()).toEqual(todo);
+    expect(history.forward()).toEqual(scratchpad);
   });
 
   it("removes destinations belonging to a recycled week and keeps a valid current entry", () => {

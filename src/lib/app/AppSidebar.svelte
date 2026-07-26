@@ -1,6 +1,6 @@
 <script>
   // @ts-nocheck
-  import { CalendarCheck, CalendarPlus, ArrowDownUp, ChevronsDownUp, ChevronsUpDown, ExternalLink, FileCog, Trash2 } from "@lucide/svelte";
+  import { CalendarCheck, CalendarPlus, ArrowDownUp, ChevronsDownUp, ChevronsUpDown, ExternalLink, FileCog, StickyNote, Trash2 } from "@lucide/svelte";
   import { openPath } from "@tauri-apps/plugin-opener";
   import FileTree from "$lib/shared/components/FileTree.svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
@@ -11,10 +11,13 @@
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
   import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
+  import { scratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.js";
 
   let {
     open = true,
+    currentView = "todo",
     selectedPath = "",
+    onSelectScratchpad = () => {},
     onSelectWeek,
     onSelectDay,
     onRepairWeek = (week) => workspaceStore.repairWeek(week),
@@ -150,6 +153,8 @@
       targetPath = weekStore.path;
     } else if (appStore.currentView === "day") {
       targetPath = dailyStore.path;
+    } else if (appStore.currentView === "scratchpad") {
+      targetPath = scratchpadStore.path;
     }
 
     if (targetPath) {
@@ -180,6 +185,15 @@
     <button onclick={toggleAllWeeks} aria-label={allWeeksExpanded ? "Collapse all weeks" : "Expand all weeks"} title={allWeeksExpanded ? "Collapse all weeks" : "Expand all weeks"}>{#if allWeeksExpanded}<ChevronsDownUp size={15} />{:else}<ChevronsUpDown size={15} />{/if}</button>
     <button onclick={openActiveMarkdown} aria-label="Open active file in system editor" title="Open active file in system editor"><ExternalLink size={15} /></button>
   </div>
+  <button
+    class="scratchpad-entry"
+    class:active={currentView === "scratchpad"}
+    onclick={onSelectScratchpad}
+    aria-current={currentView === "scratchpad" ? "page" : undefined}
+  >
+    <StickyNote size={14} />
+    <span>Scratchpad</span>
+  </button>
   {#if weekFilesMenu}
     <WeekFilesMenu
       x={weekFilesMenu.x}
@@ -218,10 +232,13 @@
 {/if}
 
 <style>
-  aside { position: relative; display: grid; grid-template-rows: auto 1fr; flex: 0 0 180px; width: 180px; height: 100%; border-right: 1px solid var(--border-color); background: var(--surface); overflow: hidden; }
+  aside { position: relative; display: grid; grid-template-rows: auto auto 1fr; flex: 0 0 180px; width: 180px; height: 100%; border-right: 1px solid var(--border-color); background: var(--surface); overflow: hidden; }
   .actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; padding: 10px 10px 9px; }
   .actions button { display: grid; place-items: center; width: 100%; min-width: 0; height: 34px; padding: 0; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-muted); cursor: pointer; }
   .actions button:hover { color: var(--text-color); border-color: var(--border-strong); }
+  .scratchpad-entry { display: flex; align-items: center; gap: 8px; width: auto; min-height: 30px; margin: 0 9px 7px; padding: 0 8px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--text-muted); cursor: pointer; font-size: var(--text-sm); text-align: left; }
+  .scratchpad-entry:hover { color: var(--text-color); background: var(--surface-hover); }
+  .scratchpad-entry.active { color: var(--accent); border-color: var(--border-color); background: var(--accent-soft); }
   .unavailable { display: grid; align-content: start; gap: 8px; margin: 8px; padding: 14px; color: var(--text-muted); font-size: var(--text-sm); }
   .unavailable button { min-height: 34px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-color); cursor: pointer; }
   .unavailable button:hover { border-color: var(--border-strong); background: var(--surface-hover); }

@@ -17,7 +17,8 @@
   import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
-  import { formatDate, getWeekDescriptor, pathBelongsToWeek } from "$lib/shared/services/logWorkspaceService.js";
+  import { scratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.js";
+  import { formatDate, getWeekDescriptor, pathBelongsToWeek, scratchpadPathForWorkspace } from "$lib/shared/services/logWorkspaceService.js";
   import AppHeader from "./AppHeader.svelte";
   import SettingsDialog from "./SettingsDialog.svelte";
   import HelpDialog from "./HelpDialog.svelte";
@@ -28,6 +29,7 @@
   import TodoToolbar from "$lib/features/todo/components/TodoToolbar.svelte";
   import DailyPanel from "$lib/features/daily/components/DailyPanel.svelte";
   import WeekPanel from "$lib/features/weekly/components/WeekPanel.svelte";
+  import ScratchpadPanel from "$lib/features/scratchpad/components/ScratchpadPanel.svelte";
   import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
 
   let showSettings = $state(false);
@@ -40,8 +42,15 @@
 
   const viewSizeConstraints = {
     todo: { width: 480, height: 360 },
+    scratchpad: { width: 480, height: 360 },
     day: { width: 900, height: 620 },
     week: { width: 1280, height: 700 }
+  };
+  const viewTitles = {
+    todo: "Todo",
+    scratchpad: "Scratchpad",
+    week: "Weekly planner",
+    day: "Daily log"
   };
 
   function descriptorFor(week) {
@@ -49,8 +58,16 @@
     return getWeekDescriptor(date);
   }
 
+  async function prepareViewChange(targetView) {
+    if (appStore.currentView === targetView) return true;
+    if (await persistenceRegistry.flushAll()) return true;
+    appStore.showStatus("Resolve file conflicts before changing views");
+    return false;
+  }
+
   async function selectWeek(week, { record = true } = {}) {
     if (!week.indexPath) return false;
+    if (!(await prepareViewChange("week"))) return false;
     todoUiState.clearSelection();
     if (!(await weekStore.loadPath(week.indexPath, descriptorFor(week), week.days))) return false;
     selectedPath = week.indexPath;
@@ -60,6 +77,7 @@
   }
 
   async function selectDay(day, week, { record = true } = {}) {
+    if (!(await prepareViewChange("day"))) return false;
     todoUiState.clearSelection();
     if (week.indexPath && weekStore.path !== week.indexPath) {
       if (!(await weekStore.loadPath(week.indexPath, descriptorFor(week), week.days))) return false;
@@ -71,7 +89,8 @@
     return true;
   }
 
-  function selectTodo({ record = true } = {}) {
+  async function selectTodo({ record = true } = {}) {
+    if (!(await prepareViewChange("todo"))) return false;
     todoUiState.clearSelection();
     selectedPath = "";
     appStore.currentView = "todo";
@@ -79,8 +98,20 @@
     return true;
   }
 
+  async function selectScratchpad({ record = true } = {}) {
+    if (!(await prepareViewChange("scratchpad"))) return false;
+    const path = scratchpadPathForWorkspace(appStore.logsRootPath);
+    if (!(await scratchpadStore.loadPath(path))) return false;
+    todoUiState.clearSelection();
+    selectedPath = path;
+    appStore.currentView = "scratchpad";
+    if (record) navigationHistory.visit({ view: "scratchpad", path });
+    return true;
+  }
+
   async function openCurrent(kind, { record = true } = {}) {
     if (kind !== "todo") todoUiState.clearSelection();
+    if (kind === "scratchpad") return await selectScratchpad({ record });
     const today = formatDate(new Date());
     const weekName = getWeekDescriptor(new Date()).folderName;
     const week = workspaceStore.weeks.find((item) => item.name === weekName);
@@ -90,7 +121,7 @@
     } else if (kind === "week" && week?.indexPath) {
       return await selectWeek(week, { record });
     } else if (kind === "todo") {
-      return selectTodo({ record });
+      return await selectTodo({ record });
     }
     appStore.showStatus(kind === "day" ? "Today log not found" : "Current week not found");
     return false;
@@ -98,7 +129,8 @@
 
   async function restoreNavigationDestination(destination) {
     if (!destination) return false;
-    if (destination.view === "todo") return selectTodo({ record: false });
+    if (destination.view === "todo") return await selectTodo({ record: false });
+    if (destination.view === "scratchpad") return await selectScratchpad({ record: false });
     for (const week of workspaceStore.weeks) {
       if (destination.view === "week" && week.indexPath === destination.path) {
         return selectWeek(week, { record: false });
@@ -179,7 +211,7 @@
     if (!(await workspaceStore.recycleWeek(week))) return false;
     unloadWeekDocuments(week);
     navigationHistory.removePathsUnder(week.path);
-    if (wasActive) selectTodo();
+    if (wasActive) await selectTodo();
     return true;
   }
 
@@ -299,7 +331,10 @@
       });
       if (disposed) { unlistenClose?.(); unlistenQuit?.(); }
     })();
-    const handleFocus = async () => { await persistenceRegistry.checkActive(appStore.currentView); if (appStore.currentView !== "todo") await workspaceStore.refresh(); };
+    const handleFocus = async () => {
+      await persistenceRegistry.checkActive(appStore.currentView);
+      if (["week", "day"].includes(appStore.currentView)) await workspaceStore.refresh();
+    };
     window.addEventListener("focus", handleFocus);
     return () => { disposed = true; unlistenClose?.(); unlistenQuit?.(); unlistenResized?.(); window.removeEventListener("focus", handleFocus); window.removeEventListener("resize", handleResize); window.removeEventListener("contextmenu", handleContextMenu); };
   });
@@ -346,6 +381,8 @@
   async function openActiveMarkdown() {
     const targetPath = appStore.currentView === "todo"
       ? (todoStore.loadedPath || appStore.filePath)
+      : appStore.currentView === "scratchpad"
+        ? scratchpadStore.path
       : appStore.currentView === "week"
         ? weekStore.path
         : dailyStore.path;
@@ -362,7 +399,7 @@
 
 <main class="app-container" class:desktop-mode={appStore.layerMode === "desktop"} class:maximized={isMaximized}>
   <AppHeader
-    title={workspaceStore.needsFirstSetup ? "Workspace setup" : appStore.currentView === "todo" ? "Todo" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"}
+    title={workspaceStore.needsFirstSetup ? "Workspace setup" : (viewTitles[appStore.currentView] || "Tracker")}
     currentView={appStore.currentView}
     sidebarOpen={workspaceStore.sidebarOpen}
     dragEnabled={appStore.dragEnabled}
@@ -401,7 +438,9 @@
     <div class="workspace-shell">
       <AppSidebar
         open={workspaceStore.sidebarOpen}
+        currentView={appStore.currentView}
         {selectedPath}
+        onSelectScratchpad={() => selectScratchpad()}
         onSelectWeek={selectWeek}
         onSelectDay={selectDay}
         onRepairWeek={repairWeek}
@@ -411,7 +450,7 @@
       />
       <section class="main-workspace">
         {#if appStore.currentView === "todo" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
-        <div class="panel-scroll" class:todo-scroll={appStore.currentView === "todo"}>{#if appStore.currentView === "todo"}<TodoPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
+        <div class="panel-scroll" class:todo-scroll={appStore.currentView === "todo"} class:scratchpad-scroll={appStore.currentView === "scratchpad"}>{#if appStore.currentView === "todo"}<TodoPanel />{:else if appStore.currentView === "scratchpad"}<ScratchpadPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
         {#if appStore.currentView === "todo" && !todoStore.fileMissing}<TodoToolbar selectedCount={todoUiState.selectedTodoIds.length} undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTodo={() => todoStore.addTodo(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={reloadTodo} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
       </section>
     </div>
@@ -438,6 +477,7 @@
   .main-workspace { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; background: var(--bg-panel); }
   .panel-scroll { flex: 1; min-height: 0; overflow: auto; scroll-behavior: smooth; scrollbar-width: none; }
   .panel-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  .panel-scroll.scratchpad-scroll { overflow: hidden; }
   .panel-scroll.todo-scroll { scrollbar-width: thin; scrollbar-color: #333333 transparent; }
   .panel-scroll.todo-scroll::-webkit-scrollbar { width: 6px; height: 6px; display: block; }
   .panel-scroll.todo-scroll::-webkit-scrollbar-track { background: transparent; }

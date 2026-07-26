@@ -121,3 +121,16 @@ export const noteEditorTheme = [
     { dark: true }
   )
 ];
+
+export const noteEditorFillTheme = EditorView.theme({
+  "&": {
+    height: "100%",
+    minHeight: "0"
+  },
+  ".cm-scroller": {
+    overflow: "auto"
+  },
+  ".cm-content": {
+    minHeight: "100%"
+  }
+});
