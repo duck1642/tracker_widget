@@ -2,24 +2,27 @@
 
 Tracker Widget is a local-first desktop productivity app built with Tauri v2, SvelteKit, and Rust. It uses plain Markdown files for todos, weekly planning, daily logs, and notes.
 
-Current version: `1.2.0`
+Current version: `1.3.0`
 
 ## Features
 
 - Single workspace folder setup.
 - `todo.md` checklist at the workspace root.
+- Global `scratchpad.md` with live Markdown preview and source editing.
 - Weekly folders named like `2026w27`.
 - Daily logs and weekly index files generated from templates.
 - Todo folding, row numbers, keyboard reorder, multiselect, and context-menu actions.
 - Send selected todos to today's activity, weekly objectives, or weekly planned activities.
 - Daily sessions with activity tracking, subject pills, time pills, notes, and session suggestions.
-- Weekly planning with editable planned activity details and collapsible day columns.
-- Weekly actuals derived from daily logs, with read-only activity details.
-- Indented and foldable weekly objectives stored as nested Markdown lists.
-- Keyboard navigation between weekly and daily log files.
+- Weekly planning with editable planned activity details, duplicate cards, duration totals, and collapsible day columns.
+- Weekly actuals derived from daily logs, with read-only activity details and duration totals.
+- Indented and foldable weekly objectives stored as nested Markdown lists, with session-wide fold memory and bulk fold actions.
+- Back/Forward history and keyboard navigation between weekly and daily log files.
 - Custom text and entity context menus throughout the app.
 - App-local subject and session history suggestions.
 - Optional personal YAML frontmatter mode for newly created files.
+- Safe week checking, Personal conversion, and Recycle Bin deletion from the sidebar.
+- Single-instance launch behavior: opening Tracker Widget again restores and focuses the existing window.
 - Portable zip release support.
 
 ## Workspace Layout
@@ -29,25 +32,28 @@ Normal use expects one workspace folder:
 ```text
 workspace/
   todo.md
+  scratchpad.md
   2026w27/
     2026w27_index.md
     20260701_log.md
     20260702_log.md
 ```
 
-Unknown files are ignored. Missing week files can be created from the sidebar. Missing `todo.md` can be created or imported from the Todo view.
+Unknown files are ignored. Missing week files can be checked or created for explicit week ranges from the sidebar. Missing `todo.md` can be created or imported from the Todo view. `scratchpad.md` is created lazily when Scratchpad is first opened.
 
 ## Getting Started
 
 1. Open the app.
 2. Select a workspace folder.
 3. Create or import `todo.md` if needed.
-4. Use **Create week files** from the sidebar to initialize the current week.
+4. Use the calendar action in the sidebar to check the current week, create next week, or choose a week range.
 
-Workspace location is managed from Settings. The Todo path is derived as `<workspace>/todo.md`.
+Workspace location is managed from Settings. Todo and Scratchpad paths are derived as `<workspace>/todo.md` and `<workspace>/scratchpad.md`.
 
 ## Navigation
 
+- Use the fixed Todo and Scratchpad entries above the week tree to switch workspace views.
+- Use **Back** and **Forward** from the app menu or keyboard shortcuts to revisit view history.
 - `Ctrl + PageUp`: open the previous existing log file in sidebar order.
 - `Ctrl + PageDown`: open the next existing log file in sidebar order.
 - Navigation crosses week boundaries without expanding collapsed sidebar folders.
@@ -74,6 +80,8 @@ Activity Markdown format:
 - {subjects: (rust, ui), time: 120m} Refactored the settings panel layout.
 ```
 
+Use `time: ?` when an activity has no known duration. Mixed totals display the known lower bound with `+`; all-unknown totals display `?`.
+
 Session suggestions come from the current weekly plan first, then app-local session history.
 Sessions planned during the current week are marked with `*` in the suggestion list. The marker is display-only and is never stored in Markdown.
 
@@ -99,7 +107,7 @@ Weekly plan rows have stable IDs and editable activity details:
 <!-- tracker:plan-details:end -->
 ```
 
-Plan card subject and time summaries are derived from planned activities. Weekly actuals are derived from daily logs and remain read-only.
+Plan card subject and time summaries are derived from planned activities. Cards can be duplicated from their context menu. Weekly Planned and Weekly Actual headers show aggregate duration totals; Weekly Actual remains read-only.
 
 Clicking a day header collapses or expands that day in both Weekly Plan and Weekly Actual. At least one day remains expanded, and the collapse state is temporary UI state rather than workspace data.
 
@@ -114,10 +122,23 @@ Weekly objectives support indentation levels `0` through `2`:
 - `Tab` / `Shift + Tab`: indent or outdent the objective being edited.
 - Foldable objectives hide consecutive, more deeply indented rows without changing Markdown.
 - Objective context menus provide Indent, Outdent, Move Up, Move Down, Delete, and text clipboard actions.
+- Objective fold state is remembered independently per week until the application closes. Context menus can collapse or expand all foldable objectives.
+
+## Notes and Scratchpad
+
+Daily, Weekly, and Scratchpad notes share one continuous Markdown editor:
+
+- Live preview keeps Markdown structure editable in place.
+- Source view uses a monospace font.
+- Headings, emphasis, links, code, lists, and task markers are supported.
+- Enter continues normal, numbered, and task lists.
+- Scratchpad stores raw Markdown at `<workspace>/scratchpad.md` without frontmatter or wrapper fences.
+- Daily and Weekly `## Notes` sections use dynamically sized `tracker-notes` fences so headings inside notes cannot alter document structure.
 
 ## Settings
 
 - Workspace folder.
+- Derived Todo and Scratchpad file locations with Found/Missing status.
 - Frontmatter mode: `Off` or `Personal`.
 - Rebuild subject history.
 - Rebuild session history.
@@ -190,4 +211,4 @@ Build the portable zip:
 npm run package:portable
 ```
 
-The portable zip is written to `build-artifacts/tracker-widget-portable-v1.2.0.zip`.
+The portable zip is written to `build-artifacts/tracker-widget-portable-v1.3.0.zip`.

@@ -14,6 +14,13 @@ use tauri::{Emitter, Manager};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
@@ -116,6 +123,26 @@ pub fn run() {
 
 #[cfg(test)]
 mod capability_tests {
+    #[test]
+    fn single_instance_guard_precedes_other_plugins_and_reactivates_main_window() {
+        let source = include_str!("lib.rs");
+        let guard = source
+            .find(".plugin(tauri_plugin_single_instance::init")
+            .expect("single-instance plugin must be registered");
+        let opener = source
+            .find(".plugin(tauri_plugin_opener::init")
+            .expect("opener plugin must be registered");
+
+        assert!(
+            guard < opener,
+            "single-instance plugin must be registered before other plugins"
+        );
+        let activation = &source[guard..opener];
+        assert!(activation.contains("window.show()"));
+        assert!(activation.contains("window.unminimize()"));
+        assert!(activation.contains("window.set_focus()"));
+    }
+
     #[test]
     fn main_window_can_show_confirmation_dialogs() {
         let capability: serde_json::Value =
