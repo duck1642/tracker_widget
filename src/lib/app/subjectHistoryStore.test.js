@@ -1,8 +1,13 @@
 // @ts-nocheck
 import { describe, expect, it, vi } from "vitest";
-import { SubjectHistoryStore } from "./subjectHistoryStore.svelte.js";
+import { appStore } from "./appStore.svelte.js";
+import { SubjectHistoryStore, subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
 
 describe("SubjectHistoryStore", () => {
+  it("wires the shared singleton to application status notifications", () => {
+    expect(subjectHistoryStore.appStore).toBe(appStore);
+  });
+
   it("sorts suggestions by count, recency, then name", async () => {
     const store = new SubjectHistoryStore({
       subjectHistoryService: {

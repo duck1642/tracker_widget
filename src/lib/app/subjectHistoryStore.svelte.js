@@ -1,5 +1,6 @@
 // @ts-nocheck
 import * as defaultSubjectHistoryService from "$lib/shared/services/subjectHistoryService.js";
+import { appStore } from "./appStore.svelte.js";
 
 export class SubjectHistoryStore {
   history = $state({ subjects: {} });
@@ -67,4 +68,4 @@ export class SubjectHistoryStore {
   }
 }
 
-export const subjectHistoryStore = new SubjectHistoryStore();
+export const subjectHistoryStore = new SubjectHistoryStore({ appStore });

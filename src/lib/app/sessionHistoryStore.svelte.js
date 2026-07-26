@@ -1,5 +1,6 @@
 // @ts-nocheck
 import * as defaultSessionHistoryService from "$lib/shared/services/sessionHistoryService.js";
+import { appStore } from "./appStore.svelte.js";
 
 export class SessionHistoryStore {
   history = $state({ sessions: {} });
@@ -73,4 +74,4 @@ export class SessionHistoryStore {
   }
 }
 
-export const sessionHistoryStore = new SessionHistoryStore();
+export const sessionHistoryStore = new SessionHistoryStore({ appStore });

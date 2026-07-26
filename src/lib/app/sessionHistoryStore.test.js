@@ -1,8 +1,13 @@
 // @ts-nocheck
 import { describe, expect, it, vi } from "vitest";
-import { SessionHistoryStore } from "./sessionHistoryStore.svelte.js";
+import { appStore } from "./appStore.svelte.js";
+import { SessionHistoryStore, sessionHistoryStore } from "./sessionHistoryStore.svelte.js";
 
 describe("SessionHistoryStore", () => {
+  it("wires the shared singleton to application status notifications", () => {
+    expect(sessionHistoryStore.appStore).toBe(appStore);
+  });
+
   it("sorts suggestions by actual count, planned count, recency, then name", async () => {
     const store = new SessionHistoryStore({
       sessionHistoryService: {
