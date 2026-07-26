@@ -21,17 +21,17 @@ function harness(initialFiles = {}) {
 }
 
 describe("ScratchpadStore", () => {
-  it("registers as scratchpad persistence and lazily creates an empty file", async () => {
-    const { store, files, fileService, registry } = harness();
+  it("registers as scratchpad persistence and reports a missing file without creating it", async () => {
+    const { store, fileService, registry } = harness();
 
     expect(registry.register).toHaveBeenCalledWith(store);
     expect(await store.loadPath("C:\\Tracker\\scratchpad.md")).toBe(true);
 
     expect(store.view).toBe("scratchpad");
-    expect(store.loaded).toBe(true);
+    expect(store.loaded).toBe(false);
+    expect(store.fileMissing).toBe(true);
     expect(store.content).toBe("");
-    expect(fileService.writeFile).toHaveBeenCalledWith("C:\\Tracker\\scratchpad.md", "");
-    expect(files.get("C:\\Tracker\\scratchpad.md")).toBe("");
+    expect(fileService.writeFile).not.toHaveBeenCalled();
   });
 
   it("loads and autosaves standalone Markdown without transforming it", async () => {
@@ -40,6 +40,7 @@ describe("ScratchpadStore", () => {
     await store.loadPath("scratchpad.md");
 
     expect(store.content).toBe(markdown);
+    expect(store.fileMissing).toBe(false);
 
     const updated = `${markdown}\n## Later\n\nRaw text`;
     store.updateContent(updated);
@@ -92,5 +93,17 @@ describe("ScratchpadStore", () => {
     expect(await store.loadPath("second.md")).toBe(true);
     expect(files.get("first.md")).toBe("first updated");
     expect(store.content).toBe("second");
+  });
+
+  it("keeps missing-file and load-failure states separate", async () => {
+    const { store, fileService, appStore } = harness();
+    fileService.pathExists.mockRejectedValueOnce(new Error("unavailable"));
+
+    expect(await store.loadPath("scratchpad.md")).toBe(false);
+    expect(store.loaded).toBe(false);
+    expect(store.fileMissing).toBe(false);
+    expect(appStore.showStatus).toHaveBeenCalledWith(
+      expect.stringContaining("Scratchpad load failed")
+    );
   });
 });

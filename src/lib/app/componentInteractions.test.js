@@ -83,6 +83,7 @@ afterEach(() => {
   scratchpadStore.path = "";
   scratchpadStore.content = "";
   scratchpadStore.loaded = false;
+  scratchpadStore.fileMissing = false;
   subjectHistoryStore.history = { subjects: {} };
   subjectHistoryStore.loaded = false;
   subjectHistoryStore.rebuilding = false;
@@ -274,6 +275,7 @@ describe("window controls", () => {
   it("opens the active scratchpad Markdown from the sidebar action", async () => {
     appStore.currentView = "scratchpad";
     scratchpadStore.path = "C:\\Tracker\\scratchpad.md";
+    scratchpadStore.loaded = true;
     render(AppSidebar, {
       open: true,
       currentView: "scratchpad",

@@ -5,6 +5,7 @@ import * as fileService from "$lib/shared/services/fileService.js";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
 import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
+import { scratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.js";
 
 class WorkspaceStore {
   weeks = $state([]);
@@ -100,6 +101,25 @@ class WorkspaceStore {
       return true;
     } catch (error) {
       appStore.showStatus("Todo creation failed: " + error);
+      return false;
+    }
+  }
+
+  async createScratchpad() {
+    if (!this.workspaceAvailable) return false;
+    try {
+      const path = this.scratchpadPath;
+      const existed = await workspaceService.pathExists(path);
+      if (!existed) {
+        await fileService.writeFile(path, "");
+      }
+      await this.refresh();
+      if (!(await scratchpadStore.loadPath(path))) return false;
+      this.scratchpadExists = true;
+      appStore.showStatus(existed ? "Opened scratchpad.md" : "Created scratchpad.md");
+      return true;
+    } catch (error) {
+      appStore.showStatus("Scratchpad creation failed: " + error);
       return false;
     }
   }

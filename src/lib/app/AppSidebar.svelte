@@ -155,7 +155,7 @@
     } else if (appStore.currentView === "day") {
       targetPath = dailyStore.path;
     } else if (appStore.currentView === "scratchpad") {
-      targetPath = scratchpadStore.path;
+      targetPath = scratchpadStore.loaded ? scratchpadStore.path : "";
     }
 
     if (targetPath) {

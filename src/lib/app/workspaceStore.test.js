@@ -15,8 +15,15 @@ vi.mock("$lib/features/todo/todoStore.svelte.js", () => ({
   }
 }));
 
+vi.mock("$lib/features/scratchpad/scratchpadStore.svelte.js", () => ({
+  scratchpadStore: {
+    loadPath: vi.fn(async () => true)
+  }
+}));
+
 vi.mock("$lib/shared/services/fileService.js", () => ({
-  readFile: vi.fn(async () => "- [ ] imported\n")
+  readFile: vi.fn(async () => "- [ ] imported\n"),
+  writeFile: vi.fn(async () => {})
 }));
 
 vi.mock("$lib/shared/services/logWorkspaceService.js", () => ({
@@ -49,7 +56,9 @@ vi.mock("$lib/shared/services/logWorkspaceService.js", () => ({
 import { appStore } from "./appStore.svelte.js";
 import { workspaceStore } from "./workspaceStore.svelte.js";
 import * as workspaceService from "$lib/shared/services/logWorkspaceService.js";
+import * as fileService from "$lib/shared/services/fileService.js";
 import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
+import { scratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.js";
 
 describe("WorkspaceStore workspace status", () => {
   beforeEach(() => {
@@ -88,6 +97,45 @@ describe("WorkspaceStore workspace status", () => {
     expect(workspaceStore.todoExists).toBe(false);
     expect(workspaceStore.scratchpadExists).toBe(true);
     expect(workspaceService.pathExists).toHaveBeenNthCalledWith(2, "C:\\Tracker\\scratchpad.md");
+  });
+
+  it("creates a missing Scratchpad explicitly and loads it", async () => {
+    appStore.logsRootPath = "C:\\Tracker";
+    workspaceService.pathExists.mockResolvedValueOnce(false);
+    vi.spyOn(workspaceStore, "refresh").mockResolvedValueOnce(true);
+
+    expect(await workspaceStore.createScratchpad()).toBe(true);
+
+    expect(fileService.writeFile).toHaveBeenCalledWith("C:\\Tracker\\scratchpad.md", "");
+    expect(scratchpadStore.loadPath).toHaveBeenCalledWith("C:\\Tracker\\scratchpad.md");
+    expect(workspaceStore.scratchpadExists).toBe(true);
+    expect(appStore.showStatus).toHaveBeenCalledWith("Created scratchpad.md");
+  });
+
+  it("does not overwrite a Scratchpad created before the button is pressed", async () => {
+    appStore.logsRootPath = "C:\\Tracker";
+    workspaceService.pathExists.mockResolvedValueOnce(true);
+    vi.spyOn(workspaceStore, "refresh").mockResolvedValueOnce(true);
+
+    expect(await workspaceStore.createScratchpad()).toBe(true);
+
+    expect(fileService.writeFile).not.toHaveBeenCalled();
+    expect(scratchpadStore.loadPath).toHaveBeenCalledWith("C:\\Tracker\\scratchpad.md");
+    expect(appStore.showStatus).toHaveBeenCalledWith("Opened scratchpad.md");
+  });
+
+  it("reports Scratchpad creation failure without claiming it exists", async () => {
+    appStore.logsRootPath = "C:\\Tracker";
+    workspaceService.pathExists.mockResolvedValueOnce(false);
+    fileService.writeFile.mockRejectedValueOnce(new Error("denied"));
+
+    expect(await workspaceStore.createScratchpad()).toBe(false);
+
+    expect(workspaceStore.scratchpadExists).toBe(false);
+    expect(scratchpadStore.loadPath).not.toHaveBeenCalled();
+    expect(appStore.showStatus).toHaveBeenCalledWith(
+      expect.stringContaining("Scratchpad creation failed")
+    );
   });
 
   it("marks an inaccessible workspace unavailable", async () => {

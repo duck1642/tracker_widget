@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1] - 2026-07-26
+
+### Fixed
+
+- Missing optional Scratchpad files now show an explicit creation prompt instead of being created silently.
+- Left-side navigation icons no longer show a hover background.
+
 ## [1.3.0] - 2026-07-26
 
 ### Added

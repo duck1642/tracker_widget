@@ -102,7 +102,7 @@
     if (!(await prepareViewChange("scratchpad"))) return false;
     const path = scratchpadPathForWorkspace(appStore.logsRootPath);
     if (!(await scratchpadStore.loadPath(path))) return false;
-    workspaceStore.scratchpadExists = true;
+    workspaceStore.scratchpadExists = !scratchpadStore.fileMissing;
     todoUiState.clearSelection();
     selectedPath = path;
     appStore.currentView = "scratchpad";
@@ -383,7 +383,7 @@
     const targetPath = appStore.currentView === "todo"
       ? (todoStore.loadedPath || appStore.filePath)
       : appStore.currentView === "scratchpad"
-        ? scratchpadStore.path
+        ? (scratchpadStore.loaded ? scratchpadStore.path : "")
       : appStore.currentView === "week"
         ? weekStore.path
         : dailyStore.path;

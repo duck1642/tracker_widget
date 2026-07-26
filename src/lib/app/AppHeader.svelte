@@ -131,7 +131,7 @@
 <header class="drag-header" class:draggable={dragEnabled} data-tauri-drag-region={dragEnabled ? true : undefined}>
   <div class="header-leading">
     <div class="navigation-controls" role="group" aria-label="Navigation controls">
-      <button class="icon-btn-header stateful-control" class:active={sidebarOpen} onclick={onToggleSidebar} aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"} title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}>
+      <button class="icon-btn-header stateful-control sidebar-toggle" class:active={sidebarOpen} onclick={onToggleSidebar} aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"} title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}>
         <SidebarToggleIcon open={sidebarOpen} />
       </button>
       <button class="icon-btn-header" onclick={onBack} disabled={!canGoBack} aria-label="Back" title="Back (Alt+Left)"><ArrowLeft size={14} /></button>
@@ -195,7 +195,8 @@
   .menu-bar { display: flex; align-items: center; }
   .header-leading { min-width: 0; gap: 7px; }
   .navigation-controls { gap: 2px; }
-  .stateful-control.active { color: var(--accent); background: var(--accent-soft); }
+  .stateful-control.active { color: var(--accent); background: transparent; }
+  .navigation-controls .icon-btn-header:hover { background: transparent; }
   .menu-bar { align-self: stretch; gap: 1px; }
   .menu-trigger {
     height: 100%;

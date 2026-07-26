@@ -9,6 +9,7 @@ export class ScratchpadStore {
   path = $state("");
   content = $state("");
   loaded = $state(false);
+  fileMissing = $state(false);
   dirty = $state(false);
   saving = $state(false);
   conflict = $state(null);
@@ -41,14 +42,24 @@ export class ScratchpadStore {
 
     try {
       const exists = await this.fileService.pathExists(path);
-      const content = exists ? await this.fileService.readFile(path) : "";
-      if (!exists) await this.fileService.writeFile(path, content);
+      if (!exists) {
+        this.path = path;
+        this.content = "";
+        this.loaded = false;
+        this.fileMissing = true;
+        this.persistence.reset("", "");
+        return true;
+      }
+      const content = await this.fileService.readFile(path);
       this.path = path;
       this.content = content;
       this.loaded = true;
+      this.fileMissing = false;
       this.persistence.reset(path, content);
       return true;
     } catch (error) {
+      this.loaded = false;
+      this.fileMissing = false;
       this.appStore.showStatus("Scratchpad load failed: " + error);
       return false;
     }
@@ -88,6 +99,7 @@ export class ScratchpadStore {
     this.path = "";
     this.content = "";
     this.loaded = false;
+    this.fileMissing = false;
     this.persistence.reset("", "");
   }
 }
