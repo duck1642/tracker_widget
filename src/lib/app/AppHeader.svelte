@@ -156,9 +156,6 @@
         </button>
         {#if showModeMenu}<LayerMenu {layerMode} {onSelectMode} />{/if}
       </div>
-      <button class="icon-btn-header" onclick={onToggleSettings} title="Settings">
-        <Settings size={13} />
-      </button>
     </div>
     <div class="window-controls" role="group" aria-label="Window controls">
       <button class="icon-btn-header window-control" onclick={onShrinkApp} title={isWidgetMode ? "Hide to tray" : "Minimize"}>

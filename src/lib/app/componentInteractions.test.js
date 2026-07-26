@@ -196,6 +196,7 @@ describe("window controls", () => {
     });
 
     expect(screen.getByRole("button", { name: "Show sidebar" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Settings" })).toHaveLength(1);
     await fireEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(onBack).toHaveBeenCalledOnce();
     expect(screen.getByRole("button", { name: "Forward" }).disabled).toBe(true);
