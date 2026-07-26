@@ -180,7 +180,7 @@ class WorkspaceStore {
         appStore.frontmatterMode
       );
       appStore.showStatus(created.length
-        ? `Repaired ${created.length} missing ${created.length === 1 ? "file" : "files"} in ${week.name}`
+        ? `Repaired ${created.length} ${created.length === 1 ? "file" : "files"} in ${week.name}`
         : `${week.name} is complete`);
       await this.refresh();
       return true;

@@ -26,6 +26,23 @@ function weekWithObjectives(label, lines) {
 }
 
 describe("WeekStore editing", () => {
+  it("unloads a recycled week without retaining persistence or presentation state", async () => {
+    const { store } = harness();
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    store.foldedObjectiveIds = ["objective-0"];
+
+    store.unload();
+
+    expect(store.loaded).toBe(false);
+    expect(store.path).toBe("");
+    expect(store.objectives).toEqual([]);
+    expect(store.plan).toEqual([]);
+    expect(store.actual).toEqual([]);
+    expect(store.foldedObjectiveIds).toEqual([]);
+    expect(store.persistence.path).toBe("");
+    expect(store.persistence.baseContent).toBe("");
+  });
+
   it("restores independent objective folds when switching between weekly files", async () => {
     const { store, files } = harness();
     files.set("A.md", weekWithObjectives("A", [

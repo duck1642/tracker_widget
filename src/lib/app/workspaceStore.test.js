@@ -135,7 +135,7 @@ describe("WorkspaceStore workspace status", () => {
     expect(workspaceService.createWeek).toHaveBeenCalledWith(
       "C:\\Tracker", expect.any(Date), appStore.frontmatterMode
     );
-    expect(appStore.showStatus).toHaveBeenCalledWith("Repaired 1 missing file in 2026w31");
+    expect(appStore.showStatus).toHaveBeenCalledWith("Repaired 1 file in 2026w31");
   });
 
   it("converts a selected week and reports protected custom frontmatter", async () => {

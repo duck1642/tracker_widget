@@ -21,6 +21,20 @@ function harness(initial, overrides = {}) {
 }
 
 describe("DailyStore editing", () => {
+  it("unloads a recycled daily log without retaining persistence or document state", async () => {
+    const { store } = harness("# 2026-06-22\n\n## Work\n\n## Total Time\n\n0m\n\n## Notes\n");
+    await store.loadPath("day.md", "2026-06-22");
+
+    store.unload();
+
+    expect(store.loaded).toBe(false);
+    expect(store.path).toBe("");
+    expect(store.date).toBe("");
+    expect(store.sessions).toEqual([]);
+    expect(store.persistence.path).toBe("");
+    expect(store.persistence.baseContent).toBe("");
+  });
+
   it("enforces normalized case-insensitive session uniqueness", async () => {
     const { store } = harness("# 2026-06-22\n\n## İş\n\n## Total Time\n\n0m\n\n## Notes\n");
     await store.loadPath("day.md", "2026-06-22");
