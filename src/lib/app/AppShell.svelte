@@ -102,6 +102,7 @@
     if (!(await prepareViewChange("scratchpad"))) return false;
     const path = scratchpadPathForWorkspace(appStore.logsRootPath);
     if (!(await scratchpadStore.loadPath(path))) return false;
+    workspaceStore.scratchpadExists = true;
     todoUiState.clearSelection();
     selectedPath = path;
     appStore.currentView = "scratchpad";
@@ -441,6 +442,7 @@
         currentView={appStore.currentView}
         {selectedPath}
         onSelectScratchpad={() => selectScratchpad()}
+        onSelectTodo={() => selectTodo()}
         onSelectWeek={selectWeek}
         onSelectDay={selectDay}
         onRepairWeek={repairWeek}

@@ -12,6 +12,7 @@ class WorkspaceStore {
   unavailable = $state(false);
   sidebarOpen = $state(true);
   todoExists = $state(false);
+  scratchpadExists = $state(false);
 
   get hasWorkspacePath() {
     return Boolean(appStore.logsRootPath);
@@ -23,6 +24,10 @@ class WorkspaceStore {
 
   get todoPath() {
     return workspaceService.todoPathForWorkspace(appStore.logsRootPath);
+  }
+
+  get scratchpadPath() {
+    return workspaceService.scratchpadPathForWorkspace(appStore.logsRootPath);
   }
 
   get weekCount() {
@@ -55,17 +60,20 @@ class WorkspaceStore {
       this.weeks = [];
       this.unavailable = true;
       this.todoExists = false;
+      this.scratchpadExists = false;
       return false;
     }
     this.loading = true;
     try {
       this.weeks = await workspaceService.listLogTree(appStore.logsRootPath);
       this.todoExists = await workspaceService.pathExists(this.todoPath);
+      this.scratchpadExists = await workspaceService.pathExists(this.scratchpadPath);
       this.unavailable = false;
       return true;
     } catch {
       this.weeks = [];
       this.todoExists = false;
+      this.scratchpadExists = false;
       this.unavailable = true;
       return false;
     } finally {

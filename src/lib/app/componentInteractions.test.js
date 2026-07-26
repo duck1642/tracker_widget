@@ -63,6 +63,7 @@ afterEach(() => {
   workspaceStore.unavailable = false;
   workspaceStore.weeks = [];
   workspaceStore.todoExists = false;
+  workspaceStore.scratchpadExists = false;
   appStore.logsRootPath = "";
   appStore.filePath = "";
   appStore.frontmatterMode = "off";
@@ -247,20 +248,27 @@ describe("window controls", () => {
     expect(onOpenView).toHaveBeenCalledWith("week");
   });
 
-  it("opens the fixed scratchpad entry from the sidebar", async () => {
+  it("opens fixed Scratchpad and Todo entries from the sidebar in that order", async () => {
     const onSelectScratchpad = vi.fn();
+    const onSelectTodo = vi.fn();
     render(AppSidebar, {
       open: true,
       currentView: "todo",
       selectedPath: "",
       onSelectScratchpad,
+      onSelectTodo,
       onSelectWeek: vi.fn(),
       onSelectDay: vi.fn()
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: "Scratchpad" }));
+    const primaryViews = screen.getByRole("navigation", { name: "Primary views" });
+    expect(within(primaryViews).getAllByRole("button").map((button) => button.textContent.trim()))
+      .toEqual(["Scratchpad", "Todo"]);
 
+    await fireEvent.click(within(primaryViews).getByRole("button", { name: "Scratchpad" }));
+    await fireEvent.click(within(primaryViews).getByRole("button", { name: "Todo" }));
     expect(onSelectScratchpad).toHaveBeenCalledOnce();
+    expect(onSelectTodo).toHaveBeenCalledOnce();
   });
 
   it("opens the active scratchpad Markdown from the sidebar action", async () => {
@@ -2680,17 +2688,20 @@ describe("sidebar sorting", () => {
 });
 
 describe("workspace settings and todo recovery", () => {
-  it("shows one workspace setting with derived todo status", () => {
+  it("shows derived Todo and Scratchpad file locations and statuses", () => {
     appStore.logsRootPath = "C:\\Tracker";
     appStore.filePath = "C:\\Tracker\\todo.md";
     workspaceStore.todoExists = false;
+    workspaceStore.scratchpadExists = true;
     render(SettingsPanel, { dragEnabled: true, autostartEnabled: false, onToggleDrag: vi.fn(), onToggleAutostart: vi.fn() });
 
     expect(screen.getByText("Workspace folder")).toBeTruthy();
     expect(screen.queryByText("Todo document")).toBeNull();
     expect(screen.getByTitle("C:\\Tracker")).toBeTruthy();
     expect(screen.getByTitle("C:\\Tracker\\todo.md")).toBeTruthy();
+    expect(screen.getByTitle("C:\\Tracker\\scratchpad.md")).toBeTruthy();
     expect(screen.getByText("Missing")).toBeTruthy();
+    expect(screen.getByText("Found")).toBeTruthy();
   });
 
   it("rebuilds subject history from settings", async () => {
@@ -2777,6 +2788,15 @@ describe("NotesEditor interactions", () => {
     }
     expect(container.querySelectorAll('[role="textbox"]')).toHaveLength(1);
     expect(container.querySelector("textarea")).toBeNull();
+  });
+
+  it("uses native text selection so wrapped highlights follow their glyphs", async () => {
+    const { container } = await renderNotes({
+      value: "a-very-long-wrapped-note-selection",
+      onChange: vi.fn()
+    });
+
+    expect(container.querySelector(".cm-selectionLayer")).toBeNull();
   });
 
   it("switches between live preview and Markdown source without changing editor state", async () => {

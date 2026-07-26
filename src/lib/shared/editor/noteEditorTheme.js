@@ -28,7 +28,7 @@ export const noteEditorTheme = [
         wordBreak: "break-word"
       },
       ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--accent)" },
-      "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
+      "::selection": {
         backgroundColor: "color-mix(in srgb, var(--accent) 28%, transparent)"
       },
       ".cm-note-heading": {

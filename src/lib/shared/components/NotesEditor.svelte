@@ -5,7 +5,6 @@
   import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
   import { Compartment, EditorState, Prec } from "@codemirror/state";
   import {
-    drawSelection,
     dropCursor,
     EditorView,
     highlightSpecialChars,
@@ -69,7 +68,6 @@
       extensions: [
         createNoteMarkdownExtension(),
         history(),
-        drawSelection(),
         dropCursor(),
         highlightSpecialChars(),
         Prec.high(keymap.of(noteMarkdownKeymap)),

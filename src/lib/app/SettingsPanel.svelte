@@ -21,6 +21,8 @@
         <button onclick={() => workspaceStore.importTodo()}><Upload size={14} /> Import Markdown</button>
       </div>
     {/if}
+    <span class="field-label">Scratchpad file</span>
+    <div class="path-display"><code title={workspaceStore.scratchpadPath || "No workspace selected"}>{workspaceStore.scratchpadPath || "No workspace selected"}</code><span class:ok={workspaceStore.scratchpadExists} class="status-pill">{workspaceStore.scratchpadExists ? "Found" : "Missing"}</span></div>
   </section>
   <section>
     <h3>Window</h3>

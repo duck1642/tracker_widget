@@ -21,6 +21,7 @@ vi.mock("$lib/shared/services/fileService.js", () => ({
 
 vi.mock("$lib/shared/services/logWorkspaceService.js", () => ({
   todoPathForWorkspace: (root) => root ? `${root.replace(/[\\/]$/, "")}\\todo.md` : "",
+  scratchpadPathForWorkspace: (root) => root ? `${root.replace(/[\\/]$/, "")}\\scratchpad.md` : "",
   listLogTree: vi.fn(async () => []),
   pathExists: vi.fn(async () => false),
   selectLogsFolder: vi.fn(async () => "C:\\Tracker"),
@@ -60,6 +61,7 @@ describe("WorkspaceStore workspace status", () => {
     workspaceStore.weeks = [];
     workspaceStore.unavailable = false;
     workspaceStore.todoExists = false;
+    workspaceStore.scratchpadExists = false;
   });
 
   it("selects a workspace and derives the todo path", async () => {
@@ -72,16 +74,20 @@ describe("WorkspaceStore workspace status", () => {
     expect(todoStore.loadFile).toHaveBeenCalled();
   });
 
-  it("treats an available workspace with no weeks and no todo as valid", async () => {
+  it("tracks Todo and Scratchpad existence in an available workspace", async () => {
     appStore.logsRootPath = "C:\\Tracker";
     appStore.filePath = "C:\\Tracker\\todo.md";
     workspaceService.listLogTree.mockResolvedValueOnce([]);
-    workspaceService.pathExists.mockResolvedValueOnce(false);
+    workspaceService.pathExists
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
 
     expect(await workspaceStore.refresh()).toBe(true);
     expect(workspaceStore.unavailable).toBe(false);
     expect(workspaceStore.weekCount).toBe(0);
     expect(workspaceStore.todoExists).toBe(false);
+    expect(workspaceStore.scratchpadExists).toBe(true);
+    expect(workspaceService.pathExists).toHaveBeenNthCalledWith(2, "C:\\Tracker\\scratchpad.md");
   });
 
   it("marks an inaccessible workspace unavailable", async () => {
@@ -91,6 +97,7 @@ describe("WorkspaceStore workspace status", () => {
     expect(await workspaceStore.refresh()).toBe(false);
     expect(workspaceStore.unavailable).toBe(true);
     expect(workspaceStore.todoExists).toBe(false);
+    expect(workspaceStore.scratchpadExists).toBe(false);
   });
 
   it("creates or repairs a selected consecutive week range and refreshes once", async () => {
