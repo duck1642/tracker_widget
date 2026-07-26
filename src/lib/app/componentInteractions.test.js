@@ -3,10 +3,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/svelte";
 import { tick } from "svelte";
-import MainTabs from "./MainTabs.svelte";
 import AppHeader from "./AppHeader.svelte";
 import AppSidebar from "./AppSidebar.svelte";
 import SettingsPanel from "./SettingsPanel.svelte";
+import SettingsDialog from "./SettingsDialog.svelte";
+import HelpDialog from "./HelpDialog.svelte";
+import StatusToast from "./StatusToast.svelte";
 import FileTree from "$lib/shared/components/FileTree.svelte";
 import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
 import ActivityRow from "$lib/features/daily/components/ActivityRow.svelte";
@@ -82,13 +84,6 @@ afterEach(() => {
 });
 
 describe("application navigation", () => {
-  it("changes the main view from the tab bar", async () => {
-    const onSelect = vi.fn();
-    render(MainTabs, { currentView: "todo", onSelect });
-    await fireEvent.click(screen.getByRole("button", { name: "Day" }));
-    expect(onSelect).toHaveBeenCalledWith("day");
-  });
-
   it("opens weekly and daily files from the file tree", async () => {
     const week = { path: "week", name: "2026w26", indexPath: "week/index.md", days: [{ path: "week/day.md", date: "2026-06-22" }] };
     const onSelectWeek = vi.fn();
@@ -144,6 +139,93 @@ describe("window controls", () => {
     await fireEvent.keyDown(window, { key: "Escape" });
     expect(onDismissModeMenu).toHaveBeenCalledTimes(2);
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it("opens compact File and View menus and emits shell actions", async () => {
+    const onCreateNextWeek = vi.fn();
+    const onOpenView = vi.fn();
+    render(AppHeader, {
+      dragEnabled: true,
+      layerMode: "normal",
+      title: "Todo",
+      currentView: "todo",
+      sidebarOpen: true,
+      showModeMenu: false,
+      onToggleSidebar: vi.fn(),
+      onToggleModeMenu: vi.fn(),
+      onSelectMode: vi.fn(),
+      onToggleSettings: vi.fn(),
+      onCreateNextWeek,
+      onOpenView,
+      onShrinkApp: vi.fn(),
+      onMaximizeApp: vi.fn(),
+      onCloseApp: vi.fn()
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "File" }));
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Create Next Week" }));
+    expect(onCreateNextWeek).toHaveBeenCalledOnce();
+
+    await fireEvent.click(screen.getByRole("button", { name: "View" }));
+    expect(screen.getByRole("menuitem", { name: "Todo" }).disabled).toBe(true);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Current Week" }));
+    expect(onOpenView).toHaveBeenCalledWith("week");
+  });
+
+  it("exposes stateful sidebar and history controls", async () => {
+    const onBack = vi.fn();
+    const onForward = vi.fn();
+    render(AppHeader, {
+      dragEnabled: true,
+      layerMode: "normal",
+      title: "Daily log",
+      currentView: "day",
+      sidebarOpen: false,
+      showModeMenu: false,
+      canGoBack: true,
+      canGoForward: false,
+      onToggleSidebar: vi.fn(),
+      onBack,
+      onForward,
+      onToggleModeMenu: vi.fn(),
+      onSelectMode: vi.fn(),
+      onToggleSettings: vi.fn(),
+      onShrinkApp: vi.fn(),
+      onMaximizeApp: vi.fn(),
+      onCloseApp: vi.fn()
+    });
+
+    expect(screen.getByRole("button", { name: "Show sidebar" })).toBeTruthy();
+    await fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(onBack).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Forward" }).disabled).toBe(true);
+  });
+
+  it("renders Settings and Help as dismissible overlays", async () => {
+    const closeSettings = vi.fn();
+    render(SettingsDialog, {
+      dragEnabled: true,
+      autostartEnabled: false,
+      onToggleDrag: vi.fn(),
+      onToggleAutostart: vi.fn(),
+      onClose: closeSettings
+    });
+    expect(screen.getByRole("dialog", { name: "Settings" })).toBeTruthy();
+    await fireEvent.click(screen.getByRole("button", { name: "Close Settings" }));
+    expect(closeSettings).toHaveBeenCalledOnce();
+
+    cleanup();
+    const closeHelp = vi.fn();
+    render(HelpDialog, { onClose: closeHelp });
+    expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeTruthy();
+    expect(screen.getByText("Back and Forward follow your navigation history. Page Up and Page Down move through files in sidebar order.")).toBeTruthy();
+    await fireEvent.keyDown(window, { key: "Escape" });
+    expect(closeHelp).toHaveBeenCalledOnce();
+  });
+
+  it("renders transient app status outside the title bar", () => {
+    render(StatusToast, { message: "Created 8 files across 1 week" });
+    expect(screen.getByRole("status").textContent).toContain("Created 8 files across 1 week");
   });
 });
 
@@ -2317,23 +2399,17 @@ describe("todo actions", () => {
     }
   });
 
-  it("renders selected count through the header status text", () => {
-    render(AppHeader, {
-      dragEnabled: true,
-      layerMode: "normal",
-      statusMessage: "2 selected",
-      title: "Todo",
-      showModeMenu: false,
-      onToggleSidebar: vi.fn(),
-      onToggleModeMenu: vi.fn(),
-      onSelectMode: vi.fn(),
-      onToggleSettings: vi.fn(),
-      onShrinkApp: vi.fn(),
-      onMaximizeApp: vi.fn(),
-      onCloseApp: vi.fn()
+  it("renders selected count in the Todo toolbar instead of the title", () => {
+    render(TodoToolbar, {
+      selectedCount: 2,
+      onAddTodo: vi.fn(),
+      onUndo: vi.fn(),
+      onRedo: vi.fn(),
+      onReload: vi.fn(),
+      onClearCompleted: vi.fn()
     });
 
-    expect(screen.getByText("Todo - 2 selected")).toBeTruthy();
+    expect(screen.getByText("2 selected")).toBeTruthy();
   });
 
 });

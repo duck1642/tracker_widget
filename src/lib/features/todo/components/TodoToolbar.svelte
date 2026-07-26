@@ -4,6 +4,7 @@
   import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
 
   let { 
+    selectedCount = 0,
     undoStackLength = 0,
     redoStackLength = 0,
     onAddTodo, 
@@ -15,9 +16,12 @@
 </script>
 
 <footer class="bottom-bar">
-  <button class="action-btn" onclick={onAddTodo} title="Add todo">
-    <Plus size={13} />
-  </button>
+  <div class="footer-left">
+    <button class="action-btn" onclick={onAddTodo} title="Add todo">
+      <Plus size={13} />
+    </button>
+    {#if selectedCount > 0}<span class="selection-count">{selectedCount} selected</span>{/if}
+  </div>
   <div class="footer-right">
     <button
       class="action-btn"
@@ -53,3 +57,8 @@
     </button>
   </div>
 </footer>
+
+<style>
+  .footer-left { display: flex; align-items: center; gap: 8px; }
+  .selection-count { color: var(--text-muted); font-size: var(--text-xs); }
+</style>

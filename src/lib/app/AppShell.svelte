@@ -4,20 +4,24 @@
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+  import { openPath } from "@tauri-apps/plugin-opener";
   import { appStore } from "./appStore.svelte.js";
   import { workspaceStore } from "./workspaceStore.svelte.js";
   import { subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
   import { sessionHistoryStore } from "./sessionHistoryStore.svelte.js";
   import { persistenceRegistry } from "./persistenceRegistry.js";
   import { suppressPrintShortcut } from "./applicationShortcuts.js";
+  import { NavigationHistory } from "./navigationHistory.svelte.js";
   import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
   import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
   import AppHeader from "./AppHeader.svelte";
-  import SettingsPanel from "./SettingsPanel.svelte";
-  import MainTabs from "./MainTabs.svelte";
+  import SettingsDialog from "./SettingsDialog.svelte";
+  import HelpDialog from "./HelpDialog.svelte";
+  import StatusToast from "./StatusToast.svelte";
+  import WeekFilesDialog from "./WeekFilesDialog.svelte";
   import AppSidebar from "./AppSidebar.svelte";
   import TodoPanel from "$lib/features/todo/components/TodoPanel.svelte";
   import TodoToolbar from "$lib/features/todo/components/TodoToolbar.svelte";
@@ -25,10 +29,13 @@
   import WeekPanel from "$lib/features/weekly/components/WeekPanel.svelte";
   import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
 
-  let editingSettings = $state(false);
+  let showSettings = $state(false);
+  let showHelp = $state(false);
+  let showWeekFilesDialog = $state(false);
   let showModeMenu = $state(false);
   let selectedPath = $state("");
   let isMaximized = $state(false);
+  const navigationHistory = new NavigationHistory({ view: "todo", path: "" });
 
   const viewSizeConstraints = {
     todo: { width: 480, height: 360 },
@@ -41,36 +48,84 @@
     return getWeekDescriptor(date);
   }
 
-  async function selectWeek(week) {
-    if (!week.indexPath) return;
+  async function selectWeek(week, { record = true } = {}) {
+    if (!week.indexPath) return false;
     todoUiState.clearSelection();
+    if (!(await weekStore.loadPath(week.indexPath, descriptorFor(week), week.days))) return false;
     selectedPath = week.indexPath;
     appStore.currentView = "week";
-    await weekStore.loadPath(week.indexPath, descriptorFor(week), week.days);
+    if (record) navigationHistory.visit({ view: "week", path: week.indexPath });
+    return true;
   }
 
-  async function selectDay(day, week) {
+  async function selectDay(day, week, { record = true } = {}) {
     todoUiState.clearSelection();
-    selectedPath = day.path;
     if (week.indexPath && weekStore.path !== week.indexPath) {
-      await weekStore.loadPath(week.indexPath, descriptorFor(week), week.days);
+      if (!(await weekStore.loadPath(week.indexPath, descriptorFor(week), week.days))) return false;
     }
+    if (!(await dailyStore.loadPath(day.path, day.date))) return false;
+    selectedPath = day.path;
     appStore.currentView = "day";
-    await dailyStore.loadPath(day.path, day.date);
+    if (record) navigationHistory.visit({ view: "day", path: day.path });
+    return true;
   }
 
-  async function openCurrent(kind) {
+  function selectTodo({ record = true } = {}) {
+    todoUiState.clearSelection();
+    selectedPath = "";
+    appStore.currentView = "todo";
+    if (record) navigationHistory.visit({ view: "todo", path: "" });
+    return true;
+  }
+
+  async function openCurrent(kind, { record = true } = {}) {
     if (kind !== "todo") todoUiState.clearSelection();
     const today = formatDate(new Date());
     const weekName = getWeekDescriptor(new Date()).folderName;
     const week = workspaceStore.weeks.find((item) => item.name === weekName);
     if (kind === "day") {
       const day = week?.days.find((item) => item.date === today);
-      if (day) return await selectDay(day, week);
+      if (day) return await selectDay(day, week, { record });
     } else if (kind === "week" && week?.indexPath) {
-      return await selectWeek(week);
+      return await selectWeek(week, { record });
+    } else if (kind === "todo") {
+      return selectTodo({ record });
     }
-    appStore.currentView = kind;
+    appStore.showStatus(kind === "day" ? "Today log not found" : "Current week not found");
+    return false;
+  }
+
+  async function restoreNavigationDestination(destination) {
+    if (!destination) return false;
+    if (destination.view === "todo") return selectTodo({ record: false });
+    for (const week of workspaceStore.weeks) {
+      if (destination.view === "week" && week.indexPath === destination.path) {
+        return selectWeek(week, { record: false });
+      }
+      if (destination.view === "day") {
+        const day = week.days.find((item) => item.path === destination.path);
+        if (day) return selectDay(day, week, { record: false });
+      }
+    }
+    appStore.showStatus("Navigation target is no longer available");
+    return false;
+  }
+
+  async function moveThroughHistory(direction) {
+    const destination = direction === "back" ? navigationHistory.back() : navigationHistory.forward();
+    if (!destination) return;
+    if (await restoreNavigationDestination(destination)) return;
+    if (direction === "back") navigationHistory.forward();
+    else navigationHistory.back();
+  }
+
+  function handleShellKeydown(event) {
+    if (suppressPrintShortcut(event)) return;
+    if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    if (document.querySelector('[role="dialog"], [role="menu"]')) return;
+    event.preventDefault();
+    void moveThroughHistory(event.key === "ArrowLeft" ? "back" : "forward");
   }
 
   async function applyViewSizeConstraints(view) {
@@ -220,22 +275,55 @@
   }
 
   function toggleSettings() {
-    todoUiState.clearSelection();
-    editingSettings = !editingSettings;
+    showHelp = false;
+    showSettings = !showSettings;
   }
 
-  let headerStatusMessage = $derived(
-    appStore.statusMessage
-      || (appStore.currentView === "todo" && todoUiState.hasSelection
-        ? `${todoUiState.selectedTodoIds.length} selected`
-        : "")
-  );
+  async function openActiveMarkdown() {
+    const targetPath = appStore.currentView === "todo"
+      ? (todoStore.loadedPath || appStore.filePath)
+      : appStore.currentView === "week"
+        ? weekStore.path
+        : dailyStore.path;
+    if (!targetPath) return appStore.showStatus("No active file");
+    try {
+      await openPath(targetPath);
+    } catch (error) {
+      appStore.showStatus("Failed to open: " + error);
+    }
+  }
 </script>
 
-<svelte:window onkeydown={suppressPrintShortcut} />
+<svelte:window onkeydown={handleShellKeydown} />
 
 <main class="app-container" class:desktop-mode={appStore.layerMode === "desktop"} class:maximized={isMaximized}>
-  <AppHeader title={workspaceStore.needsFirstSetup ? "Workspace setup" : appStore.currentView === "todo" ? "Todo" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"} dragEnabled={appStore.dragEnabled} layerMode={appStore.layerMode} statusMessage={headerStatusMessage} {showModeMenu} {isMaximized} onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen} onToggleModeMenu={() => showModeMenu = !showModeMenu} onDismissModeMenu={() => showModeMenu = false} onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }} onToggleSettings={toggleSettings} onShrinkApp={minimizeApp} onMaximizeApp={toggleMaximizeApp} onCloseApp={closeApp} />
+  <AppHeader
+    title={workspaceStore.needsFirstSetup ? "Workspace setup" : appStore.currentView === "todo" ? "Todo" : appStore.currentView === "week" ? "Weekly planner" : "Daily log"}
+    currentView={appStore.currentView}
+    sidebarOpen={workspaceStore.sidebarOpen}
+    dragEnabled={appStore.dragEnabled}
+    layerMode={appStore.layerMode}
+    {showModeMenu}
+    {isMaximized}
+    canGoBack={navigationHistory.canGoBack}
+    canGoForward={navigationHistory.canGoForward}
+    onToggleSidebar={() => workspaceStore.sidebarOpen = !workspaceStore.sidebarOpen}
+    onBack={() => moveThroughHistory("back")}
+    onForward={() => moveThroughHistory("forward")}
+    onToggleModeMenu={() => showModeMenu = !showModeMenu}
+    onDismissModeMenu={() => showModeMenu = false}
+    onSelectMode={(mode) => { appStore.changeLayerMode(mode); showModeMenu = false; }}
+    onToggleSettings={toggleSettings}
+    onOpenView={(view) => openCurrent(view)}
+    onOpenActiveFile={openActiveMarkdown}
+    onCreateCurrentWeek={() => workspaceStore.createCurrentWeekFiles()}
+    onCreateNextWeek={() => workspaceStore.createNextWeekFiles()}
+    onChooseWeeks={() => showWeekFilesDialog = true}
+    onOpenHelp={() => { showSettings = false; showHelp = true; }}
+    onShrinkApp={minimizeApp}
+    onMaximizeApp={toggleMaximizeApp}
+    onCloseApp={closeApp}
+  />
   {#if workspaceStore.needsFirstSetup}
     <section class="setup-screen">
       <div>
@@ -247,19 +335,22 @@
     </section>
   {:else}
     <div class="workspace-shell">
-      <AppSidebar open={workspaceStore.sidebarOpen} {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} keyboardNavigationEnabled={!editingSettings} />
+      <AppSidebar open={workspaceStore.sidebarOpen} {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} keyboardNavigationEnabled={!showSettings && !showHelp} />
       <section class="main-workspace">
-        {#if editingSettings}
-          <SettingsPanel dragEnabled={appStore.dragEnabled} autostartEnabled={appStore.autostartEnabled} onToggleDrag={() => appStore.toggleDrag()} onToggleAutostart={() => appStore.toggleAutostart()} />
-        {:else}
-          <MainTabs currentView={appStore.currentView} onSelect={(view) => view === "todo" ? appStore.currentView = "todo" : openCurrent(view)} />
-          {#if appStore.currentView === "todo" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
-          <div class="panel-scroll" class:todo-scroll={appStore.currentView === "todo"}>{#if appStore.currentView === "todo"}<TodoPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
-          {#if appStore.currentView === "todo" && !todoStore.fileMissing}<TodoToolbar undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTodo={() => todoStore.addTodo(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={reloadTodo} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
-        {/if}
+        {#if appStore.currentView === "todo" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
+        <div class="panel-scroll" class:todo-scroll={appStore.currentView === "todo"}>{#if appStore.currentView === "todo"}<TodoPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
+        {#if appStore.currentView === "todo" && !todoStore.fileMissing}<TodoToolbar selectedCount={todoUiState.selectedTodoIds.length} undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTodo={() => todoStore.addTodo(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={reloadTodo} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
       </section>
     </div>
   {/if}
+  {#if showSettings}
+    <SettingsDialog dragEnabled={appStore.dragEnabled} autostartEnabled={appStore.autostartEnabled} onToggleDrag={() => appStore.toggleDrag()} onToggleAutostart={() => appStore.toggleAutostart()} onClose={() => showSettings = false} />
+  {/if}
+  {#if showHelp}<HelpDialog onClose={() => showHelp = false} />{/if}
+  {#if showWeekFilesDialog}
+    <WeekFilesDialog onClose={() => showWeekFilesDialog = false} onSubmit={(year, week, count) => workspaceStore.createSelectedWeekFiles(year, week, count)} />
+  {/if}
+  <StatusToast message={appStore.statusMessage} />
 </main>
 
 <style>

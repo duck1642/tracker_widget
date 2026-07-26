@@ -29,6 +29,8 @@
   --sidebar-width: clamp(220px, 24vw, 290px);
   --layer-autocomplete: 60;
   --layer-sticky-header: 70;
+  --layer-modal: 800;
+  --layer-toast: 1100;
 }
 
 /* Reset and base styles */
