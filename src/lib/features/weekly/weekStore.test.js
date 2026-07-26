@@ -187,6 +187,47 @@ describe("WeekStore editing", () => {
     expect(store.plan.at(-1).id).toBe("p4");
   });
 
+  it("duplicates a complete plan entry after its source with fresh IDs", async () => {
+    const { store, files } = harness();
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    store.plan = [
+      {
+        id: "p3",
+        day: "Thu",
+        session: "Deep work",
+        subjects: ["rust", "planning"],
+        targetMinutes: 90,
+        activities: [
+          { id: "original-known", subjects: ["rust"], minutes: 45, description: "Implement" },
+          { id: "original-unknown", subjects: ["planning"], minutes: null, description: "Investigate" }
+        ]
+      },
+      { id: "p8", day: "Thu", session: "Review", subjects: ["general"], targetMinutes: 30, activities: [] }
+    ];
+
+    expect(store.duplicatePlanEntry("p3")).toBe(true);
+    expect(store.plan.map((entry) => entry.id)).toEqual(["p3", "p9", "p8"]);
+    expect(store.plan[1]).toMatchObject({
+      day: "Thu",
+      session: "Deep work",
+      subjects: ["rust", "planning"],
+      targetMinutes: 90,
+      activities: [
+        { subjects: ["rust"], minutes: 45, description: "Implement" },
+        { subjects: ["planning"], minutes: null, description: "Investigate" }
+      ]
+    });
+    expect(store.plan[1].subjects).not.toBe(store.plan[0].subjects);
+    expect(store.plan[1].activities).not.toBe(store.plan[0].activities);
+    expect(store.plan[1].activities.map((activity) => activity.id)).not.toEqual(["original-known", "original-unknown"]);
+    expect(store.plan[1].activities.every((activity, index) => activity.subjects !== store.plan[0].activities[index].subjects)).toBe(true);
+    expect(store.duplicatePlanEntry("missing")).toBe(false);
+
+    await store.flushSave();
+    expect(files.get("week.md")).toContain("| p9 | Thu | Deep work | rust, planning | 45+ |");
+    expect(files.get("week.md")).toContain("### p9");
+  });
+
   it("returns sorted unique session names from the whole week", () => {
     const { store } = harness();
     store.plan = [

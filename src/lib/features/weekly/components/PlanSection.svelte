@@ -1,7 +1,8 @@
 <script>
   // @ts-nocheck
-  import { GripVertical, ListTodo, Plus, Trash2 } from "@lucide/svelte";
+  import { Copy, GripVertical, ListTodo, Plus, Trash2 } from "@lucide/svelte";
   import { sortableDragHandle, sortableDropTarget } from "$lib/shared/actions/sortableDrag.js";
+  import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
   import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
   import DurationTotal from "$lib/shared/components/DurationTotal.svelte";
   import SuggestionDropdown from "$lib/shared/components/SuggestionDropdown.svelte";
@@ -18,6 +19,7 @@
     onAdd,
     onUpdate,
     onDelete,
+    onDuplicate,
     onMove,
     onMoveToDay,
     onAddActivity,
@@ -37,6 +39,7 @@
   let showSessionSuggestions = $state(false);
   let highlightedSessionIndex = $state(-1);
   let selectedEntryId = $state(null);
+  let contextMenu = $state(null);
   let draggedEntryId = $state(null);
   let dragOverEntryId = $state(null);
   let dragOverDay = $state(null);
@@ -51,6 +54,22 @@
 
   function focus(node) {
     node.focus();
+  }
+
+  function openContextMenu(event, entryId) {
+    if (event.target instanceof Element && event.target.closest("input, textarea, [contenteditable='true']")) return;
+    event.preventDefault();
+    contextMenu = { x: event.clientX, y: event.clientY, entryId };
+  }
+
+  function closeContextMenu() {
+    contextMenu = null;
+  }
+
+  function duplicateContextEntry() {
+    const entryId = contextMenu?.entryId;
+    closeContextMenu();
+    if (entryId) onDuplicate?.(entryId);
   }
 
   function beginSessionEdit(entry) {
@@ -225,6 +244,7 @@
                   onLeave: handleDragLeave,
                   onDrop: handleDrop
                 }}
+                oncontextmenu={(event) => openContextMenu(event, entry.id)}
               >
                 <div class="card-top">
                   <span
@@ -314,6 +334,15 @@
       onUpdateActivity={(activityId, patch) => onUpdateActivity(selectedEntry.id, activityId, patch)}
       onDeleteActivity={(activityId) => onDeleteActivity(selectedEntry.id, activityId)}
       onMoveActivity={(activityId, direction) => onMoveActivity(selectedEntry.id, activityId, direction)}
+    />
+  {/if}
+  {#if contextMenu}
+    <ContextMenu
+      x={contextMenu.x}
+      y={contextMenu.y}
+      items={[{ label: "Duplicate", icon: Copy, onclick: duplicateContextEntry }]}
+      ariaLabel="Planned session actions"
+      onDismiss={closeContextMenu}
     />
   {/if}
 </section>

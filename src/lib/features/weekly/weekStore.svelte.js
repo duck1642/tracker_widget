@@ -189,6 +189,29 @@ export class WeekStore {
     void this.save(true);
   }
 
+  duplicatePlanEntry(entryId) {
+    const sourceIndex = this.plan.findIndex((entry) => entry.id === entryId);
+    if (sourceIndex < 0) return false;
+    const source = this.plan[sourceIndex];
+    const duplicate = {
+      ...source,
+      id: nextPlanId(this.plan),
+      subjects: [...(source.subjects || [])],
+      activities: (source.activities || []).map((activity) => ({
+        ...activity,
+        id: id("plan-activity"),
+        subjects: [...(activity.subjects || [])]
+      }))
+    };
+    this.plan = [
+      ...this.plan.slice(0, sourceIndex + 1),
+      duplicate,
+      ...this.plan.slice(sourceIndex + 1)
+    ];
+    void this.save(true);
+    return true;
+  }
+
   movePlanEntryWithinDay(sourceEntryId, targetEntryId, position = "before") {
     if (sourceEntryId === targetEntryId) return false;
     const source = this.plan.find((entry) => entry.id === sourceEntryId);

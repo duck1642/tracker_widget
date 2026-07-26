@@ -538,6 +538,24 @@ describe("logger editing", () => {
     expect(screen.queryByRole("textbox", { name: "Add subject" })).toBeNull();
   });
 
+  it("duplicates a Weekly Planned card from its context menu", async () => {
+    const onDuplicate = vi.fn();
+    render(PlanSection, {
+      plan: [{ id: "p1", day: "Mon", session: "Development", subjects: ["rust"], targetMinutes: 60, activities: [] }],
+      onAdd: vi.fn(),
+      onUpdate: vi.fn(),
+      onDelete: vi.fn(),
+      onDuplicate
+    });
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Development" }).closest("article"));
+    expect(screen.getByRole("menu", { name: "Planned session actions" })).toBeTruthy();
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Duplicate" }));
+
+    expect(onDuplicate).toHaveBeenCalledWith("p1");
+    expect(screen.queryByRole("menu", { name: "Planned session actions" })).toBeNull();
+  });
+
   it("edits unknown durations without conflating them with zero", async () => {
     const onUpdate = vi.fn();
     render(ActivityRow, {

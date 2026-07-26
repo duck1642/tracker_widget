@@ -56,6 +56,7 @@
       onAdd={(day) => weekStore.addPlanEntry(day)}
       onUpdate={(id, patch) => weekStore.updatePlanEntry(id, patch)}
       onDelete={(id) => weekStore.removePlanEntry(id)}
+      onDuplicate={(id) => weekStore.duplicatePlanEntry(id)}
       onMove={(sourceId, targetId, position) => weekStore.movePlanEntry(sourceId, targetId, position)}
       onMoveToDay={(sourceId, day) => weekStore.movePlanEntryToDay(sourceId, day)}
       onAddActivity={(entryId) => weekStore.addPlanActivity(entryId)}
