@@ -83,7 +83,7 @@
       >
         {#if item.icon}
           {@const Icon = item.icon}
-          <Icon size={13} />
+          <Icon size={13} {...(item.iconProps || {})} />
         {/if}
         <span>{item.label}</span>
       </button>

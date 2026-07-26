@@ -50,14 +50,14 @@
 </div>
 
 <style>
-  .settings-panel { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 12px; width: min(100%, 900px); margin: 0 auto; padding: 22px; box-sizing: border-box; }
-  h3 { margin: 0 0 12px; font-size: var(--text-md); }
-  section { display: grid; align-content: start; gap: 8px; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--surface); }
+  .settings-panel { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 8px; width: 100%; margin: 0 auto; padding: 12px; box-sizing: border-box; }
+  h3 { margin: 0 0 6px; font-size: var(--text-md); }
+  section { display: grid; align-content: start; gap: 6px; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--surface); }
   .field-label { color: var(--text-muted); font-size: var(--text-sm); }
   .path-display { display: flex; gap: 8px; align-items: center; min-width: 0; } .path-display code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); font-size: var(--text-xs); } .path-display button { flex-shrink: 0; }
   .status-pill { flex-shrink: 0; min-width: 54px; padding: 4px 7px; border: 1px solid var(--border-color); border-radius: 999px; color: var(--warning); font-size: var(--text-xs); text-align: center; }
   .status-pill.ok { color: var(--success); }
-  button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-color); cursor: pointer; }
+  button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 30px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-color); cursor: pointer; }
   button:hover { border-color: var(--border-strong); background: var(--surface-hover); }
   .toggle-row { justify-content: flex-start; border: 0; background: transparent; }
   .checkbox { display: grid; place-items: center; width: 16px; height: 16px; border: 1px solid var(--border-strong); border-radius: 4px; } .checkbox.checked { background: var(--accent); color: var(--accent-ink); }

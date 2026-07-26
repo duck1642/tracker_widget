@@ -39,8 +39,8 @@
   .settings-dialog {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    width: min(900px, 100%);
-    max-height: min(720px, 100%);
+    width: min(840px, 100%);
+    max-height: min(660px, 100%);
     overflow: hidden;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
@@ -51,7 +51,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 18px;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--border-subtle);
     background: var(--surface);
   }
@@ -69,6 +69,7 @@
     color: var(--text-muted);
     cursor: pointer;
   }
-  .close-button:hover { color: var(--text-color); background: var(--surface-hover); }
-  .dialog-content { min-height: 0; overflow: auto; }
+  .close-button:hover { color: #ff5555; background: transparent; }
+  .dialog-content { min-height: 0; overflow: auto; scrollbar-width: none; }
+  .dialog-content::-webkit-scrollbar { display: none; }
 </style>

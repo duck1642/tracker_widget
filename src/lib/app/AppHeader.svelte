@@ -12,13 +12,12 @@
     ExternalLink,
     Layers,
     Minus,
-    PanelLeftClose,
-    PanelLeftOpen,
     Settings,
     X
   } from "@lucide/svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
   import LayerMenu from "./LayerMenu.svelte";
+  import SidebarToggleIcon from "./SidebarToggleIcon.svelte";
 
   let { 
     dragEnabled, 
@@ -69,7 +68,7 @@
         { label: "Current Week", icon: CalendarRange, disabled: currentView === "week", onclick: () => runMenuAction(onOpenView, "week") },
         { label: "Today", icon: CalendarCheck, disabled: currentView === "day", onclick: () => runMenuAction(onOpenView, "day") },
         { separator: true },
-        { label: sidebarOpen ? "Hide Sidebar" : "Show Sidebar", icon: sidebarOpen ? PanelLeftClose : PanelLeftOpen, onclick: () => runMenuAction(onToggleSidebar) }
+        { label: sidebarOpen ? "Hide Sidebar" : "Show Sidebar", icon: SidebarToggleIcon, iconProps: { open: sidebarOpen }, onclick: () => runMenuAction(onToggleSidebar) }
       ];
     }
     return [];
@@ -131,7 +130,7 @@
   <div class="header-leading">
     <div class="navigation-controls" role="group" aria-label="Navigation controls">
       <button class="icon-btn-header stateful-control" class:active={sidebarOpen} onclick={onToggleSidebar} aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"} title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}>
-        {#if sidebarOpen}<PanelLeftClose size={14} />{:else}<PanelLeftOpen size={14} />{/if}
+        <SidebarToggleIcon open={sidebarOpen} />
       </button>
       <button class="icon-btn-header" onclick={onBack} disabled={!canGoBack} aria-label="Back" title="Back (Alt+Left)"><ArrowLeft size={14} /></button>
       <button class="icon-btn-header" onclick={onForward} disabled={!canGoForward} aria-label="Forward" title="Forward (Alt+Right)"><ArrowRight size={14} /></button>

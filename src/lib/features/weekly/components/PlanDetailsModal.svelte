@@ -218,8 +218,8 @@
   }
 
   .icon-button:hover {
-    background: var(--surface-hover);
-    color: var(--text-color);
+    background: transparent;
+    color: #ff5555;
   }
 
   .row-btn:hover:not(:disabled) {

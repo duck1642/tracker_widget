@@ -44,7 +44,7 @@
   header span { color: var(--accent); font-size: var(--text-xs); font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
   h2 { margin: 3px 0 0; font-size: var(--text-lg); }
   button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer; }
-  button:hover { color: var(--text-color); background: var(--surface-hover); }
+  button:hover { color: #ff5555; background: transparent; }
   dl { display: grid; gap: 1px; margin: 0; padding: 12px 18px; }
   dl div { display: flex; align-items: center; justify-content: space-between; min-height: 38px; border-bottom: 1px solid var(--border-subtle); }
   dl div:last-child { border-bottom: 0; }
