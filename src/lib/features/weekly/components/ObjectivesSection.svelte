@@ -7,9 +7,18 @@
   import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
   import ObjectiveRow from "./ObjectiveRow.svelte";
   import { buildVisibleObjectiveRows } from "../objectiveFolding.js";
-  let { objectives, onAdd, onUpdate, onDelete, onMove, onIndent, onOutdent } = $props();
+  let {
+    objectives,
+    foldedObjectiveIds = [],
+    onFoldChange = () => {},
+    onAdd,
+    onUpdate,
+    onDelete,
+    onMove,
+    onIndent,
+    onOutdent
+  } = $props();
 
-  let foldedObjectiveIds = $state([]);
   let contextMenu = $state(null);
   let visibleObjectives = $derived(buildVisibleObjectiveRows(objectives, foldedObjectiveIds));
   let contextObjective = $derived(contextMenu ? objectives.find((objective) => objective.id === contextMenu.id) : null);
@@ -31,17 +40,11 @@
     ];
   });
 
-  $effect(() => {
-    const validFoldedIds = visibleObjectives.foldedIds;
-    if (validFoldedIds.length !== foldedObjectiveIds.length || validFoldedIds.some((id, index) => id !== foldedObjectiveIds[index])) {
-      foldedObjectiveIds = validFoldedIds;
-    }
-  });
-
   function toggleFold(id) {
-    foldedObjectiveIds = foldedObjectiveIds.includes(id)
+    const next = foldedObjectiveIds.includes(id)
       ? foldedObjectiveIds.filter((item) => item !== id)
       : [...foldedObjectiveIds, id];
+    return onFoldChange(next);
   }
 
   function openContextMenu(event, id) {

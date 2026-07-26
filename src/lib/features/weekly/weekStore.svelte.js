@@ -4,6 +4,8 @@ import { PersistenceCoordinator } from "$lib/shared/persistence/persistenceCoord
 import { parseWeeklyIndex, serializeWeeklyIndex } from "./weeklyIndexParser.js";
 import { parseDailyLog } from "$lib/features/daily/dailyLogParser.js";
 import { aggregateWeeklyActual } from "./actualAggregator.js";
+import { getFoldableObjectiveIds } from "./objectiveFolding.js";
+import { ObjectiveFoldSessionCache } from "./objectiveFoldSessionCache.js";
 import { appStore as defaultAppStore } from "$lib/app/appStore.svelte.js";
 import { persistenceRegistry as defaultRegistry } from "$lib/app/persistenceRegistry.js";
 import { dayLabel } from "$lib/shared/services/logWorkspaceService.js";
@@ -47,6 +49,7 @@ export class WeekStore {
   dirty = $state(false);
   saving = $state(false);
   conflict = $state(null);
+  foldedObjectiveIds = $state([]);
 
   constructor({ fileService = defaultFileService, appStore = defaultAppStore, registry = defaultRegistry, debounceMs = 250 } = {}) {
     this.fileService = fileService;
@@ -61,6 +64,7 @@ export class WeekStore {
       },
       onStatus: (message) => this.appStore.showStatus(message)
     });
+    this.objectiveFoldCache = new ObjectiveFoldSessionCache();
     registry.register(this);
   }
 
@@ -70,6 +74,7 @@ export class WeekStore {
 
   async loadPath(path, descriptor, days = []) {
     if (this.loaded && !(await this.flushSave())) return false;
+    this.captureObjectiveFolds();
     try {
       const content = await this.fileService.readFile(path);
       const parsed = parseWeeklyIndex(content, descriptor);
@@ -83,6 +88,7 @@ export class WeekStore {
       this.frontmatterRaw = parsed.frontmatterRaw;
       this.preambleRaw = parsed.preambleRaw;
       this.unknownSectionsRaw = parsed.unknownSectionsRaw;
+      this.foldedObjectiveIds = this.objectiveFoldCache.restore(path, this.objectives);
       this.loaded = true;
       this.persistence.reset(path, content);
       await this.refreshActual(days);
@@ -99,6 +105,7 @@ export class WeekStore {
 
   addObjective() {
     this.objectives.push({ id: id("objective"), subjects: ["general"], status: "open", description: "", indent: 0 });
+    this.syncObjectiveFolds();
     void this.save();
   }
 
@@ -112,6 +119,7 @@ export class WeekStore {
       description,
       indent: 0
     })));
+    this.syncObjectiveFolds();
     void this.save();
     return true;
   }
@@ -120,11 +128,13 @@ export class WeekStore {
     const objective = this.objectives.find((item) => item.id === objectiveId);
     if (!objective) return;
     Object.assign(objective, patch);
+    this.syncObjectiveFolds();
     void this.save();
   }
 
   removeObjective(objectiveId) {
     this.objectives = this.objectives.filter((item) => item.id !== objectiveId);
+    this.syncObjectiveFolds();
     void this.save(true);
   }
 
@@ -132,6 +142,7 @@ export class WeekStore {
     const next = movedByDirection(this.objectives, objectiveId, direction);
     if (!next) return false;
     this.objectives = next;
+    this.syncObjectiveFolds();
     void this.save(true);
     return true;
   }
@@ -140,6 +151,7 @@ export class WeekStore {
     const objective = this.objectives.find((item) => item.id === objectiveId);
     if (!objective || (objective.indent || 0) >= 2) return false;
     objective.indent = (objective.indent || 0) + 1;
+    this.syncObjectiveFolds();
     void this.save(true);
     return true;
   }
@@ -148,6 +160,7 @@ export class WeekStore {
     const objective = this.objectives.find((item) => item.id === objectiveId);
     if (!objective || (objective.indent || 0) <= 0) return false;
     objective.indent -= 1;
+    this.syncObjectiveFolds();
     void this.save(true);
     return true;
   }
@@ -283,6 +296,27 @@ export class WeekStore {
     void this.save();
   }
 
+  setObjectiveFolds(ids) {
+    const foldableIds = getFoldableObjectiveIds(this.objectives);
+    this.foldedObjectiveIds = [...new Set(ids)].filter((id) => foldableIds.has(id));
+    this.captureObjectiveFolds();
+  }
+
+  toggleObjectiveFold(objectiveId) {
+    const next = this.foldedObjectiveIds.includes(objectiveId)
+      ? this.foldedObjectiveIds.filter((id) => id !== objectiveId)
+      : [...this.foldedObjectiveIds, objectiveId];
+    this.setObjectiveFolds(next);
+  }
+
+  syncObjectiveFolds() {
+    this.setObjectiveFolds(this.foldedObjectiveIds);
+  }
+
+  captureObjectiveFolds() {
+    this.objectiveFoldCache.save(this.path, this.objectives, this.foldedObjectiveIds);
+  }
+
   currentWeekSessionNames() {
     const seen = new Set();
     return this.plan
@@ -353,6 +387,8 @@ export class WeekStore {
   }
 
   applyExternal(content) {
+    this.objectiveFoldCache.delete(this.path);
+    this.foldedObjectiveIds = [];
     const parsed = parseWeeklyIndex(content, this.descriptor);
     this.objectives = parsed.objectives;
     this.objectiveRawLines = parsed.objectiveRawLines;

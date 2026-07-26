@@ -47,7 +47,7 @@
       </nav>
     </header>
     {#if weekStore.conflict}<ConflictBanner onReloadExternal={() => weekStore.resolveConflict("reload")} onKeepLocal={() => weekStore.resolveConflict("keep-local")} />{/if}
-    <ObjectivesSection objectives={weekStore.objectives} onAdd={() => weekStore.addObjective()} onUpdate={(id, patch) => weekStore.updateObjective(id, patch)} onDelete={(id) => weekStore.removeObjective(id)} onMove={(id, direction) => weekStore.moveObjective(id, direction)} onIndent={(id) => weekStore.indentObjective(id)} onOutdent={(id) => weekStore.outdentObjective(id)} />
+    <ObjectivesSection objectives={weekStore.objectives} foldedObjectiveIds={weekStore.foldedObjectiveIds} onFoldChange={(ids) => weekStore.setObjectiveFolds(ids)} onAdd={() => weekStore.addObjective()} onUpdate={(id, patch) => weekStore.updateObjective(id, patch)} onDelete={(id) => weekStore.removeObjective(id)} onMove={(id, direction) => weekStore.moveObjective(id, direction)} onIndent={(id) => weekStore.indentObjective(id)} onOutdent={(id) => weekStore.outdentObjective(id)} />
     <PlanSection
       plan={weekStore.plan}
       suggestions={historicalSessionSuggestions}

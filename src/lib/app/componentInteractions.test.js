@@ -63,6 +63,7 @@ afterEach(() => {
   dailyStore.date = "";
   dailyStore.loaded = false;
   dailyStore.sessions = [];
+  weekStore.setObjectiveFolds([]);
   weekStore.path = "";
   weekStore.loaded = false;
   weekStore.objectives = [];
@@ -1077,14 +1078,22 @@ describe("logger editing", () => {
 
   it("folds and unfolds indented objective rows", async () => {
     const { default: ObjectivesSection } = await import("$lib/features/weekly/components/ObjectivesSection.svelte");
-    render(ObjectivesSection, {
+    let foldedObjectiveIds = [];
+    let rendered;
+    const props = {
       objectives: [
         { id: "parent", subjects: ["general"], status: "open", description: "Parent", indent: 0 },
         { id: "child", subjects: ["general"], status: "open", description: "Child", indent: 1 },
         { id: "sibling", subjects: ["general"], status: "open", description: "Sibling", indent: 0 }
       ],
+      foldedObjectiveIds,
+      onFoldChange: async (ids) => {
+        foldedObjectiveIds = ids;
+        await rendered.rerender({ ...props, foldedObjectiveIds });
+      },
       onAdd: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn(), onMove: vi.fn(), onIndent: vi.fn(), onOutdent: vi.fn()
-    });
+    };
+    rendered = render(ObjectivesSection, props);
 
     expect(screen.getByText("Child")).toBeTruthy();
     await fireEvent.click(screen.getByRole("button", { name: "Collapse objective" }));
@@ -1093,6 +1102,30 @@ describe("logger editing", () => {
 
     await fireEvent.click(screen.getByRole("button", { name: "Expand objective" }));
     expect(screen.getByText("Child")).toBeTruthy();
+  });
+
+  it("preserves objective folds when the weekly panel remounts", async () => {
+    weekStore.path = "A.md";
+    weekStore.loaded = true;
+    weekStore.descriptor = { year: 2026, week: 26, rangeLabel: "June 22-28" };
+    weekStore.objectives = [
+      { id: "parent", subjects: ["general"], status: "open", description: "Parent", indent: 0 },
+      { id: "child", subjects: ["general"], status: "open", description: "Child", indent: 1 }
+    ];
+    weekStore.plan = [];
+    weekStore.actual = [];
+
+    const firstMount = render(WeekPanel);
+    expect(screen.getByText("Child")).toBeTruthy();
+    await fireEvent.click(screen.getByRole("button", { name: "Collapse objective" }));
+    expect(screen.queryByText("Child")).toBeNull();
+    expect(weekStore.foldedObjectiveIds).toEqual(["parent"]);
+
+    firstMount.unmount();
+    render(WeekPanel);
+
+    expect(screen.queryByText("Child")).toBeNull();
+    expect(screen.getByRole("button", { name: "Expand objective" })).toBeTruthy();
   });
 
   it("offers single-objective structure actions from the context menu", async () => {

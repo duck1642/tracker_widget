@@ -19,7 +19,127 @@ function harness() {
   return { store, files };
 }
 
+function weekWithObjectives(label, lines) {
+  return index
+    .replace("# 2026 - Week 26 - June 22-28", `# 2026 - Week 26 - ${label}`)
+    .replace("- {subjects: (rust), status: open} Ship.", lines.join("\n"));
+}
+
 describe("WeekStore editing", () => {
+  it("restores independent objective folds when switching between weekly files", async () => {
+    const { store, files } = harness();
+    files.set("A.md", weekWithObjectives("A", [
+      "- {subjects: (general), status: open} A parent",
+      "  - {subjects: (general), status: open} A child"
+    ]));
+    files.set("B.md", weekWithObjectives("B", [
+      "- {subjects: (general), status: open} B parent",
+      "  - {subjects: (general), status: open} B child"
+    ]));
+
+    await store.loadPath("A.md", { year: 2026, week: 26, rangeLabel: "A" });
+    store.toggleObjectiveFold(store.objectives[0].id);
+    expect(store.foldedObjectiveIds).toEqual(["objective-0"]);
+
+    await store.loadPath("B.md", { year: 2026, week: 27, rangeLabel: "B" });
+    store.toggleObjectiveFold(store.objectives[0].id);
+    expect(store.foldedObjectiveIds).toEqual(["objective-0"]);
+
+    await store.loadPath("A.md", { year: 2026, week: 26, rangeLabel: "A" });
+    expect(store.foldedObjectiveIds).toEqual(["objective-0"]);
+    await store.loadPath("B.md", { year: 2026, week: 27, rangeLabel: "B" });
+    expect(store.foldedObjectiveIds).toEqual(["objective-0"]);
+  });
+
+  it("rebases cached folds after app-owned structural edits", async () => {
+    const { store, files } = harness();
+    files.set("A.md", weekWithObjectives("A", [
+      "- {subjects: (general), status: open} Intro",
+      "- {subjects: (general), status: open} Parent",
+      "  - {subjects: (general), status: open} Child"
+    ]));
+    files.set("B.md", weekWithObjectives("B", [
+      "- {subjects: (general), status: open} Other"
+    ]));
+
+    await store.loadPath("A.md", { year: 2026, week: 26, rangeLabel: "A" });
+    const [intro, parent] = store.objectives;
+    store.toggleObjectiveFold(parent.id);
+    store.updateObjective(parent.id, { status: "partial", description: "Updated parent" });
+    store.removeObjective(intro.id);
+    expect(store.foldedObjectiveIds).toEqual([parent.id]);
+
+    await store.loadPath("B.md", { year: 2026, week: 27, rangeLabel: "B" });
+    await store.loadPath("A.md", { year: 2026, week: 26, rangeLabel: "A" });
+
+    expect(store.objectives[0]).toMatchObject({ description: "Updated parent", status: "partial" });
+    expect(store.foldedObjectiveIds).toEqual(["objective-0"]);
+  });
+
+  it("invalidates stale folds when a weekly file changes externally while inactive", async () => {
+    const { store, files } = harness();
+    files.set("A.md", weekWithObjectives("A", [
+      "- {subjects: (general), status: open} Parent",
+      "  - {subjects: (general), status: open} Child"
+    ]));
+    files.set("B.md", weekWithObjectives("B", [
+      "- {subjects: (general), status: open} Other"
+    ]));
+
+    await store.loadPath("A.md", { year: 2026, week: 26, rangeLabel: "A" });
+    store.toggleObjectiveFold(store.objectives[0].id);
+    await store.loadPath("B.md", { year: 2026, week: 27, rangeLabel: "B" });
+    files.set("A.md", files.get("A.md").replace("Parent", "Externally changed parent"));
+
+    await store.loadPath("A.md", { year: 2026, week: 26, rangeLabel: "A" });
+    expect(store.foldedObjectiveIds).toEqual([]);
+  });
+
+  it("prunes invalid folds and clears the current week on external reload", async () => {
+    const { store, files } = harness();
+    files.set("A.md", weekWithObjectives("A", [
+      "- {subjects: (general), status: open} Parent",
+      "  - {subjects: (general), status: open} Child",
+      "    - {subjects: (general), status: open} Grandchild"
+    ]));
+
+    await store.loadPath("A.md", { year: 2026, week: 26, rangeLabel: "A" });
+    const [parent, child, grandchild] = store.objectives;
+    store.setObjectiveFolds([parent.id, child.id]);
+    store.removeObjective(grandchild.id);
+    expect(store.foldedObjectiveIds).toEqual([parent.id]);
+
+    store.applyExternal(files.get("A.md"));
+    expect(store.foldedObjectiveIds).toEqual([]);
+  });
+
+  it("clears the current week folds when an external conflict is reloaded", async () => {
+    const { store, files } = harness();
+    files.set("A.md", weekWithObjectives("A", [
+      "- {subjects: (general), status: open} Parent",
+      "  - {subjects: (general), status: open} Child"
+    ]));
+
+    await store.loadPath("A.md", { year: 2026, week: 26, rangeLabel: "A" });
+    store.toggleObjectiveFold(store.objectives[0].id);
+    store.updateNotes("local pending");
+    files.set("A.md", files.get("A.md").replace("Parent", "External parent"));
+    await store.flushSave();
+    expect(store.conflict).toBeTruthy();
+
+    await store.resolveConflict("reload");
+
+    expect(store.foldedObjectiveIds).toEqual([]);
+    expect(store.objectives[0].description).toBe("External parent");
+  });
+
+  it("starts a fresh store without session fold state", () => {
+    const first = harness().store;
+    first.foldedObjectiveIds = ["objective-0"];
+
+    expect(harness().store.foldedObjectiveIds).toEqual([]);
+  });
+
   it("persists objective state changes", async () => {
     const { store, files } = harness();
     await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
