@@ -1,8 +1,11 @@
 <script>
   // @ts-nocheck
   import { Copy, GripVertical, ListTodo, Plus, Trash2 } from "@lucide/svelte";
+  import { appStore } from "$lib/app/appStore.svelte.js";
   import { sortableDragHandle, sortableDropTarget } from "$lib/shared/actions/sortableDrag.js";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
+  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.js";
+  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
   import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
   import DurationTotal from "$lib/shared/components/DurationTotal.svelte";
   import SuggestionDropdown from "$lib/shared/components/SuggestionDropdown.svelte";
@@ -47,6 +50,13 @@
 
   let selectedEntry = $derived(plan.find((entry) => entry.id === selectedEntryId));
   let editingEntry = $derived(plan.find((entry) => entry.id === editingSessionId));
+  let contextMenuItems = $derived(contextMenu?.editable
+    ? buildEditableTextMenuItems(contextMenu.editable, {
+        beforeAction: closeContextMenu,
+        onError: (error) => appStore.showStatus(`Clipboard failed: ${error}`),
+        trailingSeparator: false
+      })
+    : [{ label: "Duplicate", icon: Copy, onclick: duplicateContextEntry }]);
   let filteredSessionSuggestions = $derived(suggestions.filter((suggestion) => {
     const query = sessionNameEdited ? (editingEntry?.session || "").trim().toLowerCase() : "";
     return suggestion.name.toLowerCase().includes(query);
@@ -57,9 +67,13 @@
   }
 
   function openContextMenu(event, entryId) {
-    if (event.target instanceof Element && event.target.closest("input, textarea, [contenteditable='true']")) return;
     event.preventDefault();
-    contextMenu = { x: event.clientX, y: event.clientY, entryId };
+    contextMenu = {
+      x: event.clientX,
+      y: event.clientY,
+      entryId,
+      editable: captureEditableText(event.target)
+    };
   }
 
   function closeContextMenu() {
@@ -340,9 +354,10 @@
     <ContextMenu
       x={contextMenu.x}
       y={contextMenu.y}
-      items={[{ label: "Duplicate", icon: Copy, onclick: duplicateContextEntry }]}
-      ariaLabel="Planned session actions"
-      width={124}
+      items={contextMenuItems}
+      ariaLabel={contextMenu.editable ? "Planned session text actions" : "Planned session actions"}
+      preserveFocus={Boolean(contextMenu.editable)}
+      width={contextMenu.editable ? 196 : 112}
       onDismiss={closeContextMenu}
     />
   {/if}

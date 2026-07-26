@@ -549,11 +549,38 @@ describe("logger editing", () => {
     });
 
     await fireEvent.contextMenu(screen.getByRole("button", { name: "Development" }).closest("article"));
-    expect(screen.getByRole("menu", { name: "Planned session actions" }).style.width).toBe("124px");
+    expect(screen.getByRole("menu", { name: "Planned session actions" }).style.width).toBe("112px");
     await fireEvent.click(screen.getByRole("menuitem", { name: "Duplicate" }));
 
     expect(onDuplicate).toHaveBeenCalledWith("p1");
     expect(screen.queryByRole("menu", { name: "Planned session actions" })).toBeNull();
+  });
+
+  it("offers standard clipboard actions in the Weekly Planned session input", async () => {
+    render(PlanSection, {
+      plan: [{ id: "p1", day: "Mon", session: "Development", subjects: ["rust"], targetMinutes: 60, activities: [] }],
+      onAdd: vi.fn(),
+      onUpdate: vi.fn(),
+      onDelete: vi.fn(),
+      onDuplicate: vi.fn()
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Development" }));
+    const input = screen.getByPlaceholderText("What session?");
+    input.setSelectionRange(0, 7);
+    await fireEvent.contextMenu(input);
+
+    expect(screen.getByRole("menu", { name: "Planned session text actions" }).style.width).toBe("196px");
+    expect(screen.getByRole("menuitem", { name: "Cut" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Copy" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Paste" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Select All" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Duplicate" })).toBeNull();
+
+    await fireEvent.pointerDown(screen.getByRole("menuitem", { name: "Copy" }));
+    expect(document.activeElement).toBe(input);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Copy" }));
+    expect(writeText).toHaveBeenCalledWith("Develop");
   });
 
   it("edits unknown durations without conflating them with zero", async () => {
