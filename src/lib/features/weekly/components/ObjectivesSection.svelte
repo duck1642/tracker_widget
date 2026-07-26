@@ -1,12 +1,12 @@
 <script>
   // @ts-nocheck
-  import { ChevronDown, ChevronUp, IndentDecrease, IndentIncrease, Plus, Trash2 } from "@lucide/svelte";
+  import { ChevronDown, ChevronUp, ChevronsDownUp, ChevronsUpDown, IndentDecrease, IndentIncrease, Plus, Trash2 } from "@lucide/svelte";
   import { appStore } from "$lib/app/appStore.svelte.js";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
   import { captureEditableText } from "$lib/shared/services/editableTextClipboard.js";
   import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
   import ObjectiveRow from "./ObjectiveRow.svelte";
-  import { buildVisibleObjectiveRows } from "../objectiveFolding.js";
+  import { buildVisibleObjectiveRows, getFoldableObjectiveIds } from "../objectiveFolding.js";
   let {
     objectives,
     foldedObjectiveIds = [],
@@ -21,6 +21,11 @@
 
   let contextMenu = $state(null);
   let visibleObjectives = $derived(buildVisibleObjectiveRows(objectives, foldedObjectiveIds));
+  let foldableObjectiveIds = $derived([...getFoldableObjectiveIds(objectives)]);
+  let allObjectivesFolded = $derived(
+    foldableObjectiveIds.length > 0
+      && foldableObjectiveIds.every((id) => foldedObjectiveIds.includes(id))
+  );
   let contextObjective = $derived(contextMenu ? objectives.find((objective) => objective.id === contextMenu.id) : null);
   let contextObjectiveIndex = $derived(contextObjective ? objectives.findIndex((objective) => objective.id === contextObjective.id) : -1);
   let contextMenuItems = $derived.by(() => {
@@ -35,6 +40,9 @@
       { label: "Outdent", icon: IndentDecrease, disabled: (contextObjective.indent || 0) <= 0, onclick: () => runContextAction(onOutdent, contextObjective.id) },
       { label: "Move Up", icon: ChevronUp, disabled: contextObjectiveIndex <= 0, onclick: () => runContextAction(onMove, contextObjective.id, "up") },
       { label: "Move Down", icon: ChevronDown, disabled: contextObjectiveIndex >= objectives.length - 1, onclick: () => runContextAction(onMove, contextObjective.id, "down") },
+      { separator: true },
+      { label: "Collapse All Objectives", icon: ChevronsDownUp, disabled: foldableObjectiveIds.length === 0 || allObjectivesFolded, onclick: () => runContextAction(onFoldChange, foldableObjectiveIds) },
+      { label: "Expand All Objectives", icon: ChevronsUpDown, disabled: foldedObjectiveIds.length === 0, onclick: () => runContextAction(onFoldChange, []) },
       { separator: true },
       { label: "Delete", icon: Trash2, danger: true, onclick: () => runContextAction(onDelete, contextObjective.id) }
     ];
@@ -58,7 +66,7 @@
 
   function runContextAction(action, ...args) {
     closeContextMenu();
-    action(...args);
+    return action(...args);
   }
 
 </script>

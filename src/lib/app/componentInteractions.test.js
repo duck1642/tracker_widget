@@ -1168,6 +1168,45 @@ describe("logger editing", () => {
     expect(onDelete).toHaveBeenCalledWith("target");
   });
 
+  it("collapses and expands all foldable objectives from the context menu", async () => {
+    const { default: ObjectivesSection } = await import("$lib/features/weekly/components/ObjectivesSection.svelte");
+    let foldedObjectiveIds = [];
+    let rendered;
+    const props = {
+      objectives: [
+        { id: "parent", subjects: [], status: "open", description: "Parent", indent: 0 },
+        { id: "child", subjects: [], status: "open", description: "Child", indent: 1 },
+        { id: "grandchild", subjects: [], status: "open", description: "Grandchild", indent: 2 },
+        { id: "sibling", subjects: [], status: "open", description: "Sibling", indent: 0 }
+      ],
+      foldedObjectiveIds,
+      onFoldChange: async (ids) => {
+        foldedObjectiveIds = ids;
+        await rendered.rerender({ ...props, foldedObjectiveIds });
+      },
+      onAdd: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn(), onMove: vi.fn(), onIndent: vi.fn(), onOutdent: vi.fn()
+    };
+    rendered = render(ObjectivesSection, props);
+
+    await fireEvent.contextMenu(screen.getByText("Parent").closest("article"));
+    expect(screen.getByRole("menuitem", { name: "Collapse All Objectives" }).disabled).toBe(false);
+    expect(screen.getByRole("menuitem", { name: "Expand All Objectives" }).disabled).toBe(true);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Collapse All Objectives" }));
+
+    expect(foldedObjectiveIds).toEqual(["parent", "child"]);
+    expect(screen.queryByText("Child")).toBeNull();
+    expect(screen.queryByRole("menu", { name: "Objective actions" })).toBeNull();
+
+    await fireEvent.contextMenu(screen.getByText("Parent").closest("article"));
+    expect(screen.getByRole("menuitem", { name: "Collapse All Objectives" }).disabled).toBe(true);
+    expect(screen.getByRole("menuitem", { name: "Expand All Objectives" }).disabled).toBe(false);
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Expand All Objectives" }));
+
+    expect(foldedObjectiveIds).toEqual([]);
+    expect(screen.getByText("Child")).toBeTruthy();
+    expect(screen.getByText("Grandchild")).toBeTruthy();
+  });
+
   it("disables unavailable objective context actions and closes with Escape", async () => {
     const { default: ObjectivesSection } = await import("$lib/features/weekly/components/ObjectivesSection.svelte");
     render(ObjectivesSection, {
