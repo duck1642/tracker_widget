@@ -1,7 +1,7 @@
 <script>
   // @ts-nocheck
   import { ChevronDown, ChevronRight, FileText, CalendarDays } from "@lucide/svelte";
-  let { weeks = [], selectedPath = "", onSelectWeek, onSelectDay, expansionCommand = null } = $props();
+  let { weeks = [], selectedPath = "", onSelectWeek, onSelectDay, onOpenWeekContextMenu = null, expansionCommand = null } = $props();
   let expanded = $state({});
   let handledExpansionCommandId = $state(null);
 
@@ -15,7 +15,15 @@
 <nav class="file-tree" aria-label="Log files">
   {#each weeks as week (week.path)}
     <section>
-      <button class="week-row" onclick={() => expanded[week.path] = !(expanded[week.path] ?? true)} aria-expanded={expanded[week.path] ?? true}>
+      <button
+        class="week-row"
+        onclick={() => expanded[week.path] = !(expanded[week.path] ?? true)}
+        oncontextmenu={(event) => {
+          event.preventDefault();
+          onOpenWeekContextMenu?.(event, week);
+        }}
+        aria-expanded={expanded[week.path] ?? true}
+      >
         {#if expanded[week.path] ?? true}<ChevronDown size={14} />{:else}<ChevronRight size={14} />{/if}
         <span>{week.name}</span>
       </button>

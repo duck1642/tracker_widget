@@ -198,6 +198,17 @@ export class DailyStore {
     return this.persistence.flush();
   }
 
+  unload() {
+    this.path = "";
+    this.date = "";
+    this.sessions = [];
+    this.notesRaw = "";
+    this.frontmatterRaw = "";
+    this.preambleRaw = "";
+    this.loaded = false;
+    this.persistence.reset("", "");
+  }
+
   async checkExternalChanges() {
     const content = await this.persistence.checkExternal();
     if (typeof content === "string") {

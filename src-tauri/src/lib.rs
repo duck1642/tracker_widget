@@ -6,7 +6,8 @@ use commands::session_history::{read_session_history, rebuild_session_history, r
 use commands::subject_history::{read_subject_history, rebuild_subject_history, record_subjects};
 use commands::window::{exit_app, set_always_on_top, toggle_devtools};
 use commands::workspace::{
-    create_log_week, create_workspace_todo, import_workspace_todo, list_log_tree, path_exists,
+    convert_week_to_personal, create_log_week, create_workspace_todo, import_workspace_todo,
+    list_log_tree, path_exists, recycle_week,
 };
 use tauri::{Emitter, Manager};
 
@@ -104,6 +105,8 @@ pub fn run() {
             path_exists,
             list_log_tree,
             create_log_week,
+            convert_week_to_personal,
+            recycle_week,
             create_workspace_todo,
             import_workspace_todo
         ])

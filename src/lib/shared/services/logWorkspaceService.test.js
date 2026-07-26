@@ -3,7 +3,8 @@ import {
   dateForISOWeek,
   getConsecutiveWeekDescriptors,
   getISOWeek,
-  getWeekDescriptor
+  getWeekDescriptor,
+  pathBelongsToWeek
 } from "./logWorkspaceService.js";
 
 describe("ISO week descriptors", () => {
@@ -39,5 +40,12 @@ describe("ISO week descriptors", () => {
     expect(() => dateForISOWeek(2026, 54)).toThrow("Invalid ISO week");
     expect(() => getConsecutiveWeekDescriptors(new Date(2026, 0, 1), 0)).toThrow("between 1 and 12");
     expect(() => getConsecutiveWeekDescriptors(new Date(2026, 0, 1), 13)).toThrow("between 1 and 12");
+  });
+
+  it("matches only paths contained by the selected week folder", () => {
+    expect(pathBelongsToWeek("C:\\Tracker\\2026w31\\2026w31_index.md", "c:\\tracker\\2026w31")).toBe(true);
+    expect(pathBelongsToWeek("/logs/2026w31/day.md", "/logs/2026w31/")).toBe(true);
+    expect(pathBelongsToWeek("/logs/2026w310/day.md", "/logs/2026w31")).toBe(false);
+    expect(pathBelongsToWeek("", "/logs/2026w31")).toBe(false);
   });
 });

@@ -37,11 +37,26 @@ pub struct TodoImportSummary {
     replaced: bool,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonalConversionSummary {
+    converted: usize,
+    already_personal: usize,
+    skipped_custom_frontmatter: usize,
+}
+
 fn is_week_name(name: &str) -> bool {
     name.len() == 7
         && name.as_bytes()[..4].iter().all(u8::is_ascii_digit)
         && name.as_bytes()[4] == b'w'
         && name.as_bytes()[5..].iter().all(u8::is_ascii_digit)
+}
+
+fn is_mutable_week_name(name: &str) -> bool {
+    is_week_name(name)
+        && name[5..]
+            .parse::<u32>()
+            .is_ok_and(|week| (1..=53).contains(&week))
 }
 
 fn daily_date(name: &str) -> Option<String> {
@@ -57,6 +72,29 @@ fn daily_date(name: &str) -> Option<String> {
 
 fn display_path(path: &Path) -> String {
     path.to_string_lossy().to_string()
+}
+
+fn resolve_week_dir(root_path: &str, week_name: &str) -> Result<PathBuf, String> {
+    if !is_mutable_week_name(week_name) {
+        return Err("Invalid week folder".to_string());
+    }
+    let root =
+        fs::canonicalize(root_path).map_err(|_| "Workspace folder unavailable".to_string())?;
+    if !root.is_dir() {
+        return Err("Workspace folder unavailable".to_string());
+    }
+    let requested = root.join(week_name);
+    let metadata =
+        fs::symlink_metadata(&requested).map_err(|_| "Week folder unavailable".to_string())?;
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err("Invalid week folder".to_string());
+    }
+    let resolved =
+        fs::canonicalize(&requested).map_err(|_| "Week folder unavailable".to_string())?;
+    if resolved.parent() != Some(root.as_path()) {
+        return Err("Week folder is outside the workspace".to_string());
+    }
+    Ok(resolved)
 }
 
 #[tauri::command]
@@ -248,6 +286,158 @@ fn daily_title(date: &str, day_index: usize) -> String {
         .copied()
         .unwrap_or("day");
     format!("{month}{day}_{weekday}_log")
+}
+
+fn weekday_for_date(date: &str) -> Option<&'static str> {
+    let year = date.get(0..4)?.parse::<i32>().ok()?;
+    let month = date.get(5..7)?.parse::<usize>().ok()?;
+    let day = date.get(8..10)?.parse::<i32>().ok()?;
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+        return None;
+    }
+    let offsets = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
+    let adjusted_year = year - i32::from(month < 3);
+    let weekday = (adjusted_year + adjusted_year / 4 - adjusted_year / 100
+        + adjusted_year / 400
+        + offsets[month - 1]
+        + day)
+        .rem_euclid(7) as usize;
+    Some(["sun", "mon", "tue", "wed", "thur", "fri", "sat"][weekday])
+}
+
+fn personal_daily_title(date: &str) -> String {
+    let month = date
+        .get(5..7)
+        .and_then(|value| value.parse::<usize>().ok())
+        .and_then(|month| {
+            [
+                "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
+            ]
+            .get(month.saturating_sub(1))
+        })
+        .copied()
+        .unwrap_or("date");
+    let day = date.get(8..10).unwrap_or("00");
+    let weekday = weekday_for_date(date).unwrap_or("day");
+    format!("{month}{day}_{weekday}_log")
+}
+
+fn frontmatter_kind(content: &str) -> Option<bool> {
+    let visible = content.strip_prefix('\u{feff}').unwrap_or(content);
+    let mut lines = visible.lines();
+    if lines.next() != Some("---") {
+        return None;
+    }
+    let mut frontmatter = String::new();
+    for line in lines {
+        if line == "---" {
+            return Some(frontmatter.contains("[log](../../../tags_as_notes/type/log.md)"));
+        }
+        frontmatter.push_str(line);
+        frontmatter.push('\n');
+    }
+    Some(false)
+}
+
+fn personal_frontmatter(title: &str, date: &str, newline: &str) -> String {
+    [
+        "---",
+        "title:",
+        &format!("  - {title}"),
+        "type:",
+        "  - \"[log](../../../tags_as_notes/type/log.md)\"",
+        &format!("creation_date: {date}"),
+        "update_date:",
+        "---",
+        "",
+        "",
+    ]
+    .join(newline)
+}
+
+#[tauri::command]
+pub fn convert_week_to_personal(
+    root_path: String,
+    week_name: String,
+) -> Result<PersonalConversionSummary, String> {
+    let week_dir = resolve_week_dir(&root_path, &week_name)?;
+    let mut recognized = Vec::new();
+    let index_name = format!("{week_name}_index.md");
+    for entry in fs::read_dir(&week_dir).map_err(|error| error.to_string())? {
+        let entry = entry.map_err(|error| error.to_string())?;
+        if !entry
+            .file_type()
+            .map_err(|error| error.to_string())?
+            .is_file()
+        {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name == index_name || daily_date(&name).is_some() {
+            recognized.push((name, entry.path()));
+        }
+    }
+    recognized.sort_by(|left, right| left.0.cmp(&right.0));
+    let first_date = recognized
+        .iter()
+        .find_map(|(name, _)| daily_date(name))
+        .unwrap_or_default();
+    let mut summary = PersonalConversionSummary {
+        converted: 0,
+        already_personal: 0,
+        skipped_custom_frontmatter: 0,
+    };
+
+    for (name, path) in recognized {
+        let content = fs::read_to_string(&path).map_err(|error| error.to_string())?;
+        match frontmatter_kind(&content) {
+            Some(true) => {
+                summary.already_personal += 1;
+                continue;
+            }
+            Some(false) => {
+                summary.skipped_custom_frontmatter += 1;
+                continue;
+            }
+            None => {}
+        }
+        let date = daily_date(&name).unwrap_or_else(|| first_date.clone());
+        let title = if name == index_name {
+            format!("{week_name}_index")
+        } else {
+            personal_daily_title(&date)
+        };
+        let newline = if content.contains("\r\n") {
+            "\r\n"
+        } else {
+            "\n"
+        };
+        let (bom, body) = content
+            .strip_prefix('\u{feff}')
+            .map_or(("", content.as_str()), |body| ("\u{feff}", body));
+        let converted = format!(
+            "{bom}{}{body}",
+            personal_frontmatter(&title, &date, newline)
+        );
+        fs::write(path, converted).map_err(|error| error.to_string())?;
+        summary.converted += 1;
+    }
+    Ok(summary)
+}
+
+fn trash_week_with<F>(root_path: &str, week_name: &str, move_to_trash: F) -> Result<(), String>
+where
+    F: FnOnce(&Path) -> Result<(), String>,
+{
+    let week_dir = resolve_week_dir(root_path, week_name)?;
+    move_to_trash(&week_dir)
+}
+
+#[tauri::command]
+pub fn recycle_week(root_path: String, week_name: String) -> Result<(), String> {
+    trash_week_with(&root_path, &week_name, |path| {
+        trash::delete(path).map_err(|error| error.to_string())
+    })
 }
 
 fn write_new(path: &Path, content: &str) -> Result<bool, String> {
@@ -557,6 +747,105 @@ mod tests {
         assert_eq!(tree[0].name, "2026w26");
         assert_eq!(tree[0].days.len(), 1);
         assert_eq!(tree[0].days[0].name, "20260622_log.md");
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn week_mutations_reject_invalid_outside_and_symlink_targets() {
+        let root = temp_directory("week-target-validation");
+        let outside = temp_directory("week-target-outside");
+        fs::create_dir_all(root.join("2026w26")).unwrap();
+
+        assert!(resolve_week_dir(&display_path(&root), "2026w26").is_ok());
+        assert!(resolve_week_dir(&display_path(&root), "../2026w26").is_err());
+        assert!(resolve_week_dir(&display_path(&root), "2026w00").is_err());
+        assert!(resolve_week_dir(&display_path(&root), "2026w54").is_err());
+        assert!(resolve_week_dir(&display_path(&root), "random").is_err());
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::symlink_dir;
+            let linked = root.join("2026w27");
+            if symlink_dir(&outside, &linked).is_ok() {
+                assert!(resolve_week_dir(&display_path(&root), "2026w27").is_err());
+                fs::remove_dir(linked).unwrap();
+            }
+        }
+
+        fs::remove_dir_all(root).unwrap();
+        fs::remove_dir_all(outside).unwrap();
+    }
+
+    #[test]
+    fn converts_recognized_week_markdown_without_changing_body_content() {
+        let root = temp_directory("week-personal-convert");
+        let week = root.join("2026w26");
+        fs::create_dir_all(&week).unwrap();
+        let index_body = "# 2026 - Week 26 - June 22 - 28\r\n\r\n## Notes\r\n\r\nkeep index\r\n";
+        let day_body = "# 2026-06-22\n\n## Notes\n\nkeep day\n";
+        fs::write(week.join("2026w26_index.md"), index_body).unwrap();
+        fs::write(week.join("20260622_log.md"), day_body).unwrap();
+        fs::write(week.join("misc.md"), "leave me").unwrap();
+
+        let summary = convert_week_to_personal(display_path(&root), "2026w26".into()).unwrap();
+
+        assert_eq!(summary.converted, 2);
+        assert_eq!(summary.already_personal, 0);
+        assert_eq!(summary.skipped_custom_frontmatter, 0);
+        let converted_index = fs::read_to_string(week.join("2026w26_index.md")).unwrap();
+        assert!(converted_index.starts_with("---\r\ntitle:\r\n  - 2026w26_index\r\n"));
+        assert!(converted_index.contains("---\r\n\r\n# 2026 - Week 26"));
+        assert!(converted_index.ends_with(index_body));
+        let converted_day = fs::read_to_string(week.join("20260622_log.md")).unwrap();
+        assert!(converted_day.contains("  - jun22_mon_log\n"));
+        assert!(converted_day.ends_with(day_body));
+        assert_eq!(
+            fs::read_to_string(week.join("misc.md")).unwrap(),
+            "leave me"
+        );
+
+        let second = convert_week_to_personal(display_path(&root), "2026w26".into()).unwrap();
+        assert_eq!(second.converted, 0);
+        assert_eq!(second.already_personal, 2);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn personal_conversion_skips_unfamiliar_frontmatter() {
+        let root = temp_directory("week-personal-custom-frontmatter");
+        let week = root.join("2026w26");
+        fs::create_dir_all(&week).unwrap();
+        let custom = "---\ncustom: keep\n---\n\n# 2026-06-22\n";
+        fs::write(week.join("20260622_log.md"), custom).unwrap();
+
+        let summary = convert_week_to_personal(display_path(&root), "2026w26".into()).unwrap();
+
+        assert_eq!(summary.converted, 0);
+        assert_eq!(summary.skipped_custom_frontmatter, 1);
+        assert_eq!(
+            fs::read_to_string(week.join("20260622_log.md")).unwrap(),
+            custom
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn recycle_operation_receives_only_a_validated_week_directory() {
+        let root = temp_directory("week-recycle-validation");
+        let week = root.join("2026w26");
+        fs::create_dir_all(&week).unwrap();
+        let expected = fs::canonicalize(&week).unwrap();
+        let mut received = None;
+
+        trash_week_with(&display_path(&root), "2026w26", |path| {
+            received = Some(path.to_path_buf());
+            fs::remove_dir_all(path).map_err(|error| error.to_string())
+        })
+        .unwrap();
+
+        assert_eq!(received, Some(expected));
+        assert!(!week.exists());
+        assert!(trash_week_with(&display_path(&root), "../2026w26", |_| Ok(())).is_err());
         fs::remove_dir_all(root).unwrap();
     }
 }

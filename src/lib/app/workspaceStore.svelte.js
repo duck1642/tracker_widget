@@ -164,6 +164,65 @@ class WorkspaceStore {
   createSelectedWeekFiles(year, week, count = 1) {
     return this.createWeekFiles(workspaceService.dateForISOWeek(year, week), count);
   }
+
+  async repairWeek(week) {
+    if (!appStore.logsRootPath || !week?.name) return false;
+    const match = week.name.match(/^(\d{4})w(\d{2})$/);
+    if (!match) {
+      appStore.showStatus("Week repair failed: invalid week folder");
+      return false;
+    }
+    try {
+      const date = workspaceService.dateForISOWeek(Number(match[1]), Number(match[2]));
+      const created = await workspaceService.createWeek(
+        appStore.logsRootPath,
+        date,
+        appStore.frontmatterMode
+      );
+      appStore.showStatus(created.length
+        ? `Repaired ${created.length} missing ${created.length === 1 ? "file" : "files"} in ${week.name}`
+        : `${week.name} is complete`);
+      await this.refresh();
+      return true;
+    } catch (error) {
+      appStore.showStatus("Week repair failed: " + error);
+      return false;
+    }
+  }
+
+  async convertWeekToPersonal(week) {
+    if (!appStore.logsRootPath || !week?.name) return false;
+    try {
+      const summary = await workspaceService.convertWeekToPersonal(
+        appStore.logsRootPath,
+        week.name
+      );
+      const parts = [`Converted ${summary.converted} ${summary.converted === 1 ? "file" : "files"} in ${week.name}`];
+      if (summary.alreadyPersonal) parts.push(`${summary.alreadyPersonal} already personal`);
+      if (summary.skippedCustomFrontmatter) {
+        parts.push(`${summary.skippedCustomFrontmatter} custom frontmatter skipped`);
+      }
+      appStore.showStatus(parts.join("; "));
+      await this.refresh();
+      return true;
+    } catch (error) {
+      appStore.showStatus("Personal conversion failed: " + error);
+      return false;
+    }
+  }
+
+  async recycleWeek(week) {
+    if (!appStore.logsRootPath || !week?.name) return false;
+    try {
+      await workspaceService.recycleWeek(appStore.logsRootPath, week.name);
+      await this.refresh();
+      appStore.showStatus(`Moved ${week.name} to Recycle Bin`);
+      return true;
+    } catch (error) {
+      appStore.showStatus("Week deletion failed: " + error);
+      return false;
+    }
+  }
 }
 
 export const workspaceStore = new WorkspaceStore();

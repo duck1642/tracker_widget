@@ -1,8 +1,9 @@
 <script>
   // @ts-nocheck
-  import { CalendarPlus, ArrowDownUp, ChevronsDownUp, ChevronsUpDown, ExternalLink } from "@lucide/svelte";
+  import { CalendarCheck, CalendarPlus, ArrowDownUp, ChevronsDownUp, ChevronsUpDown, ExternalLink, FileCog, Trash2 } from "@lucide/svelte";
   import { openPath } from "@tauri-apps/plugin-opener";
   import FileTree from "$lib/shared/components/FileTree.svelte";
+  import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
   import WeekFilesDialog from "./WeekFilesDialog.svelte";
   import WeekFilesMenu from "./WeekFilesMenu.svelte";
   import { workspaceStore } from "./workspaceStore.svelte.js";
@@ -11,7 +12,16 @@
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
   import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
 
-  let { open = true, selectedPath = "", onSelectWeek, onSelectDay, keyboardNavigationEnabled = true } = $props();
+  let {
+    open = true,
+    selectedPath = "",
+    onSelectWeek,
+    onSelectDay,
+    onRepairWeek = (week) => workspaceStore.repairWeek(week),
+    onConvertWeek = (week) => workspaceStore.convertWeekToPersonal(week),
+    onDeleteWeek = () => {},
+    keyboardNavigationEnabled = true
+  } = $props();
   let sortAscending = $state(false);
   let allWeeksExpanded = $state(true);
   let expansionCommand = $state(null);
@@ -24,6 +34,19 @@
   let navigationQueue = Promise.resolve();
   let weekFilesMenu = $state(null);
   let showWeekFilesDialog = $state(false);
+  let weekContextMenu = $state(null);
+  let weekContextItems = $derived.by(() => {
+    if (!weekContextMenu) return [];
+    const week = weekContextMenu.week;
+    return [
+      { label: "Check/repair week", icon: CalendarCheck, onclick: () => runWeekContextAction(onRepairWeek, week) },
+      ...(appStore.frontmatterMode === "personal"
+        ? [{ label: "Convert to personal", icon: FileCog, onclick: () => runWeekContextAction(onConvertWeek, week) }]
+        : []),
+      { separator: true },
+      { label: "Delete week…", icon: Trash2, danger: true, onclick: () => runWeekContextAction(onDeleteWeek, week) }
+    ];
+  });
 
   const EDITOR_BLUR_SETTLE_MS = 160;
 
@@ -104,6 +127,16 @@
     await action();
   }
 
+  function openWeekContextMenu(event, week) {
+    weekFilesMenu = null;
+    weekContextMenu = { week, x: event.clientX, y: event.clientY };
+  }
+
+  function runWeekContextAction(action, week) {
+    weekContextMenu = null;
+    void action(week);
+  }
+
   function toggleAllWeeks() {
     allWeeksExpanded = !allWeeksExpanded;
     expansionCommand = { id: ++expansionCommandId, expanded: allWeeksExpanded };
@@ -162,9 +195,20 @@
   {#if workspaceStore.unavailable}
     <div class="unavailable"><strong>Workspace unavailable</strong><span>Locate the existing workspace folder, select another one, or retry the configured path.</span><button onclick={() => workspaceStore.chooseRoot()}>Locate existing</button><button onclick={() => workspaceStore.chooseRoot()}>Select new</button><button onclick={() => workspaceStore.refresh()}>Retry</button></div>
   {:else}
-    <FileTree weeks={sortedWeeks} {selectedPath} {onSelectWeek} {onSelectDay} {expansionCommand} />
+    <FileTree weeks={sortedWeeks} {selectedPath} {onSelectWeek} {onSelectDay} onOpenWeekContextMenu={openWeekContextMenu} {expansionCommand} />
   {/if}
 </aside>
+
+{#if weekContextMenu}
+  <ContextMenu
+    x={weekContextMenu.x}
+    y={weekContextMenu.y}
+    items={weekContextItems}
+    width={174}
+    ariaLabel={`${weekContextMenu.week.name} actions`}
+    onDismiss={() => weekContextMenu = null}
+  />
+{/if}
 
 {#if showWeekFilesDialog}
   <WeekFilesDialog

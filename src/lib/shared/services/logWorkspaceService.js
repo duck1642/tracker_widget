@@ -114,10 +114,25 @@ export async function createWeek(rootPath, date, frontmatterMode = "off") {
   });
 }
 
+export async function convertWeekToPersonal(rootPath, weekName) {
+  return await invoke("convert_week_to_personal", { rootPath, weekName });
+}
+
+export async function recycleWeek(rootPath, weekName) {
+  return await invoke("recycle_week", { rootPath, weekName });
+}
+
 export function todoPathForWorkspace(rootPath) {
   if (!rootPath) return "";
   const separator = rootPath.includes("\\") ? "\\" : "/";
   return `${rootPath.replace(/[\\/]$/, "")}${separator}todo.md`;
+}
+
+export function pathBelongsToWeek(path, weekPath) {
+  const normalizedPath = String(path || "").replaceAll("\\", "/").replace(/\/+$/, "").toLowerCase();
+  const normalizedWeek = String(weekPath || "").replaceAll("\\", "/").replace(/\/+$/, "").toLowerCase();
+  return Boolean(normalizedPath && normalizedWeek)
+    && (normalizedPath === normalizedWeek || normalizedPath.startsWith(`${normalizedWeek}/`));
 }
 
 export function countTodoItems(markdown) {

@@ -395,6 +395,23 @@ export class WeekStore {
     return this.persistence.flush();
   }
 
+  unload() {
+    this.objectiveFoldCache.delete(this.path);
+    this.path = "";
+    this.descriptor = null;
+    this.objectives = [];
+    this.objectiveRawLines = [];
+    this.plan = [];
+    this.actual = [];
+    this.notesRaw = "";
+    this.frontmatterRaw = "";
+    this.preambleRaw = "";
+    this.unknownSectionsRaw = [];
+    this.foldedObjectiveIds = [];
+    this.loaded = false;
+    this.persistence.reset("", "");
+  }
+
   async checkExternalChanges() {
     const content = await this.persistence.checkExternal();
     if (typeof content === "string") {

@@ -94,6 +94,62 @@ describe("application navigation", () => {
     expect(onSelectWeek).toHaveBeenCalledWith(week);
     expect(onSelectDay).toHaveBeenCalledWith(week.days[0], week);
   });
+
+  it("opens week-folder actions from a right click", async () => {
+    const week = { path: "week", name: "2026w26", indexPath: "week/index.md", days: [] };
+    const onOpenWeekContextMenu = vi.fn();
+    render(FileTree, {
+      weeks: [week],
+      selectedPath: "",
+      onSelectWeek: vi.fn(),
+      onSelectDay: vi.fn(),
+      onOpenWeekContextMenu
+    });
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "2026w26" }), {
+      clientX: 40,
+      clientY: 70
+    });
+
+    expect(onOpenWeekContextMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ clientX: 40, clientY: 70 }),
+      week
+    );
+  });
+
+  it("offers safe week actions and only exposes conversion in Personal mode", async () => {
+    const week = { path: "week", name: "2026w26", indexPath: "week/index.md", days: [] };
+    workspaceStore.weeks = [week];
+    appStore.frontmatterMode = "personal";
+    const onRepairWeek = vi.fn();
+    const onConvertWeek = vi.fn();
+    const onDeleteWeek = vi.fn();
+    render(AppSidebar, {
+      open: true,
+      selectedPath: "",
+      onSelectWeek: vi.fn(),
+      onSelectDay: vi.fn(),
+      onRepairWeek,
+      onConvertWeek,
+      onDeleteWeek
+    });
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "2026w26" }), {
+      clientX: 40,
+      clientY: 70
+    });
+
+    expect(screen.getByRole("menu", { name: "2026w26 actions" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Check/repair week" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Convert to personal" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Delete week…" })).toBeTruthy();
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Convert to personal" }));
+    expect(onConvertWeek).toHaveBeenCalledWith(week);
+
+    appStore.frontmatterMode = "off";
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "2026w26" }));
+    expect(screen.queryByRole("menuitem", { name: "Convert to personal" })).toBeNull();
+  });
 });
 describe("window controls", () => {
   it("emits minimize, maximize, and close actions from the title bar", async () => {

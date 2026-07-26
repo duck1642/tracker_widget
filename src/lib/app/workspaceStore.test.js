@@ -29,6 +29,8 @@ vi.mock("$lib/shared/services/logWorkspaceService.js", () => ({
   importWorkspaceTodo: vi.fn(async (rootPath) => ({ path: `${rootPath}\\todo.md`, todoCount: 1, rawLineCount: 0, replaced: false })),
   countTodoItems: vi.fn((content) => content.includes("- [ ]") ? 1 : 0),
   createWeek: vi.fn(async () => []),
+  convertWeekToPersonal: vi.fn(async () => ({ converted: 0, alreadyPersonal: 0, skippedCustomFrontmatter: 0 })),
+  recycleWeek: vi.fn(async () => {}),
   dateForISOWeek: vi.fn((year, week) => new Date(year, 0, week)),
   getConsecutiveWeekDescriptors: vi.fn((startDate, count) =>
     Array.from({ length: count }, (_, index) => ({
@@ -120,5 +122,47 @@ describe("WorkspaceStore workspace status", () => {
     await workspaceStore.createNextWeekFiles(new Date(2026, 6, 25));
 
     expect(createWeekFiles).toHaveBeenCalledWith(new Date(2026, 6, 27), 1);
+  });
+
+  it("checks one selected week through the existing missing-only creation path", async () => {
+    appStore.logsRootPath = "C:\\Tracker";
+    workspaceService.createWeek.mockResolvedValueOnce(["C:\\Tracker\\2026w31\\missing.md"]);
+    vi.spyOn(workspaceStore, "refresh").mockResolvedValue(true);
+
+    expect(await workspaceStore.repairWeek({ name: "2026w31" })).toBe(true);
+
+    expect(workspaceService.dateForISOWeek).toHaveBeenCalledWith(2026, 31);
+    expect(workspaceService.createWeek).toHaveBeenCalledWith(
+      "C:\\Tracker", expect.any(Date), appStore.frontmatterMode
+    );
+    expect(appStore.showStatus).toHaveBeenCalledWith("Repaired 1 missing file in 2026w31");
+  });
+
+  it("converts a selected week and reports protected custom frontmatter", async () => {
+    appStore.logsRootPath = "C:\\Tracker";
+    workspaceService.convertWeekToPersonal.mockResolvedValueOnce({
+      converted: 6,
+      alreadyPersonal: 1,
+      skippedCustomFrontmatter: 1
+    });
+    vi.spyOn(workspaceStore, "refresh").mockResolvedValue(true);
+
+    expect(await workspaceStore.convertWeekToPersonal({ name: "2026w31" })).toBe(true);
+
+    expect(workspaceService.convertWeekToPersonal).toHaveBeenCalledWith("C:\\Tracker", "2026w31");
+    expect(appStore.showStatus).toHaveBeenCalledWith(
+      "Converted 6 files in 2026w31; 1 already personal; 1 custom frontmatter skipped"
+    );
+  });
+
+  it("recycles a selected week and refreshes the tree", async () => {
+    appStore.logsRootPath = "C:\\Tracker";
+    vi.spyOn(workspaceStore, "refresh").mockResolvedValue(true);
+
+    expect(await workspaceStore.recycleWeek({ name: "2026w31" })).toBe(true);
+
+    expect(workspaceService.recycleWeek).toHaveBeenCalledWith("C:\\Tracker", "2026w31");
+    expect(workspaceStore.refresh).toHaveBeenCalledOnce();
+    expect(appStore.showStatus).toHaveBeenCalledWith("Moved 2026w31 to Recycle Bin");
   });
 });

@@ -53,4 +53,26 @@ export class NavigationHistory {
     this.index += 1;
     return this.entries[this.index];
   }
+
+  removePathsUnder(folderPath) {
+    const normalizedFolder = String(folderPath || "").replace(/[\\/]+$/, "");
+    if (!normalizedFolder) return false;
+    const belongsToFolder = (destination) =>
+      destination.view !== "todo"
+      && (destination.path === normalizedFolder
+        || destination.path.startsWith(`${normalizedFolder}\\`)
+        || destination.path.startsWith(`${normalizedFolder}/`));
+    const next = [];
+    let nextIndex = -1;
+    for (let index = 0; index < this.entries.length; index += 1) {
+      if (belongsToFolder(this.entries[index])) continue;
+      next.push(this.entries[index]);
+      if (index <= this.index) nextIndex = next.length - 1;
+    }
+    if (next.length === this.entries.length) return false;
+    if (!next.length) next.push({ view: "todo", path: "" });
+    this.entries = next;
+    this.index = Math.max(0, nextIndex);
+    return true;
+  }
 }

@@ -60,4 +60,20 @@ describe("NavigationHistory", () => {
     expect(restarted.entries).toEqual([todo]);
     expect(restarted.canGoBack).toBe(false);
   });
+
+  it("removes destinations belonging to a recycled week and keeps a valid current entry", () => {
+    const history = new NavigationHistory(todo);
+    history.visit(week);
+    history.visit(day);
+    history.visit({ view: "week", path: "2026w31/index.md" });
+    history.back();
+
+    history.removePathsUnder("2026w30");
+
+    expect(history.entries).toEqual([
+      todo,
+      { view: "week", path: "2026w31/index.md" }
+    ]);
+    expect(history.entries[history.index]).toEqual(todo);
+  });
 });

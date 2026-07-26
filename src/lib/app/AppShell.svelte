@@ -5,6 +5,7 @@
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
   import { openPath } from "@tauri-apps/plugin-opener";
+  import { confirm } from "@tauri-apps/plugin-dialog";
   import { appStore } from "./appStore.svelte.js";
   import { workspaceStore } from "./workspaceStore.svelte.js";
   import { subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
@@ -16,7 +17,7 @@
   import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
   import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
   import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
-  import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
+  import { formatDate, getWeekDescriptor, pathBelongsToWeek } from "$lib/shared/services/logWorkspaceService.js";
   import AppHeader from "./AppHeader.svelte";
   import SettingsDialog from "./SettingsDialog.svelte";
   import HelpDialog from "./HelpDialog.svelte";
@@ -117,6 +118,63 @@
     if (await restoreNavigationDestination(destination)) return;
     if (direction === "back") navigationHistory.forward();
     else navigationHistory.back();
+  }
+
+  function unloadWeekDocuments(week) {
+    if (pathBelongsToWeek(weekStore.path, week.path)) weekStore.unload();
+    if (pathBelongsToWeek(dailyStore.path, week.path)) dailyStore.unload();
+  }
+
+  async function reloadActiveWeekDestination(week, activeView, activePath) {
+    const refreshedWeek = workspaceStore.weeks.find((item) => item.name === week.name);
+    if (!refreshedWeek) return false;
+    if (activeView === "week" && refreshedWeek.indexPath === activePath) {
+      return await selectWeek(refreshedWeek, { record: false });
+    }
+    if (activeView === "day") {
+      const day = refreshedWeek.days.find((item) => item.path === activePath);
+      if (day) return await selectDay(day, refreshedWeek, { record: false });
+    }
+    return false;
+  }
+
+  async function repairWeek(week) {
+    const activeView = appStore.currentView;
+    const activePath = selectedPath;
+    if (!(await workspaceStore.repairWeek(week))) return false;
+    if (!pathBelongsToWeek(activePath, week.path)) return true;
+    return await reloadActiveWeekDestination(week, activeView, activePath);
+  }
+
+  async function convertWeekToPersonal(week) {
+    if (!(await persistenceRegistry.flushAll())) {
+      appStore.showStatus("Resolve file conflicts before converting the week");
+      return false;
+    }
+    const activeView = appStore.currentView;
+    const activePath = selectedPath;
+    if (!(await workspaceStore.convertWeekToPersonal(week))) return false;
+    unloadWeekDocuments(week);
+    if (!pathBelongsToWeek(activePath, week.path)) return true;
+    return await reloadActiveWeekDestination(week, activeView, activePath);
+  }
+
+  async function deleteWeek(week) {
+    const approved = await confirm(
+      `Move ${week.name} and all of its log files to the Recycle Bin?`,
+      { title: "Delete week", kind: "warning" }
+    );
+    if (!approved) return false;
+    if (!(await persistenceRegistry.flushAll())) {
+      appStore.showStatus("Resolve file conflicts before deleting the week");
+      return false;
+    }
+    const wasActive = pathBelongsToWeek(selectedPath, week.path);
+    if (!(await workspaceStore.recycleWeek(week))) return false;
+    unloadWeekDocuments(week);
+    navigationHistory.removePathsUnder(week.path);
+    if (wasActive) selectTodo();
+    return true;
   }
 
   function handleShellKeydown(event) {
@@ -335,7 +393,16 @@
     </section>
   {:else}
     <div class="workspace-shell">
-      <AppSidebar open={workspaceStore.sidebarOpen} {selectedPath} onSelectWeek={selectWeek} onSelectDay={selectDay} keyboardNavigationEnabled={!showSettings && !showHelp} />
+      <AppSidebar
+        open={workspaceStore.sidebarOpen}
+        {selectedPath}
+        onSelectWeek={selectWeek}
+        onSelectDay={selectDay}
+        onRepairWeek={repairWeek}
+        onConvertWeek={convertWeekToPersonal}
+        onDeleteWeek={deleteWeek}
+        keyboardNavigationEnabled={!showSettings && !showHelp}
+      />
       <section class="main-workspace">
         {#if appStore.currentView === "todo" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
         <div class="panel-scroll" class:todo-scroll={appStore.currentView === "todo"}>{#if appStore.currentView === "todo"}<TodoPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
