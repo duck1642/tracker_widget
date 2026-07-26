@@ -191,7 +191,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   border-bottom: 1px solid var(--border-color);
   border-top-left-radius: 7px;
   border-top-right-radius: 7px;
-  padding: 0 8px;
+  padding: 0 0 0 8px;
   cursor: default;
   flex: none;
 }

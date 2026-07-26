@@ -62,37 +62,62 @@
     {title} {statusMessage ? `- ${statusMessage}` : ""}
   </span>
   <div class="header-controls">
-    <button class="icon-btn-header" onclick={onToggleSidebar} title="Toggle file tree"><PanelLeft size={13} /></button>
-    <div class="mode-selector" bind:this={modeSelector}>
-      <button class="icon-btn-header mode-trigger" bind:this={modeTrigger} onclick={onToggleModeMenu} title={isWidgetMode ? "Window mode: Widget (tray only)" : "Window layer mode"} aria-haspopup="menu" aria-expanded={showModeMenu}>
-        <Layers size={13} />
-        <span class="btn-text">{getModeLabel(layerMode)}</span>
-        <ChevronDown size={10} />
+    <div class="app-controls" role="group" aria-label="Application controls">
+      <button class="icon-btn-header" onclick={onToggleSidebar} title="Toggle file tree"><PanelLeft size={13} /></button>
+      <div class="mode-selector" bind:this={modeSelector}>
+        <button class="icon-btn-header mode-trigger" bind:this={modeTrigger} onclick={onToggleModeMenu} title={isWidgetMode ? "Window mode: Widget (tray only)" : "Window layer mode"} aria-haspopup="menu" aria-expanded={showModeMenu}>
+          <Layers size={13} />
+          <span class="btn-text">{getModeLabel(layerMode)}</span>
+          <ChevronDown size={10} />
+        </button>
+        {#if showModeMenu}<LayerMenu {layerMode} {onSelectMode} />{/if}
+      </div>
+      <button class="icon-btn-header" onclick={onToggleSettings} title="Settings">
+        <Settings size={13} />
       </button>
-      {#if showModeMenu}<LayerMenu {layerMode} {onSelectMode} />{/if}
     </div>
-    <button class="icon-btn-header" onclick={onToggleSettings} title="Settings">
-      <Settings size={13} />
-    </button>
-    <button class="icon-btn-header" onclick={onShrinkApp} title={isWidgetMode ? "Hide to tray" : "Minimize"}>
-      <Minus size={13} />
-    </button>
-    {#if !isWidgetMode}
-      <button class="icon-btn-header" onclick={onMaximizeApp} title={isMaximized ? "Restore Down" : "Maximize"}>
-        {#if isMaximized}
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1"><path d="M3 1.5H8.5V7H7" /><rect x="1.5" y="3" width="5.5" height="5.5" rx="0.5" /></svg>
-        {:else}
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="1.5" y="1.5" width="7" height="7" rx="0.5" /></svg>
-        {/if}
+    <div class="window-controls" role="group" aria-label="Window controls">
+      <button class="icon-btn-header window-control" onclick={onShrinkApp} title={isWidgetMode ? "Hide to tray" : "Minimize"}>
+        <Minus size={13} />
       </button>
-    {/if}
-    <button class="icon-btn-header close" onclick={onCloseApp} title="Close">
-      <X size={13} />
-    </button>
+      {#if !isWidgetMode}
+        <button class="icon-btn-header window-control" onclick={onMaximizeApp} title={isMaximized ? "Restore Down" : "Maximize"}>
+          {#if isMaximized}
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1"><path d="M3 1.5H8.5V7H7" /><rect x="1.5" y="3" width="5.5" height="5.5" rx="0.5" /></svg>
+          {:else}
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="1.5" y="1.5" width="7" height="7" rx="0.5" /></svg>
+          {/if}
+        </button>
+      {/if}
+      <button class="icon-btn-header window-control close" onclick={onCloseApp} title="Close">
+        <X size={13} />
+      </button>
+    </div>
   </div>
 </header>
 
 <style>
   .mode-selector { position: relative; display: flex; align-items: center; }
   .mode-trigger { gap: 3px; }
+  .header-controls,
+  .app-controls,
+  .window-controls { display: flex; align-items: center; }
+  .header-controls { align-self: stretch; gap: 8px; }
+  .app-controls { gap: 4px; }
+  .window-controls { gap: 0; }
+  .window-control {
+    width: 36px;
+    height: 32px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 0;
+  }
+  .window-control:hover {
+    color: var(--text-color);
+    background: var(--surface-hover);
+  }
+  .window-control.close:hover {
+    color: #fff;
+    background: #c42b1c;
+  }
 </style>
