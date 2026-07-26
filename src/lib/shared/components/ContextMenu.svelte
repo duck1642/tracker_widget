@@ -7,6 +7,7 @@
     items = [],
     ariaLabel = "Context actions",
     preserveFocus = false,
+    width = 196,
     onDismiss = null
   } = $props();
 
@@ -19,7 +20,7 @@
     const position = clampContextMenuPosition({
       x,
       y,
-      width: rect?.width || 196,
+      width: rect?.width || width,
       height: rect?.height || 150,
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight
@@ -60,6 +61,7 @@
   class="context-menu todo-context-menu"
   style:left={`${menuLeft}px`}
   style:top={`${menuTop}px`}
+  style:width={`${width}px`}
   role="menu"
   aria-label={ariaLabel}
   tabindex="-1"

@@ -342,6 +342,7 @@
       y={contextMenu.y}
       items={[{ label: "Duplicate", icon: Copy, onclick: duplicateContextEntry }]}
       ariaLabel="Planned session actions"
+      width={124}
       onDismiss={closeContextMenu}
     />
   {/if}

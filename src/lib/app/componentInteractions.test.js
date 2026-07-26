@@ -549,7 +549,7 @@ describe("logger editing", () => {
     });
 
     await fireEvent.contextMenu(screen.getByRole("button", { name: "Development" }).closest("article"));
-    expect(screen.getByRole("menu", { name: "Planned session actions" })).toBeTruthy();
+    expect(screen.getByRole("menu", { name: "Planned session actions" }).style.width).toBe("124px");
     await fireEvent.click(screen.getByRole("menuitem", { name: "Duplicate" }));
 
     expect(onDuplicate).toHaveBeenCalledWith("p1");
