@@ -146,6 +146,10 @@ describe("application navigation", () => {
     await fireEvent.click(screen.getByRole("menuitem", { name: "Convert to personal" }));
     expect(onConvertWeek).toHaveBeenCalledWith(week);
 
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "2026w26" }));
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Delete week…" }));
+    expect(onDeleteWeek).toHaveBeenCalledWith(week);
+
     appStore.frontmatterMode = "off";
     await fireEvent.contextMenu(screen.getByRole("button", { name: "2026w26" }));
     expect(screen.queryByRole("menuitem", { name: "Convert to personal" })).toBeNull();

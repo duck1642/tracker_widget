@@ -160,10 +160,16 @@
   }
 
   async function deleteWeek(week) {
-    const approved = await confirm(
-      `Move ${week.name} and all of its log files to the Recycle Bin?`,
-      { title: "Delete week", kind: "warning" }
-    );
+    let approved;
+    try {
+      approved = await confirm(
+        `Move ${week.name} and all of its log files to the Recycle Bin?`,
+        { title: "Delete week", kind: "warning" }
+      );
+    } catch (error) {
+      appStore.showStatus("Delete confirmation failed: " + error);
+      return false;
+    }
     if (!approved) return false;
     if (!(await persistenceRegistry.flushAll())) {
       appStore.showStatus("Resolve file conflicts before deleting the week");

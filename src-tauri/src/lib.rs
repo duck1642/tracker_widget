@@ -113,3 +113,23 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(test)]
+mod capability_tests {
+    #[test]
+    fn main_window_can_show_confirmation_dialogs() {
+        let capability: serde_json::Value =
+            serde_json::from_str(include_str!("../capabilities/default.json"))
+                .expect("default capability must be valid JSON");
+        let permissions = capability["permissions"]
+            .as_array()
+            .expect("default capability must list permissions");
+
+        assert!(
+            permissions
+                .iter()
+                .any(|permission| permission.as_str() == Some("dialog:allow-message")),
+            "week deletion confirmation requires dialog:allow-message"
+        );
+    }
+}
