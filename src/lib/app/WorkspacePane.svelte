@@ -37,7 +37,7 @@
     return { id: `day:${data.path}`, view: "day", title: data.date, path: data.path, date: data.date };
   }
 
-  async function activate(tab) {
+  async function load(tab) {
     if (!tab) return false;
     if (tab.view === "todo") {
       if (!session.todoStore.loadedPath && !(await session.todoStore.loadFile())) return false;
@@ -49,9 +49,18 @@
     } else if (tab.view === "day") {
       if (!(await session.dailyStore.loadPath(tab.path, tab.date))) return false;
     }
+    return true;
+  }
+
+  function focus(tab) {
     activeId = tab.id;
     onFocused({ view: tab.view, path: tab.path });
     dispatch("focus", { view: tab.view, path: tab.path });
+  }
+
+  async function activate(tab) {
+    if (!(await load(tab))) return false;
+    focus(tab);
     return true;
   }
 
@@ -66,6 +75,18 @@
   export async function openWeek(week, options) { return open(tabFor("week", week), options); }
   export async function openDay(day, options) { return open(tabFor("day", day), options); }
   export async function openTab(tab, options) { return open(tab, options); }
+  export async function replaceActiveTab(tab) {
+    if (tab.id === activeId) return await activate(tab);
+    const previousTab = activeTab;
+    if (previousTab && !(await flushTab(previousTab))) {
+      appStore.showStatus("Resolve file conflicts before changing the tab");
+      return false;
+    }
+    if (!(await load(tab))) return false;
+    tabs = previousTab ? tabs.map((item) => item.id === previousTab.id ? tab : item) : [tab];
+    focus(tab);
+    return true;
+  }
   export function hasTab(id) { return tabs.some((tab) => tab.id === id); }
   export function tabCount() { return tabs.length; }
   export function activeTabId() { return activeId; }
@@ -130,7 +151,7 @@
 
 <section class="pane" role="presentation" onpointerdown={() => activeTab && onFocused({ view: activeTab.view, path: activeTab.path })}>
   <WorkspaceTabs {tabs} {activeId} {focused} onActivate={activate} onClose={close} onSplit={onRequestSplit ? requestSplit : null} {onMoveToLeft} {onMoveToRight} {onSeparate} />
-  <div class="panel-scroll" class:todo-scroll={activeTab?.view === "todo"} class:scratchpad-scroll={activeTab?.view === "scratchpad"}>
+  <div class="panel-scroll" class:todo-scroll={activeTab?.view === "todo"}>
     {#if activeTab?.view === "todo"}<TodoPanel {...session} />
     {:else if activeTab?.view === "scratchpad"}<ScratchpadPanel scratchpadStore={session.scratchpadStore} />
     {:else if activeTab?.view === "week"}<WeekPanel weekStore={session.weekStore} />
@@ -143,7 +164,6 @@
 <style>
   .pane { display: flex; flex: 1; min-width: 0; min-height: 0; flex-direction: column; background: var(--bg-panel); }
   .panel-scroll { flex: 1; min-height: 0; overflow: auto; scrollbar-width: none; }
-  .panel-scroll.scratchpad-scroll { overflow: hidden; }
   .panel-scroll.todo-scroll { scrollbar-width: thin; scrollbar-color: #333 transparent; }
   .empty { display: grid; height: 100%; place-items: center; color: var(--text-muted); }
 </style>

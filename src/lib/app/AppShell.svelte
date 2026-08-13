@@ -192,24 +192,28 @@
     return activePane()?.openWeek(week, { background: true });
   }
 
-  async function selectWeek(week) {
+  async function selectWeek(week, { replace = true } = {}) {
     if (!week.indexPath) return false;
     if (await focusExistingTab(weekTab(week))) return true;
+    if (replace) return await activePane()?.replaceActiveTab(weekTab(week));
     return await activePane()?.openWeek(week);
   }
 
-  async function selectDay(day, week) {
+  async function selectDay(day, week, { replace = true } = {}) {
     if (await focusExistingTab(dayTab(day))) return true;
+    if (replace) return await activePane()?.replaceActiveTab(dayTab(day));
     return await activePane()?.openDay(day);
   }
 
-  async function selectTodo() {
+  async function selectTodo({ replace = true } = {}) {
     if (await focusExistingTab({ id: "todo", view: "todo", title: "Todo", path: "" })) return true;
+    if (replace) return await activePane()?.replaceActiveTab({ id: "todo", view: "todo", title: "Todo", path: "" });
     return await activePane()?.openTodo();
   }
 
-  async function selectScratchpad() {
+  async function selectScratchpad({ replace = true } = {}) {
     if (await focusExistingTab(scratchpadTab())) return true;
+    if (replace) return await activePane()?.replaceActiveTab(scratchpadTab());
     return await activePane()?.openScratchpad();
   }
 
@@ -234,15 +238,15 @@
   async function restoreNavigationDestination(destination) {
     if (!destination) return false;
     return await withoutHistoryRecording(async () => {
-      if (destination.view === "todo") return await selectTodo();
-      if (destination.view === "scratchpad") return await selectScratchpad();
+      if (destination.view === "todo") return await selectTodo({ replace: false });
+      if (destination.view === "scratchpad") return await selectScratchpad({ replace: false });
       for (const week of workspaceStore.weeks) {
         if (destination.view === "week" && week.indexPath === destination.path) {
-          return await selectWeek(week);
+          return await selectWeek(week, { replace: false });
         }
         if (destination.view === "day") {
           const day = week.days.find((item) => item.path === destination.path);
-          if (day) return await selectDay(day, week);
+          if (day) return await selectDay(day, week, { replace: false });
         }
       }
       appStore.showStatus("Navigation target is no longer available");

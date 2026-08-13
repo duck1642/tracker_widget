@@ -24,4 +24,15 @@ describe("NotesEditor layout", () => {
     });
     expect(screen.getByLabelText("Daily notes").closest(".notes-container")?.classList.contains("fill-height")).toBe(false);
   });
+
+  it("can place formatting help below the header for top-aligned editors", () => {
+    render(NotesEditor, {
+      value: "",
+      label: "Scratchpad",
+      helpPlacement: "below",
+      onChange: vi.fn()
+    });
+
+    expect(screen.getByLabelText("Formatting help").parentElement?.classList.contains("help-below")).toBe(true);
+  });
 });

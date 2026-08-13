@@ -26,7 +26,7 @@
   } from "$lib/shared/editor/noteLivePreview.js";
   import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
 
-  let { value = "", onChange, label = "Notes", fillHeight = false } = $props();
+  let { value = "", onChange, label = "Notes", fillHeight = false, helpPlacement = "above" } = $props();
 
   let editorHost = $state(null);
   let editorView = $state(null);
@@ -156,7 +156,7 @@
         {#if livePreviewEnabled}<Code2 size={12} />{:else}<Eye size={12} />{/if}
       </button>
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="help-container" onmouseenter={() => showHelp = true} onmouseleave={() => showHelp = false}>
+      <div class:help-below={helpPlacement === "below"} class="help-container" onmouseenter={() => showHelp = true} onmouseleave={() => showHelp = false}>
         <button class="help-btn" type="button" aria-label="Formatting help">?</button>
         {#if showHelp}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -274,6 +274,10 @@
     color: var(--text-color);
     font-size: 11px;
     pointer-events: auto;
+  }
+  .help-container.help-below .help-popover {
+    top: calc(100% + 6px);
+    bottom: auto;
   }
   .help-popover h3 {
     margin: 0 0 8px;

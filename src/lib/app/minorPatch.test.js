@@ -38,6 +38,14 @@ describe("minor Scratchpad and sidebar patch", () => {
     expect(createScratchpad).toHaveBeenCalledOnce();
   });
 
+  it("uses the pane scroll container instead of a fixed-height Markdown editor", () => {
+    scratchpadStore.loaded = true;
+    scratchpadStore.content = "A long scratchpad note";
+    const { container } = render(ScratchpadPanel);
+
+    expect(container.querySelector(".notes-container")?.classList.contains("fill-height")).toBe(false);
+  });
+
   it("does not open a missing Scratchpad in the system editor", async () => {
     appStore.currentView = "scratchpad";
     scratchpadStore.path = "C:\\Tracker\\scratchpad.md";
