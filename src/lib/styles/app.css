@@ -509,18 +509,18 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 .custom-check-btn.checked {
   border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .custom-check-btn.checked:hover {
   border-color: var(--accent);
-  background: rgba(184, 223, 158, 0.2);
+  background: color-mix(in srgb, var(--accent) 92%, white);
 }
 
 .custom-check-btn.checked:active {
   border-color: var(--accent);
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent) 92%, black);
 }
 
 

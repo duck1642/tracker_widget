@@ -487,6 +487,10 @@ describe("todo actions", () => {
       render(TodoPanel);
       await fireEvent.click(screen.getAllByTitle("Mark completed")[0]);
       expect(todoStore.todos[0].checked).toBe(true);
+      const checkIcon = screen.getByTitle("Mark active").querySelector("svg");
+      expect(checkIcon.getAttribute("width")).toBe("10");
+      expect(checkIcon.getAttribute("height")).toBe("10");
+      expect(checkIcon.getAttribute("stroke-width")).toBe("3");
 
       await fireEvent.click(screen.getByRole("button", { name: "Move todo 1" }));
       expect(screen.getByRole("textbox", { name: "Todo target position" })).toBeTruthy();

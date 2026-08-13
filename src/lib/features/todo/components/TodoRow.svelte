@@ -190,7 +190,7 @@
     title={todo.checked ? "Mark active" : "Mark completed"}
   >
     {#if todo.checked}
-      <Check size={12} strokeWidth={4} />
+      <Check size={10} strokeWidth={3} />
     {/if}
   </button>
   <textarea 

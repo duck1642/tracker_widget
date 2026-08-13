@@ -454,8 +454,12 @@ describe("NotesEditor interactions", () => {
     expect(onChange).toHaveBeenLastCalledWith("- [x] Todo item\n* List item");
     const checkedButton = screen.getByRole("checkbox", { name: "Mark task incomplete" });
     expect(checkedButton.classList.contains("checked")).toBe(true);
-    expect(checkedButton.querySelector("svg")).toBeTruthy();
-    expect(checkedButton.querySelector("svg").style.visibility).toBe("");
+    const checkIcon = checkedButton.querySelector("svg");
+    expect(checkIcon).toBeTruthy();
+    expect(checkIcon.style.visibility).toBe("");
+    expect(checkIcon.getAttribute("width")).toBe("10");
+    expect(checkIcon.getAttribute("height")).toBe("10");
+    expect(checkIcon.getAttribute("stroke-width")).toBe("3");
   });
 
   it("emits the complete continuous document for an editor transaction", async () => {

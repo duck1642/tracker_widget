@@ -495,12 +495,12 @@ class TaskWidget extends WidgetType {
     checkbox.title = this.checked ? "Mark active" : "Mark completed";
 
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("width", "12");
-    svg.setAttribute("height", "12");
+    svg.setAttribute("width", "10");
+    svg.setAttribute("height", "10");
     svg.setAttribute("viewBox", "0 0 24 24");
     svg.setAttribute("fill", "none");
     svg.setAttribute("stroke", "currentColor");
-    svg.setAttribute("stroke-width", "4");
+    svg.setAttribute("stroke-width", "3");
     svg.setAttribute("stroke-linecap", "round");
     svg.setAttribute("stroke-linejoin", "round");
     svg.setAttribute("shape-rendering", "geometricPrecision");
