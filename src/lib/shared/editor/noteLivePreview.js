@@ -11,6 +11,8 @@ const syntaxParentNames = new Set([
   "ATXHeading4",
   "ATXHeading5",
   "ATXHeading6",
+  "SetextHeading1",
+  "SetextHeading2",
   "StrongEmphasis",
   "Emphasis",
   "InlineCode",
@@ -231,7 +233,7 @@ export function collectNotePreviewRanges(state, selectionActive = true) {
       const node = ref.node;
       const active = selectionActive && constructIsActive(state, node);
 
-      if (/^ATXHeading[1-6]$/.test(name)) {
+      if (/^(ATXHeading[1-6]|SetextHeading[1-2])$/.test(name)) {
         pushRange({
           kind: "heading",
           from: ref.from,

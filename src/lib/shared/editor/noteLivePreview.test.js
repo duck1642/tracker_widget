@@ -280,6 +280,72 @@ describe("note live-preview ranges", () => {
     expect(listRanges[1].ordered).toBe(false);
     expect(listRanges[2].ordered).toBe(false);
   });
+
+  it("recognizes Setext level-one and level-two headings and manages underline visibility", () => {
+    const setextH1Doc = "Title One\n===";
+    const inactiveH1 = stateFor(setextH1Doc);
+    const h1Ranges = collectNotePreviewRanges(inactiveH1, false);
+
+    expect(h1Ranges.some((r) => r.kind === "heading" && r.level === 1 && r.from === 0)).toBe(true);
+    expect(h1Ranges.some((r) => r.kind === "hide" && setextH1Doc.slice(r.from, r.to) === "===")).toBe(true);
+    expect(h1Ranges.some((r) => r.kind === "rule")).toBe(false);
+    expect(inactiveH1.doc.toString()).toBe(setextH1Doc);
+
+    const activeH1 = stateFor(setextH1Doc, 2);
+    const activeH1Ranges = collectNotePreviewRanges(activeH1, true);
+    expect(activeH1Ranges.some((r) => r.kind === "heading" && r.level === 1)).toBe(true);
+    expect(activeH1Ranges.some((r) => r.kind === "hide" && setextH1Doc.slice(r.from, r.to) === "===")).toBe(false);
+
+    const setextH2Doc = "Title Two\n---";
+    const inactiveH2 = stateFor(setextH2Doc);
+    const h2Ranges = collectNotePreviewRanges(inactiveH2, false);
+
+    expect(h2Ranges.some((r) => r.kind === "heading" && r.level === 2 && r.from === 0)).toBe(true);
+    expect(h2Ranges.some((r) => r.kind === "hide" && setextH2Doc.slice(r.from, r.to) === "---")).toBe(true);
+    expect(h2Ranges.some((r) => r.kind === "rule")).toBe(false);
+    expect(h2Ranges.some((r) => r.kind === "listMarker")).toBe(false);
+    expect(inactiveH2.doc.toString()).toBe(setextH2Doc);
+  });
+
+  it("renders standalone thematic breaks without emitting list or heading decorations", () => {
+    for (const ruleDoc of ["---", "-----------", "***", "___", "---\nafter"]) {
+      const state = stateFor(ruleDoc);
+      const ranges = collectNotePreviewRanges(state, false);
+
+      expect(ranges.some((r) => r.kind === "rule")).toBe(true);
+      expect(ranges.some((r) => r.kind === "heading")).toBe(false);
+      expect(ranges.some((r) => r.kind === "listMarker")).toBe(false);
+      expect(ranges.some((r) => r.kind === "listLayout")).toBe(false);
+      expect(state.doc.toString()).toBe(ruleDoc);
+    }
+  });
+
+  it("keeps horizontal rule sequences inside fenced code blocks as code text", () => {
+    const doc = "```\n---\n```";
+    const state = stateFor(doc);
+    const ranges = collectNotePreviewRanges(state, false);
+
+    expect(ranges.some((r) => r.kind === "codeblock")).toBe(true);
+    expect(ranges.some((r) => r.kind === "rule")).toBe(false);
+    expect(ranges.some((r) => r.kind === "heading")).toBe(false);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
+  it("acquires Setext heading styling immediately on the transaction that completes the underline", () => {
+    const initial = stateFor("Section\n", 8);
+    const initialRanges = collectNotePreviewRanges(initial, true);
+    expect(initialRanges.some((r) => r.kind === "heading")).toBe(false);
+
+    const transaction = initial.update({
+      changes: { from: 8, insert: "-" },
+      selection: { anchor: 9 }
+    });
+    const updatedState = transaction.state;
+    expect(updatedState.doc.toString()).toBe("Section\n-");
+
+    const updatedRanges = collectNotePreviewRanges(updatedState, true);
+    expect(updatedRanges.some((r) => r.kind === "heading" && r.level === 2)).toBe(true);
+  });
 });
 
 describe("note editor document transactions", () => {
