@@ -114,6 +114,29 @@
   function openWeekInSplit(week) { return openInSplit(weekTab(week)); }
   function openDayInSplit(day) { return openInSplit(dayTab(day)); }
 
+  async function openInPane(tab, targetPane) {
+    if (targetPane === "right") return await openInSplit(tab);
+    if (leftPane?.hasTab(tab.id)) {
+      focusedPane = "left";
+      return await leftPane.openTab(tab);
+    }
+    if (!rightPane?.hasTab(tab.id)) {
+      focusedPane = "left";
+      return await leftPane?.openTab(tab);
+    }
+
+    rightPane.takeTab(tab.id);
+    focusedPane = "left";
+    const opened = await leftPane?.openTab(tab);
+    if (rightPane.tabCount() === 0) await collapseSplit();
+    return opened;
+  }
+
+  function openTodoInPane(targetPane) { return openInPane({ id: "todo", view: "todo", title: "Todo", path: "" }, targetPane); }
+  function openScratchpadInPane(targetPane) { return openInPane(scratchpadTab(), targetPane); }
+  function openWeekInPane(week, targetPane) { return openInPane(weekTab(week), targetPane); }
+  function openDayInPane(day, targetPane) { return openInPane(dayTab(day), targetPane); }
+
   async function collapseSplit() {
     const tabs = rightPane?.takeAllTabs?.() || [];
     for (const tab of tabs) await leftPane?.openTab(tab, { background: true });
@@ -535,16 +558,21 @@
         onOpenScratchpadInSplit={openScratchpadInSplit}
         onOpenWeekInSplit={openWeekInSplit}
         onOpenDayInSplit={openDayInSplit}
+        {splitView}
+        onOpenTodoInPane={openTodoInPane}
+        onOpenScratchpadInPane={openScratchpadInPane}
+        onOpenWeekInPane={openWeekInPane}
+        onOpenDayInPane={openDayInPane}
         onRepairWeek={repairWeek}
         onConvertWeek={convertWeekToPersonal}
         onDeleteWeek={deleteWeek}
         keyboardNavigationEnabled={!showSettings && !showHelp}
       />
       <section class="main-workspace">
-        <div class="pane-wrap" style:flex-basis={splitView ? `${splitRatio * 100}%` : "100%"}><WorkspacePane bind:this={leftPane} session={leftSession} initialTabs={[{ id: "todo", view: "todo", title: "Todo", path: "" }]} onFocused={(detail) => { focusedPane = "left"; updateFocusedView(detail); }} onRequestSplit={openInSplit} onEmpty={() => { if (splitView) void collapseSplit(); }} /></div>
+        <div class="pane-wrap" style:flex-basis={splitView ? `${splitRatio * 100}%` : "100%"}><WorkspacePane bind:this={leftPane} session={leftSession} initialTabs={[{ id: "todo", view: "todo", title: "Todo", path: "" }]} onFocused={(detail) => { focusedPane = "left"; updateFocusedView(detail); }} onRequestSplit={splitView ? null : openInSplit} onMoveToRight={splitView ? (tab) => openInPane(tab, "right") : null} onEmpty={() => { if (splitView) void collapseSplit(); }} /></div>
         {#if splitView}
           <div class="split-divider" role="separator" aria-orientation="vertical" aria-label="Resize split view" onpointerdown={beginSplitResize}></div>
-          <div class="pane-wrap" style:flex-basis={`${(1 - splitRatio) * 100}%`}><WorkspacePane bind:this={rightPane} session={rightSession} onFocused={(detail) => { focusedPane = "right"; updateFocusedView(detail); }} onEmpty={collapseSplit} onSeparate={collapseSplit} /></div>
+          <div class="pane-wrap" style:flex-basis={`${(1 - splitRatio) * 100}%`}><WorkspacePane bind:this={rightPane} session={rightSession} onFocused={(detail) => { focusedPane = "right"; updateFocusedView(detail); }} onMoveToLeft={(tab) => openInPane(tab, "left")} onEmpty={collapseSplit} onSeparate={collapseSplit} /></div>
         {/if}
       </section>
     </div>
@@ -570,7 +598,7 @@
   .workspace-shell { display: flex; flex: 1; min-height: 0; overflow: hidden; }
   .main-workspace { display: flex; flex: 1; min-width: 0; min-height: 0; background: var(--bg-panel); }
   .pane-wrap { display: flex; min-width: 0; min-height: 0; }
-  .split-divider { position: relative; z-index: 1; flex: 0 0 0; cursor: col-resize; touch-action: none; }
+  .split-divider { position: relative; z-index: 1; flex: 0 0 1px; background: var(--border-color); cursor: col-resize; touch-action: none; }
   .split-divider::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 1px; background: var(--border-color); transition: background .12s ease, width .12s ease; }
   .split-divider::after { content: ""; position: absolute; inset: 0 -5px; }
   .split-divider:hover::before, .split-divider:active::before { width: 2px; background: #587b61; }

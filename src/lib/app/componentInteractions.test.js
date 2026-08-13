@@ -401,6 +401,37 @@ describe("workspace tab actions", () => {
     await fireEvent.click(screen.getByRole("menuitem", { name: "Close tab" }));
     expect(onClose).toHaveBeenCalledWith(tabs[0]);
   });
+
+  it("offers an explicit move action for a tab in the left pane", async () => {
+    const onMoveToRight = vi.fn();
+    render(WorkspaceTabs, { tabs, activeId: "todo", onMoveToRight });
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Todo" }));
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Move to right pane" }));
+
+    expect(onMoveToRight).toHaveBeenCalledWith(tabs[0]);
+  });
+
+  it("replaces the split action with explicit pane targets in the sidebar", async () => {
+    const onOpenScratchpadInPane = vi.fn();
+    render(AppSidebar, {
+      open: true,
+      currentView: "todo",
+      selectedPath: "",
+      splitView: true,
+      onSelectScratchpad: vi.fn(),
+      onSelectTodo: vi.fn(),
+      onSelectWeek: vi.fn(),
+      onSelectDay: vi.fn(),
+      onOpenScratchpadInPane
+    });
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Scratchpad" }));
+    expect(screen.queryByRole("menuitem", { name: "Open in split view" })).toBeNull();
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Open at right pane" }));
+
+    expect(onOpenScratchpadInPane).toHaveBeenCalledWith("right");
+  });
 });
 
 describe("logger editing", () => {

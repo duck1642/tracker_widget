@@ -11,7 +11,7 @@
   import WeekPanel from "$lib/features/weekly/components/WeekPanel.svelte";
   import ScratchpadPanel from "$lib/features/scratchpad/components/ScratchpadPanel.svelte";
 
-  let { session, initialTabs = [], onFocused = () => {}, onRequestSplit = () => {}, onEmpty = null, onSeparate = null } = $props();
+  let { session, initialTabs = [], onFocused = () => {}, onRequestSplit = null, onMoveToLeft = null, onMoveToRight = null, onEmpty = null, onSeparate = null } = $props();
   let tabs = $state([]);
   let activeId = $state("");
   let initialized = $state(false);
@@ -123,13 +123,13 @@
       appStore.showStatus("Choose another tab to open beside the current one");
       return;
     }
-    onRequestSplit(tab);
+    onRequestSplit?.(tab);
   }
   let activeTab = $derived(tabs.find((tab) => tab.id === activeId));
 </script>
 
 <section class="pane" role="presentation" onpointerdown={() => activeTab && onFocused({ view: activeTab.view, path: activeTab.path })}>
-  <WorkspaceTabs {tabs} {activeId} onActivate={activate} onClose={close} onSplit={requestSplit} {onSeparate} />
+  <WorkspaceTabs {tabs} {activeId} onActivate={activate} onClose={close} onSplit={onRequestSplit ? requestSplit : null} {onMoveToLeft} {onMoveToRight} {onSeparate} />
   <div class="panel-scroll" class:todo-scroll={activeTab?.view === "todo"} class:scratchpad-scroll={activeTab?.view === "scratchpad"}>
     {#if activeTab?.view === "todo"}<TodoPanel {...session} />
     {:else if activeTab?.view === "scratchpad"}<ScratchpadPanel scratchpadStore={session.scratchpadStore} />

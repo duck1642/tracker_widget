@@ -1,6 +1,6 @@
 <script>
   // @ts-nocheck
-  import { CalendarCheck, CalendarPlus, ArrowDownUp, CheckSquare2, ChevronsDownUp, ChevronsUpDown, ExternalLink, FileCog, Plus, StickyNote, Trash2 } from "@lucide/svelte";
+  import { ArrowLeft, ArrowRight, CalendarCheck, CalendarPlus, ArrowDownUp, CheckSquare2, ChevronsDownUp, ChevronsUpDown, Columns2, ExternalLink, FileCog, Plus, StickyNote, Trash2 } from "@lucide/svelte";
   import { openPath } from "@tauri-apps/plugin-opener";
   import FileTree from "$lib/shared/components/FileTree.svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
@@ -25,10 +25,15 @@
     onOpenDayInBackground = null,
     onMiddleClickTodo = null,
     onMiddleClickScratchpad = null,
+    splitView = false,
     onOpenTodoInSplit = null,
     onOpenScratchpadInSplit = null,
     onOpenWeekInSplit = null,
     onOpenDayInSplit = null,
+    onOpenTodoInPane = null,
+    onOpenScratchpadInPane = null,
+    onOpenWeekInPane = null,
+    onOpenDayInPane = null,
     onRepairWeek = (week) => workspaceStore.repairWeek(week),
     onConvertWeek = (week) => workspaceStore.convertWeekToPersonal(week),
     onDeleteWeek = () => {},
@@ -62,9 +67,16 @@
   });
   let sidebarContextItems = $derived.by(() => {
     if (!sidebarContextMenu) return [];
+    const openInNewTab =
+      { label: "Open in new tab", icon: Plus, onclick: () => runSidebarContextAction(sidebarContextMenu.openInBackground) };
+    if (!splitView) return [
+      openInNewTab,
+      { label: "Open in split view", icon: Columns2, onclick: () => runSidebarContextAction(sidebarContextMenu.openInSplit) }
+    ];
     return [
-      { label: "Open in new tab", icon: Plus, onclick: () => runSidebarContextAction(sidebarContextMenu.openInBackground) },
-      { label: "Open in split view", onclick: () => runSidebarContextAction(sidebarContextMenu.openInSplit) }
+      openInNewTab,
+      { label: "Open at left pane", icon: ArrowLeft, onclick: () => runSidebarContextAction(sidebarContextMenu.openInLeft) },
+      { label: "Open at right pane", icon: ArrowRight, onclick: () => runSidebarContextAction(sidebarContextMenu.openInRight) }
     ];
   });
 
@@ -157,9 +169,9 @@
     void action(week);
   }
 
-  function openSidebarContextMenu(event, openInBackground, openInSplit = null) {
+  function openSidebarContextMenu(event, openInBackground, openInSplit = null, openInLeft = null, openInRight = null) {
     weekFilesMenu = null;
-    sidebarContextMenu = { x: event.clientX, y: event.clientY, openInBackground, openInSplit };
+    sidebarContextMenu = { x: event.clientX, y: event.clientY, openInBackground, openInSplit, openInLeft, openInRight };
   }
 
   function runSidebarContextAction(action) {
@@ -219,7 +231,7 @@
       onclick={onSelectScratchpad}
       onmousedown={(event) => { if (event.button === 1) event.preventDefault(); }}
       onauxclick={(event) => { if (event.button === 1) { event.preventDefault(); onMiddleClickScratchpad?.(); } }}
-      oncontextmenu={(event) => { event.preventDefault(); openSidebarContextMenu(event, onMiddleClickScratchpad, onOpenScratchpadInSplit); }}
+      oncontextmenu={(event) => { event.preventDefault(); openSidebarContextMenu(event, onMiddleClickScratchpad, onOpenScratchpadInSplit, () => onOpenScratchpadInPane?.("left"), () => onOpenScratchpadInPane?.("right")); }}
       aria-current={currentView === "scratchpad" ? "page" : undefined}
     >
       <StickyNote size={14} />
@@ -231,7 +243,7 @@
       onclick={onSelectTodo}
       onmousedown={(event) => { if (event.button === 1) event.preventDefault(); }}
       onauxclick={(event) => { if (event.button === 1) { event.preventDefault(); onMiddleClickTodo?.(); } }}
-      oncontextmenu={(event) => { event.preventDefault(); openSidebarContextMenu(event, onMiddleClickTodo, onOpenTodoInSplit); }}
+      oncontextmenu={(event) => { event.preventDefault(); openSidebarContextMenu(event, onMiddleClickTodo, onOpenTodoInSplit, () => onOpenTodoInPane?.("left"), () => onOpenTodoInPane?.("right")); }}
       aria-current={currentView === "todo" ? "page" : undefined}
     >
       <CheckSquare2 size={14} />
@@ -253,7 +265,7 @@
   {#if workspaceStore.unavailable}
     <div class="unavailable"><strong>Workspace unavailable</strong><span>Locate the existing workspace folder, select another one, or retry the configured path.</span><button onclick={() => workspaceStore.chooseRoot()}>Locate existing</button><button onclick={() => workspaceStore.chooseRoot()}>Select new</button><button onclick={() => workspaceStore.refresh()}>Retry</button></div>
   {:else}
-    <FileTree weeks={sortedWeeks} {selectedPath} {onSelectWeek} {onSelectDay} {onOpenWeekInBackground} {onOpenDayInBackground} onOpenWeekItemContextMenu={(event, week) => openSidebarContextMenu(event, () => onOpenWeekInBackground?.(week), () => onOpenWeekInSplit?.(week))} onOpenDayContextMenu={(event, day) => openSidebarContextMenu(event, () => onOpenDayInBackground?.(day), () => onOpenDayInSplit?.(day))} onOpenWeekContextMenu={openWeekContextMenu} {expansionCommand} />
+    <FileTree weeks={sortedWeeks} {selectedPath} {onSelectWeek} {onSelectDay} {onOpenWeekInBackground} {onOpenDayInBackground} onOpenWeekItemContextMenu={(event, week) => openSidebarContextMenu(event, () => onOpenWeekInBackground?.(week), () => onOpenWeekInSplit?.(week), () => onOpenWeekInPane?.(week, "left"), () => onOpenWeekInPane?.(week, "right"))} onOpenDayContextMenu={(event, day) => openSidebarContextMenu(event, () => onOpenDayInBackground?.(day), () => onOpenDayInSplit?.(day), () => onOpenDayInPane?.(day, "left"), () => onOpenDayInPane?.(day, "right"))} onOpenWeekContextMenu={openWeekContextMenu} {expansionCommand} />
   {/if}
 </aside>
 
