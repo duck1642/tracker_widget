@@ -124,7 +124,7 @@
 <div
   class="todo-row"
   class:selected={selected}
-  style="padding-left: {todo.indent * 16}px"
+  style="padding-left: {todo.indent * 20}px"
   onpointerdown={handleRowPointerDown}
   oncontextmenu={(event) => onOpenContextMenu(event, todo.id)}
   role="listitem"
@@ -190,7 +190,7 @@
     title={todo.checked ? "Mark active" : "Mark completed"}
   >
     {#if todo.checked}
-      <Check size={10} strokeWidth={4} />
+      <Check size={12} strokeWidth={4} />
     {/if}
   </button>
   <textarea 

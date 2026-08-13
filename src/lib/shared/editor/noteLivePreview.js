@@ -83,12 +83,12 @@ function listItemDepth(listItem, state, markerFrom) {
 
 /** @param {number} depth @param {boolean} task @param {boolean} ordered */
 function listLayoutStyle(depth, task, ordered) {
-  const positions = Array.from({ length: depth }, (_, index) => `calc(${index * 22}px + .375em) 0`);
+  const positions = Array.from({ length: depth }, (_, index) => `calc(${index * 20}px + .375em) 0px`);
   const guide = "linear-gradient(to bottom, var(--border-subtle), var(--border-subtle))";
-  const prefix = task ? "22px" : ordered ? "calc(1.2em + 6px)" : "calc(.75em + 6px)";
+  const prefix = task ? "24px" : ordered ? "calc(1.2em + 6px)" : "calc(.75em + 6px)";
 
   return [
-    `--cm-note-list-depth: ${depth * 22}px`,
+    `--cm-note-list-depth: ${depth * 20}px`,
     `--cm-note-list-prefix: ${prefix}`,
     "padding-left: calc(var(--cm-note-list-depth) + var(--cm-note-list-prefix))",
     "text-indent: calc(-1 * var(--cm-note-list-prefix))",
@@ -495,14 +495,15 @@ class TaskWidget extends WidgetType {
     checkbox.title = this.checked ? "Mark active" : "Mark completed";
 
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("width", "10");
-    svg.setAttribute("height", "10");
+    svg.setAttribute("width", "12");
+    svg.setAttribute("height", "12");
     svg.setAttribute("viewBox", "0 0 24 24");
     svg.setAttribute("fill", "none");
     svg.setAttribute("stroke", "currentColor");
     svg.setAttribute("stroke-width", "4");
     svg.setAttribute("stroke-linecap", "round");
     svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("shape-rendering", "geometricPrecision");
     svg.setAttribute("aria-hidden", "true");
     if (!this.checked) svg.style.visibility = "hidden";
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");

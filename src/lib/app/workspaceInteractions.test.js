@@ -389,10 +389,10 @@ describe("NotesEditor interactions", () => {
     expect(markers.every((marker) => marker.className === "cm-note-list-marker cm-note-list-marker-ordered")).toBe(true);
     expect(lines.map((line) => line.style.getPropertyValue("--cm-note-list-depth"))).toEqual([
       "0px",
-      "22px",
-      "22px",
-      "44px",
-      "44px"
+      "20px",
+      "20px",
+      "40px",
+      "40px"
     ]);
     expect(lines.map((line) => line.style.getPropertyValue("--cm-note-list-prefix"))).toEqual(
       Array(5).fill("calc(1.2em + 6px)")
@@ -402,8 +402,8 @@ describe("NotesEditor interactions", () => {
       "",
       "calc(0.375em + 0px) 0px",
       "calc(0.375em + 0px) 0px",
-      "calc(0.375em + 0px) 0px, calc(0.375em + 22px) 0px",
-      "calc(0.375em + 0px) 0px, calc(0.375em + 22px) 0px"
+      "calc(0.375em + 0px) 0px, calc(0.375em + 20px) 0px",
+      "calc(0.375em + 0px) 0px, calc(0.375em + 20px) 0px"
     ]);
     expect(lines.every((line) => line.style.paddingLeft === "calc(var(--cm-note-list-depth) + var(--cm-note-list-prefix))")).toBe(true);
     expect(lines.every((line) => line.style.textIndent === "calc(-1 * var(--cm-note-list-prefix))")).toBe(true);

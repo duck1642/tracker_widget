@@ -9,7 +9,7 @@ export const noteEditorTheme = [
         minHeight: "150px",
         background: "transparent",
         color: "var(--text-color)",
-        fontSize: "13px"
+        fontSize: "15px"
       },
       "&.cm-focused": { outline: "none" },
       ".cm-scroller": {
