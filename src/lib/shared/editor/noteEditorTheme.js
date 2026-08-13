@@ -90,9 +90,11 @@ export const noteEditorTheme = [
       },
       ".cm-note-list-marker": {
         display: "inline-block",
-        marginRight: "4px",
+        minWidth: "1.6em",
+        marginRight: "6px",
         color: "var(--accent)",
-        fontWeight: "700"
+        fontWeight: "700",
+        textAlign: "right"
       },
       ".cm-note-task": {
         display: "inline-flex",

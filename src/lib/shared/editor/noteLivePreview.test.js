@@ -78,21 +78,172 @@ describe("note live-preview ranges", () => {
     expect(state.doc.toString()).toBe(doc);
   });
 
-  it("does not reveal a parent marker while editing a nested child", () => {
-    const doc = "- parent\n  - child";
-    const state = stateFor(doc, doc.indexOf("- child"));
-    const markers = rangesOfKind(state, "listMarker");
+  it("renders unordered markers once, including the current line", () => {
+    const doc = "- dash\n* star\n+ plus";
+    const inactiveState = stateFor(doc);
+    const inactiveMarkers = collectNotePreviewRanges(inactiveState, false).filter((r) => r.kind === "listMarker");
 
-    expect(markers.map((range) => doc.slice(range.from, range.to))).toEqual(["-"]);
+    expect(inactiveMarkers.map((r) => r.marker)).toEqual(["-", "*", "+"]);
+    expect(inactiveMarkers.map((r) => inactiveState.sliceDoc(r.from, r.to))).toEqual(["-", "*", "+"]);
+
+    const activeState = stateFor(doc, doc.indexOf("star"));
+    expect(rangesOfKind(activeState, "listMarker").map((r) => activeState.sliceDoc(r.from, r.to))).toEqual(["-", "*", "+"]);
+
+    const bareMarkerState = stateFor("-");
+    expect(collectNotePreviewRanges(bareMarkerState, false).filter((r) => r.kind === "listMarker")).toHaveLength(0);
+    expect(collectNotePreviewRanges(inactiveState, false).filter((r) => r.kind === "listLayout").map((r) => r.depth)).toEqual([0, 0, 0]);
   });
 
-  it("keeps a recognized task rendered while its text is actively edited", () => {
-    const doc = "- [ ] active task";
-    const state = stateFor(doc, doc.indexOf("task") + 2);
-    const ranges = collectNotePreviewRanges(state);
+  it("keeps a task item rendered as a checkbox without turning into a bullet", () => {
+    const activeTask = stateFor("- [ ] task item", 8);
+    const ranges = collectNotePreviewRanges(activeTask);
 
-    expect(ranges.some((range) => range.kind === "task")).toBe(true);
-    expect(ranges.some((range) => range.kind === "hide" && doc.slice(range.from, range.to) === "- ")).toBe(true);
+    expect(rangesOfKind(activeTask, "listMarker")).toHaveLength(0);
+    expect(ranges.some((r) => r.kind === "task")).toBe(true);
+    expect(ranges.some((r) => r.kind === "listIndent" && activeTask.sliceDoc(r.from, r.to) === "- ")).toBe(true);
+  });
+
+  it("separates source indentation from the inactive list layout", () => {
+    const doc = "- parent\n   2. child\n     - grandchild";
+    const state = stateFor(doc, 0);
+    const ranges = collectNotePreviewRanges(state, false);
+    const markers = ranges.filter((range) => range.kind === "listMarker");
+
+    expect(markers.map((range) => ({ marker: range.marker, depth: range.depth }))).toEqual([
+      { marker: "-", depth: 0 },
+      { marker: "1.", depth: 1 },
+      { marker: "-", depth: 2 }
+    ]);
+    expect(ranges.filter((range) => range.kind === "listIndent").map((range) => doc.slice(range.from, range.to))).toEqual([
+      "   ",
+      "     "
+    ]);
+    expect(ranges.filter((range) => range.kind === "listLayout").map((range) => range.depth)).toEqual([0, 1, 2]);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
+  it("uses parsed nesting rather than pasted whitespace for list depth", () => {
+    const doc = "4. spaces\n   - child\n5. tab\n\t- child\n6. ordered tab\n\t1. child";
+    const state = stateFor(doc);
+    const markers = rangesOfKind(state, "listMarker");
+
+    expect(markers.map((range) => range.depth)).toEqual([0, 1, 0, 1, 0, 1]);
+    expect(collectNotePreviewRanges(state, false).filter((range) => range.kind === "listLayout").map((range) => range.depth)).toEqual([0, 1, 0, 1, 0, 1]);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
+  it("treats two-space ordered children as nested when CodeMirror flattens them", () => {
+    const doc = "4. parent\n  5. sadas\n  6. sda\n    7. asda\n    8. asdas";
+    const state = stateFor(doc);
+    const markers = rangesOfKind(state, "listMarker");
+
+    expect(markers.map((range) => range.depth)).toEqual([0, 1, 1, 2, 2]);
+    expect(collectNotePreviewRanges(state, false).filter((range) => range.kind === "listLayout").map((range) => range.depth)).toEqual([0, 1, 1, 2, 2]);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
+  it("continues visual ordinals across adjacent parsed OrderedLists while preserving delimiters", () => {
+    const doc = "3. first\n7) second\n\n3. parent\n   2. child";
+    const state = stateFor(doc);
+    const ranges = collectNotePreviewRanges(state, false);
+    const orderedRanges = ranges.filter((r) => r.kind === "listMarker");
+
+    expect(orderedRanges.map((r) => r.marker)).toEqual(["1.", "2)", "3.", "1."]);
+    expect(orderedRanges.map((r) => state.sliceDoc(r.from, r.to))).toEqual(["3.", "7)", "3.", "2."]);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
+  it("restarts visual ordinals after a non-list block or BulletList", () => {
+    const doc = "3. first\n7) second\n\nParagraph\n\n8. restart\n\n- bullet\n\n9. after bullet";
+    const state = stateFor(doc);
+    const orderedRanges = collectNotePreviewRanges(state, false).filter((r) => r.kind === "listMarker" && r.ordered);
+
+    expect(orderedRanges.map((r) => r.marker)).toEqual(["1.", "2)", "1.", "1."]);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
+  it("restarts visible numbering for a nested parsed OrderedList", () => {
+    const doc = "3. parent\n   8. child\n   9) child two\n7. sibling";
+    const state = stateFor(doc);
+    const orderedRanges = collectNotePreviewRanges(state, false).filter((r) => r.kind === "listMarker");
+
+    expect(orderedRanges.map((r) => r.marker)).toEqual(["1.", "1.", "2)", "2."]);
+    expect(orderedRanges.map((r) => state.sliceDoc(r.from, r.to))).toEqual(["3.", "8.", "9)", "7."]);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
+  it("renders nested list markers while the caret is inside the child", () => {
+    const doc = "3. parent\n   8. child";
+    const state = stateFor(doc, doc.indexOf("child"));
+    const markers = rangesOfKind(state, "listMarker");
+
+    expect(markers.map((range) => range.marker)).toEqual(["1.", "1."]);
+    expect(markers.map((range) => doc.slice(range.from, range.to))).toEqual(["3.", "8."]);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
+  it("renders an empty list item once its marker has a following space", () => {
+    const doc = "- \n  - child";
+    const state = stateFor(doc);
+    const markers = collectNotePreviewRanges(state, false).filter((range) => range.kind === "listMarker");
+
+    expect(markers).toHaveLength(2);
+    expect(markers.map((range) => range.marker)).toEqual(["-", "-"]);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
+  it("renders a newly continued ordered marker before content is typed", () => {
+    const doc = "18. item\n19. ";
+    const state = stateFor(doc, doc.length);
+    const markers = rangesOfKind(state, "listMarker");
+
+    expect(markers.map((range) => range.marker)).toEqual(["1.", "2."]);
+    expect(markers.map((range) => doc.slice(range.from, range.to))).toEqual(["18.", "19."]);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
+  it("renders ordered-looking paragraph lines after bullets as one visual run", () => {
+    const doc = "- item\n* item\n3. item\n7) item";
+    const state = stateFor(doc);
+    const markers = collectNotePreviewRanges(state, false).filter((range) => range.kind === "listMarker");
+
+    expect(markers.map((range) => range.marker)).toEqual(["-", "*", "1.", "2)"]);
+    expect(markers.map((range) => state.sliceDoc(range.from, range.to))).toEqual(["-", "*", "3.", "7)"]);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
+  it("renders a fallback marker while retaining its run position", () => {
+    const doc = "- item\n* item\n3. item\n7) item\n8. item";
+    const state = stateFor(doc, doc.indexOf("7) item") + 4);
+    const markers = rangesOfKind(state, "listMarker");
+
+    expect(markers.map((range) => range.marker)).toEqual(["-", "*", "1.", "2)", "3."]);
+    expect(markers.map((range) => state.sliceDoc(range.from, range.to))).toEqual(["-", "*", "3.", "7)", "8."]);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
+  it("does not apply the fallback to an ordinary Paragraph", () => {
+    const doc = "prefix\n3. literal";
+    const state = stateFor(doc);
+
+    expect(collectNotePreviewRanges(state, false).filter((range) => range.kind === "listMarker")).toHaveLength(0);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
+  it("resets fallback ordinals after another source line in the bullet paragraph", () => {
+    const doc = "- item\n3. one\ncontinuation\n7) two";
+    const state = stateFor(doc);
+    const markers = collectNotePreviewRanges(state, false).filter((range) => range.kind === "listMarker");
+
+    expect(markers.map((range) => range.marker)).toEqual(["-", "1.", "1)"]);
+  });
+
+  it("supports 2-space indented sub-lists for AI and pasted markdown", () => {
+    const doc = "3. parent\n  2. subitem\n4. sibling";
+    const state = stateFor(doc);
+    const orderedMarkers = collectNotePreviewRanges(state, false).filter((range) => range.kind === "listMarker");
+
+    expect(orderedMarkers.map((range) => range.marker)).toEqual(["1.", "1.", "2."]);
   });
 
   it.each([3, 4, 5])("preserves a %s-backtick fence, its language, and shorter inner runs", (fenceLength) => {
@@ -108,14 +259,15 @@ describe("note live-preview ranges", () => {
   });
 
   it("prevents duplicate source marker text inside unordered ListMarkerWidget DOM", () => {
-    const doc = "- item\n* item\n> quote";
+    const doc = "- item\n* item\n+ item\n> quote";
     const state = stateFor(doc);
     const ranges = collectNotePreviewRanges(state, false);
     const listRanges = ranges.filter((r) => r.kind === "listMarker");
 
-    expect(listRanges).toHaveLength(2);
+    expect(listRanges).toHaveLength(3);
     expect(listRanges[0].ordered).toBe(false);
     expect(listRanges[1].ordered).toBe(false);
+    expect(listRanges[2].ordered).toBe(false);
   });
 });
 

@@ -2,6 +2,7 @@ import { syntaxTree } from "@codemirror/language";
 import { markdownLanguage } from "@codemirror/lang-markdown";
 import { Annotation, EditorSelection, Transaction } from "@codemirror/state";
 import { Decoration, ViewPlugin, WidgetType } from "@codemirror/view";
+import { LIST_MARKER_LOOSE_RE } from "./noteListPatterns.js";
 
 const syntaxParentNames = new Set([
   "ATXHeading1",
@@ -50,13 +51,152 @@ function includeFollowingSpace(source, from, to) {
 }
 
 /** @param {import("@lezer/common").SyntaxNode} listItem */
-function listItemHeaderEnd(listItem) {
+function listItemContentEnd(listItem) {
   for (let child = listItem.firstChild; child; child = child.nextSibling) {
-    if (child.name === "BulletList" || child.name === "OrderedList") {
-      return Math.max(listItem.from, child.from - 1);
-    }
+    if (child.name === "BulletList" || child.name === "OrderedList") return child.from;
   }
   return listItem.to;
+}
+
+/** @param {string} source @param {import("@lezer/common").SyntaxNode} listItem @param {number} markerEnd */
+function listItemHasContent(source, listItem, markerEnd) {
+  return source.slice(markerEnd, listItemContentEnd(listItem)).trim().length > 0;
+}
+
+/**
+ * Uses the parser tree where possible, then preserves common two-space/tab
+ * nesting that CodeMirror keeps in one list/paragraph node.
+ * @param {import("@lezer/common").SyntaxNode} listItem
+ * @param {import("@codemirror/state").EditorState} state
+ * @param {number} markerFrom
+ */
+function listItemDepth(listItem, state, markerFrom) {
+  let structuralDepth = 0;
+  for (let parent = listItem.parent; parent; parent = parent.parent) {
+    if (parent.name === "BulletList" || parent.name === "OrderedList") structuralDepth += 1;
+  }
+
+  const line = state.doc.lineAt(markerFrom);
+  const sourceIndent = state.sliceDoc(line.from, markerFrom).replace(/\t/g, "  ").length;
+  return Math.max(0, structuralDepth - 1, Math.floor(sourceIndent / 2));
+}
+
+/** @param {number} depth @param {boolean} task */
+function listLayoutStyle(depth, task) {
+  const positions = Array.from({ length: depth }, (_, index) => `${16 + index * 22}px 0`);
+  const guide = "linear-gradient(to bottom, var(--border-subtle), var(--border-subtle))";
+  const prefix = task ? "22px" : "calc(1.6em + 6px)";
+
+  return [
+    `--cm-note-list-depth: ${depth * 22}px`,
+    `--cm-note-list-prefix: ${prefix}`,
+    "padding-left: calc(var(--cm-note-list-depth) + var(--cm-note-list-prefix))",
+    "text-indent: calc(-1 * var(--cm-note-list-prefix))",
+    ...(depth > 0
+      ? [
+          `background-image: ${Array(depth).fill(guide).join(", ")}`,
+          `background-position: ${positions.join(", ")}`,
+          `background-size: ${Array(depth).fill("1px 100%").join(", ")}`,
+          `background-repeat: ${Array(depth).fill("no-repeat").join(", ")}`
+        ]
+      : [])
+  ].join("; ");
+}
+
+/**
+ * Computes visual list ordinal for Live Preview display.
+ * @param {import("@codemirror/state").EditorState} state
+ * @param {number} lineNo
+ * @param {string} rawMarker
+ */
+function calculateVisualOrdinal(state, lineNo, rawMarker) {
+  const currentLine = state.doc.line(lineNo);
+  const currentIndent = (currentLine.text.match(/^(\s*)/)?.[1] || "").length;
+  const delimiter = rawMarker.slice(-1);
+  let ordinal = 1;
+  let blankCount = 0;
+
+  for (let p = lineNo - 1; p >= 1; p -= 1) {
+    const line = state.doc.line(p);
+    const text = line.text;
+
+    if (text.trim() === "") {
+      blankCount += 1;
+      // CommonMark: two consecutive blank lines end a list context
+      if (blankCount >= 2) break;
+      continue;
+    }
+
+    const match = text.match(LIST_MARKER_LOOSE_RE);
+    if (!match) {
+      break;
+    }
+
+    blankCount = 0;
+    const prevIndent = match[1].length;
+    const prevMarker = match[2];
+    const isPrevOrdered = /^\d+[.)]$/.test(prevMarker);
+
+    if (!isPrevOrdered) {
+      if (prevIndent <= currentIndent) break;
+      continue;
+    }
+
+    if (prevIndent < currentIndent) {
+      break;
+    } else if (prevIndent === currentIndent) {
+      ordinal += 1;
+    }
+  }
+
+  return `${ordinal}${delimiter}`;
+}
+
+/**
+ * Handles ordered-looking continuation lines that the Markdown parser keeps
+ * inside a paragraph/bullet item (e.g. 2-space indented sub-lists).
+ * @param {import("@codemirror/state").EditorState} state
+ * @param {import("@lezer/common").SyntaxNode} paragraph
+ * @param {boolean} selectionActive
+ */
+function bulletParagraphOrderedMarkers(state, paragraph, selectionActive) {
+  const ranges = [];
+  const firstLine = state.doc.lineAt(paragraph.from).number;
+  const lastLine = state.doc.lineAt(Math.max(paragraph.from, paragraph.to - 1)).number;
+
+  for (let lineNumber = firstLine; lineNumber <= lastLine; lineNumber += 1) {
+    const line = state.doc.line(lineNumber);
+    const match = /^(\s*)(\d+)([.)])[ \t]+(?=\S)/.exec(line.text);
+    if (!match) continue;
+
+    const indent = match[1].length;
+    if (indent === 0 && paragraph.parent?.name !== "ListItem") continue;
+
+    const from = line.from + match[1].length;
+    const to = from + match[2].length + match[3].length;
+    if (syntaxTree(state).resolveInner(from, 1).name === "ListMark") continue;
+
+    const rawMarker = match[2] + match[3];
+    const markerText = calculateVisualOrdinal(state, lineNumber, rawMarker);
+    const depth = Math.floor(indent / 2);
+
+    if (line.from < from) {
+      ranges.push({ kind: "listIndent", from: line.from, to: from });
+    }
+
+    ranges.push({
+      kind: "listMarker",
+      from,
+      to,
+      marker: markerText,
+      ordered: true,
+      depth
+    });
+
+    ranges.push({ kind: "listLayout", from: line.from, to: line.from, depth, task: false });
+  }
+
+  return ranges;
 }
 
 /**
@@ -69,6 +209,13 @@ export function collectNotePreviewRanges(state, selectionActive = true) {
   /** @type {Array<{ kind: string, from: number, to: number, [key: string]: unknown }>} */
   const ranges = [];
 
+  // Linear scan is fine — typical documents produce <100 ranges.
+  /** @param {any} range */
+  const pushRange = (range) => {
+    if (ranges.some((r) => r.from === range.from && r.to === range.to && r.kind === range.kind)) return;
+    ranges.push(range);
+  };
+
   syntaxTree(state).iterate({
     enter(ref) {
       const { name } = ref.type;
@@ -76,7 +223,7 @@ export function collectNotePreviewRanges(state, selectionActive = true) {
       const active = selectionActive && constructIsActive(state, node);
 
       if (/^ATXHeading[1-6]$/.test(name)) {
-        ranges.push({
+        pushRange({
           kind: "heading",
           from: ref.from,
           to: ref.to,
@@ -86,28 +233,28 @@ export function collectNotePreviewRanges(state, selectionActive = true) {
       }
 
       if (name === "StrongEmphasis") {
-        ranges.push({ kind: "strong", from: ref.from, to: ref.to });
+        pushRange({ kind: "strong", from: ref.from, to: ref.to });
         return;
       }
 
       if (name === "Emphasis") {
-        ranges.push({ kind: "emphasis", from: ref.from, to: ref.to });
+        pushRange({ kind: "emphasis", from: ref.from, to: ref.to });
         return;
       }
 
       if (name === "InlineCode") {
-        ranges.push({ kind: "inlineCode", from: ref.from, to: ref.to });
+        pushRange({ kind: "inlineCode", from: ref.from, to: ref.to });
         return;
       }
 
       if (name === "Blockquote") {
-        ranges.push({ kind: "blockquote", from: ref.from, to: ref.to });
+        pushRange({ kind: "blockquote", from: ref.from, to: ref.to });
         return;
       }
 
       if (name === "FencedCode") {
         const info = node.getChild("CodeInfo");
-        ranges.push({
+        pushRange({
           kind: "codeblock",
           from: ref.from,
           to: ref.to,
@@ -116,47 +263,75 @@ export function collectNotePreviewRanges(state, selectionActive = true) {
         return;
       }
 
+      if (name === "Paragraph") {
+        const paraRanges = bulletParagraphOrderedMarkers(state, node, selectionActive);
+        for (const r of paraRanges) pushRange(r);
+        return;
+      }
+
       if (name === "HeaderMark" && !active) {
-        ranges.push({ kind: "hide", ...includeFollowingSpace(source, ref.from, ref.to) });
+        pushRange({ kind: "hide", ...includeFollowingSpace(source, ref.from, ref.to) });
         return;
       }
 
       if ((name === "EmphasisMark" || name === "CodeMark" || name === "CodeInfo") && !active) {
-        ranges.push({ kind: "hide", from: ref.from, to: ref.to });
+        pushRange({ kind: "hide", from: ref.from, to: ref.to });
         return;
       }
 
       if (name === "QuoteMark" && !active) {
-        ranges.push({ kind: "hide", ...includeFollowingSpace(source, ref.from, ref.to) });
+        pushRange({ kind: "hide", ...includeFollowingSpace(source, ref.from, ref.to) });
         return;
       }
 
       if (name === "ListMark") {
         const listItem = syntaxConstruct(node);
-        const task = listItem?.name === "ListItem" ? listItem.getChild("Task") : null;
-        const listItemActive = Boolean(
-          selectionActive &&
-          listItem?.name === "ListItem" &&
-          selectionIntersectsRange(state, listItem.from, listItemHeaderEnd(listItem))
-        );
-        if (task || !listItemActive) {
-          const marker = source.slice(ref.from, ref.to);
-          ranges.push({
-            kind: task ? "hide" : "listMarker",
-            ...(task ? includeFollowingSpace(source, ref.from, ref.to) : { from: ref.from, to: ref.to }),
-            marker,
-            ordered: /^\d+[.)]$/.test(marker)
+        if (listItem?.name !== "ListItem") return;
+
+        const task = listItem.getChild("Task");
+        const hasContent = listItemHasContent(source, listItem, ref.to);
+        const hasFollowingSpace = /[ \t]/.test(source[ref.to] || "");
+        const line = state.doc.lineAt(ref.from);
+        const depth = listItemDepth(listItem, state, ref.from);
+
+        if (task || hasContent || hasFollowingSpace) {
+          pushRange({ kind: "listLayout", from: line.from, to: line.from, depth, task: Boolean(task) });
+
+          const rawMarker = source.slice(ref.from, ref.to);
+          const isOrdered = /^\d+[.)]$/.test(rawMarker);
+          const lineNo = state.doc.lineAt(ref.from).number;
+          const markerText = isOrdered ? calculateVisualOrdinal(state, lineNo, rawMarker) : rawMarker;
+
+          if (task) {
+            pushRange({ kind: "listIndent", from: line.from, to: task.from });
+            return;
+          }
+
+          if (line.from < ref.from) {
+            pushRange({ kind: "listIndent", from: line.from, to: ref.from });
+          }
+
+          pushRange({
+            kind: "listMarker",
+            from: ref.from,
+            to: ref.to,
+            marker: markerText,
+            ordered: isOrdered,
+            depth
           });
         }
         return;
       }
 
       if (name === "TaskMarker") {
-        ranges.push({
+        let listItem = node.parent;
+        while (listItem && listItem.name !== "ListItem") listItem = listItem.parent;
+        pushRange({
           kind: "task",
           from: ref.from,
           to: ref.to,
-          checked: /\[[xX]\]/.test(source.slice(ref.from, ref.to))
+          checked: /\[[xX]\]/.test(source.slice(ref.from, ref.to)),
+          depth: listItem ? listItemDepth(listItem, state, ref.from) : 0
         });
         return;
       }
@@ -165,7 +340,7 @@ export function collectNotePreviewRanges(state, selectionActive = true) {
         const raw = source.slice(ref.from, ref.to);
         const match = raw.match(/^\[([^\]]*)\]\(([^)]*)\)$/s);
         if (match) {
-          ranges.push({
+          pushRange({
             kind: "link",
             from: ref.from,
             to: ref.to,
@@ -179,12 +354,12 @@ export function collectNotePreviewRanges(state, selectionActive = true) {
       }
 
       if ((name === "LinkMark" || name === "URL") && !active) {
-        ranges.push({ kind: "hide", from: ref.from, to: ref.to });
+        pushRange({ kind: "hide", from: ref.from, to: ref.to });
         return;
       }
 
       if (name === "HorizontalRule" && !(selectionActive && selectionIntersectsRange(state, ref.from, ref.to))) {
-        ranges.push({ kind: "rule", from: ref.from, to: ref.to });
+        pushRange({ kind: "rule", from: ref.from, to: ref.to });
       }
     }
   });
@@ -245,22 +420,25 @@ export function externalDocumentUpdate(state, value) {
 class ListMarkerWidget extends WidgetType {
   constructor(
     /** @type {string} */ marker,
-    /** @type {boolean} */ ordered
+    /** @type {boolean} */ ordered,
+    /** @type {number} */ depth
   ) {
     super();
     this.marker = marker;
     this.ordered = ordered;
+    this.depth = depth;
   }
 
   /** @param {ListMarkerWidget} other */
   eq(other) {
-    return other.marker === this.marker && other.ordered === this.ordered;
+    return other.marker === this.marker && other.ordered === this.ordered && other.depth === this.depth;
   }
 
   toDOM() {
     const marker = document.createElement("span");
     marker.className = "cm-note-list-marker";
     marker.setAttribute("aria-hidden", "true");
+    marker.style.marginLeft = "0";
     marker.textContent = this.ordered ? this.marker : "•";
     return marker;
   }
@@ -270,17 +448,19 @@ class TaskWidget extends WidgetType {
   constructor(
     /** @type {number} */ from,
     /** @type {number} */ to,
-    /** @type {boolean} */ checked
+    /** @type {boolean} */ checked,
+    /** @type {number} */ depth
   ) {
     super();
     this.from = from;
     this.to = to;
     this.checked = checked;
+    this.depth = depth;
   }
 
   /** @param {TaskWidget} other */
   eq(other) {
-    return other.from === this.from && other.to === this.to && other.checked === this.checked;
+    return other.from === this.from && other.to === this.to && other.checked === this.checked && other.depth === this.depth;
   }
 
   /** @param {import("@codemirror/view").EditorView} view */
@@ -288,6 +468,7 @@ class TaskWidget extends WidgetType {
     const checkbox = document.createElement("button");
     checkbox.type = "button";
     checkbox.className = `custom-check-btn cm-note-task${this.checked ? " checked" : ""}`;
+    checkbox.style.marginLeft = "0";
     checkbox.setAttribute("role", "checkbox");
     checkbox.setAttribute("aria-checked", String(this.checked));
     checkbox.setAttribute("aria-label", this.checked ? "Mark task incomplete" : "Mark task complete");
@@ -338,18 +519,27 @@ function buildNoteDecorations(view) {
   const decorations = [];
 
   for (const range of /** @type {any[]} */ (collectNotePreviewRanges(view.state, view.hasFocus))) {
-    if (range.kind === "hide") {
+    if (range.kind === "hide" || range.kind === "listIndent") {
       decorations.push(Decoration.replace({}).range(range.from, range.to));
+    } else if (range.kind === "listLayout") {
+      decorations.push(
+        Decoration.line({
+          attributes: {
+            class: "cm-note-list-layout",
+            style: listLayoutStyle(Number(range.depth), Boolean(range.task))
+          }
+        }).range(range.from)
+      );
     } else if (range.kind === "listMarker") {
       decorations.push(
         Decoration.replace({
-          widget: new ListMarkerWidget(String(range.marker), Boolean(range.ordered))
+          widget: new ListMarkerWidget(String(range.marker), Boolean(range.ordered), Number(range.depth) || 0)
         }).range(range.from, range.to)
       );
     } else if (range.kind === "task") {
       decorations.push(
         Decoration.replace({
-          widget: new TaskWidget(range.from, range.to, Boolean(range.checked))
+          widget: new TaskWidget(range.from, range.to, Boolean(range.checked), Number(range.depth) || 0)
         }).range(range.from, range.to)
       );
     } else if (range.kind === "rule") {

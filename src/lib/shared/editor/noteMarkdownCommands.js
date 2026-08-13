@@ -1,16 +1,22 @@
-// @ts-nocheck
 import { ChangeSet } from "@codemirror/state";
 import { insertNewlineContinueMarkupCommand } from "@codemirror/lang-markdown";
+import { LIST_MARKER_LOOSE_RE } from "./noteListPatterns.js";
 
 const continueMarkdownMarkup = insertNewlineContinueMarkupCommand({
   nonTightLists: false
 });
 
+/**
+ * Continues Markdown list markup on Enter and removes only the spacer that
+ * CodeMirror creates when leaving a loose list.
+ * @param {{ state: import("@codemirror/state").EditorState, dispatch: (tr: import("@codemirror/state").Transaction) => void }} params
+ * @returns {boolean}
+ */
 export function continueNoteMarkdownList({ state, dispatch }) {
-  if (state.selection.ranges.length !== 1 || !state.selection.main.empty) {
-    return continueMarkdownMarkup({ state, dispatch });
-  }
+  const line = state.doc.lineAt(state.selection.main.head);
+  if (!LIST_MARKER_LOOSE_RE.test(line.text)) return false;
 
+  /** @type {import("@codemirror/state").Transaction | undefined} */
   let continuation;
   const handled = continueMarkdownMarkup({
     state,

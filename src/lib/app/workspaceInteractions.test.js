@@ -362,6 +362,19 @@ describe("NotesEditor interactions", () => {
     expect(screen.getByText("Formatting Guide")).toBeTruthy();
   });
 
+  it("keeps the current list line rendered while typing", async () => {
+    const { container, view } = await renderNotes({
+      value: "- first\n- current\n- last",
+      onChange: vi.fn()
+    });
+    view.focus();
+    view.dispatch({ selection: { anchor: "- first\n- current".length } });
+    await tick();
+
+    expect(Array.from(container.querySelectorAll(".cm-note-list-marker"), (marker) => marker.textContent)).toEqual(["•", "•", "•"]);
+    expect(container.querySelector(".cm-line:nth-child(2)")?.textContent).not.toContain("- current");
+  });
+
   it("updates the canonical Markdown when clicking a task widget", async () => {
     const onChange = vi.fn();
     const { view } = await renderNotes({ value: "- [ ] Todo item\n* List item", onChange });
@@ -391,6 +404,17 @@ describe("NotesEditor interactions", () => {
     expect(onChange).toHaveBeenLastCalledWith("Before\n**Updated**\nAfter");
   });
 
+  it("does not renumber ordered lists during an ordinary text edit", async () => {
+    const value = "3. first\n9. intentional restart\nOutside";
+    const onChange = vi.fn();
+    const { view } = await renderNotes({ value, onChange });
+
+    view.dispatch({ changes: { from: value.length, insert: "!" } });
+
+    expect(view.state.doc.toString()).toBe(`${value}!`);
+    expect(onChange).toHaveBeenLastCalledWith(`${value}!`);
+  });
+
   it("continues Markdown lists on Enter and exits an empty list item", async () => {
     const onChange = vi.fn();
     const { textbox, view } = await renderNotes({ value: "", onChange });
@@ -412,6 +436,22 @@ describe("NotesEditor interactions", () => {
       await fireEvent.keyDown(textbox, { key: "Enter", code: "Enter" });
       expect(view.state.doc.toString()).toBe(after);
     }
+  });
+
+  it.each(["x", "xx", "xxx", "xxxx", "normal text"])("keeps ordinary text after exiting an ordered list: %s", async (text) => {
+    const { textbox, view } = await renderNotes({ value: "3. item", onChange: vi.fn() });
+    view.dispatch({ selection: { anchor: view.state.doc.length } });
+
+    await fireEvent.keyDown(textbox, { key: "Enter", code: "Enter" });
+    await fireEvent.keyDown(textbox, { key: "Enter", code: "Enter" });
+
+    view.dispatch({
+      changes: { from: view.state.selection.main.head, insert: text },
+      selection: { anchor: view.state.selection.main.head + text.length }
+    });
+    await fireEvent.keyDown(textbox, { key: "Enter", code: "Enter" });
+
+    expect(view.state.doc.toString()).toBe(`3. item\n${text}\n`);
   });
 
   it("preserves a five-backtick fenced block and reveals its exact source when active", async () => {
