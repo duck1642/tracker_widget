@@ -261,16 +261,7 @@ class ListMarkerWidget extends WidgetType {
     const marker = document.createElement("span");
     marker.className = "cm-note-list-marker";
     marker.setAttribute("aria-hidden", "true");
-
-    const source = document.createElement("span");
-    source.className = "cm-note-list-marker-source";
-    source.textContent = this.marker;
-
-    const visual = document.createElement("span");
-    visual.className = "cm-note-list-marker-visual";
-    visual.textContent = this.ordered ? this.marker : "•";
-
-    marker.append(source, visual);
+    marker.textContent = this.ordered ? this.marker : "•";
     return marker;
   }
 }

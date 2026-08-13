@@ -347,7 +347,7 @@ describe("NotesEditor interactions", () => {
 
     expect(container.querySelector(".cm-note-task")).toBeTruthy();
     expect(
-      Array.from(container.querySelectorAll(".cm-note-list-marker-visual"), (marker) => marker.textContent)
+      Array.from(container.querySelectorAll(".cm-note-list-marker"), (marker) => marker.textContent)
     ).toEqual(["•", "•"]);
     expect(container.querySelector(".cm-note-rule")).toBeTruthy();
     expect(container.querySelector(".cm-note-strong")).toBeTruthy();

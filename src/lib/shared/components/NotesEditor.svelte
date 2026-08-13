@@ -80,7 +80,7 @@
         EditorView.contentAttributes.of({
           "aria-label": label,
           "aria-multiline": "true",
-          spellcheck: "true"
+          spellcheck: "false"
         }),
         EditorView.domEventHandlers({
           contextmenu(event, editor) {

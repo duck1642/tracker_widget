@@ -58,7 +58,7 @@ export const noteEditorTheme = [
         textUnderlineOffset: "2px"
       },
       ".cm-note-blockquote": {
-        paddingLeft: "12px",
+        paddingLeft: "14px",
         borderLeft: "2px solid var(--accent)",
         background: "rgba(255, 255, 255, 0.02)",
         color: "var(--text-muted)",
@@ -90,17 +90,8 @@ export const noteEditorTheme = [
       },
       ".cm-note-list-marker": {
         display: "inline-block",
-        position: "relative",
-        color: "var(--accent)"
-      },
-      ".cm-note-list-marker-source": {
-        visibility: "hidden"
-      },
-      ".cm-note-list-marker-visual": {
-        position: "absolute",
-        inset: "0",
-        display: "grid",
-        placeItems: "center",
+        marginRight: "4px",
+        color: "var(--accent)",
         fontWeight: "700"
       },
       ".cm-note-task": {

@@ -106,6 +106,17 @@ describe("note live-preview ranges", () => {
     expect(ranges.some((range) => range.kind === "codeblock" && range.language === "js")).toBe(true);
     expect(rangesOfKind(state, "hide").some(({ from, to }) => doc.slice(from, to) === fence)).toBe(false);
   });
+
+  it("prevents duplicate source marker text inside unordered ListMarkerWidget DOM", () => {
+    const doc = "- item\n* item\n> quote";
+    const state = stateFor(doc);
+    const ranges = collectNotePreviewRanges(state, false);
+    const listRanges = ranges.filter((r) => r.kind === "listMarker");
+
+    expect(listRanges).toHaveLength(2);
+    expect(listRanges[0].ordered).toBe(false);
+    expect(listRanges[1].ordered).toBe(false);
+  });
 });
 
 describe("note editor document transactions", () => {
