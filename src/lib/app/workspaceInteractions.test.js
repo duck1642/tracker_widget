@@ -346,9 +346,12 @@ describe("NotesEditor interactions", () => {
     });
 
     expect(container.querySelector(".cm-note-task")).toBeTruthy();
-    expect(
-      Array.from(container.querySelectorAll(".cm-note-list-marker"), (marker) => marker.textContent)
-    ).toEqual(["•", "•"]);
+    const bulletMarkers = Array.from(container.querySelectorAll(".cm-note-list-marker"));
+    expect(bulletMarkers.every((marker) => marker.classList.contains("cm-note-list-marker-unordered"))).toBe(true);
+    expect(bulletMarkers.map((marker) => marker.textContent)).toEqual(["•", "•"]);
+    expect(bulletMarkers.map((marker) => getComputedStyle(marker).width)).toEqual(["0.75em", "0.75em"]);
+    expect(bulletMarkers.map((marker) => getComputedStyle(marker).marginRight)).toEqual(["6px", "6px"]);
+    expect(bulletMarkers.map((marker) => getComputedStyle(marker).textIndent)).toEqual(["0px", "0px"]);
     expect(container.querySelector(".cm-note-rule")).toBeTruthy();
     expect(container.querySelector(".cm-note-strong")).toBeTruthy();
     expect(container.querySelector(".cm-note-emphasis")).toBeTruthy();
@@ -373,6 +376,65 @@ describe("NotesEditor interactions", () => {
 
     expect(Array.from(container.querySelectorAll(".cm-note-list-marker"), (marker) => marker.textContent)).toEqual(["•", "•", "•"]);
     expect(container.querySelector(".cm-line:nth-child(2)")?.textContent).not.toContain("- current");
+  });
+
+  it("keeps two-space nested lists on a stable hanging-indent grid", async () => {
+    const value = "4. parent\n  5. sadas\n  6. sda\n    7. asda\n    8. asdas";
+    const { container, view } = await renderNotes({ value, onChange: vi.fn() });
+    const lines = Array.from(container.querySelectorAll(".cm-note-list-layout"));
+    const markers = Array.from(container.querySelectorAll(".cm-note-list-marker"));
+
+    expect(lines).toHaveLength(5);
+    expect(markers.map((marker) => marker.textContent)).toEqual(["1.", "1.", "2.", "1.", "2."]);
+    expect(markers.every((marker) => marker.className === "cm-note-list-marker cm-note-list-marker-ordered")).toBe(true);
+    expect(lines.map((line) => line.style.getPropertyValue("--cm-note-list-depth"))).toEqual([
+      "0px",
+      "22px",
+      "22px",
+      "44px",
+      "44px"
+    ]);
+    expect(lines.map((line) => line.style.getPropertyValue("--cm-note-list-prefix"))).toEqual(
+      Array(5).fill("calc(1.2em + 6px)")
+    );
+    expect(lines.map((line) => (line.getAttribute("style")?.match(/linear-gradient/g) ?? []).length)).toEqual([0, 1, 1, 2, 2]);
+    expect(lines.map((line) => line.style.backgroundPosition)).toEqual([
+      "",
+      "calc(0.375em + 0px) 0px",
+      "calc(0.375em + 0px) 0px",
+      "calc(0.375em + 0px) 0px, calc(0.375em + 22px) 0px",
+      "calc(0.375em + 0px) 0px, calc(0.375em + 22px) 0px"
+    ]);
+    expect(lines.every((line) => line.style.paddingLeft === "calc(var(--cm-note-list-depth) + var(--cm-note-list-prefix))")).toBe(true);
+    expect(lines.every((line) => line.style.textIndent === "calc(-1 * var(--cm-note-list-prefix))")).toBe(true);
+    expect(view.state.doc.toString()).toBe(value);
+  });
+
+  it("keeps guide columns global across bullet and ordered list parents", async () => {
+    const value = "- bullet parent\n  - bullet child\n\n1. ordered parent\n  - ordered child";
+    const { container } = await renderNotes({ value, onChange: vi.fn() });
+    const lines = Array.from(container.querySelectorAll(".cm-note-list-layout"));
+
+    expect(lines).toHaveLength(4);
+    expect(lines[1].style.backgroundPosition).toBe("calc(0.375em + 0px) 0px");
+    expect(lines[3].style.backgroundPosition).toBe(lines[1].style.backgroundPosition);
+  });
+
+  it("uses narrower bullet prefixes than ordered-list prefixes", async () => {
+    const { container } = await renderNotes({ value: "- bullet\n1. ordered", onChange: vi.fn() });
+    const markers = Array.from(container.querySelectorAll(".cm-note-list-marker"));
+    const lines = Array.from(container.querySelectorAll(".cm-note-list-layout"));
+
+    expect(markers.map((marker) => marker.className)).toEqual([
+      "cm-note-list-marker cm-note-list-marker-unordered",
+      "cm-note-list-marker cm-note-list-marker-ordered"
+    ]);
+    expect(markers.map((marker) => getComputedStyle(marker).width)).toEqual(["0.75em", "1.2em"]);
+    expect(markers.map((marker) => getComputedStyle(marker).textIndent)).toEqual(["0px", "0px"]);
+    expect(lines.map((line) => line.style.getPropertyValue("--cm-note-list-prefix"))).toEqual([
+      "calc(.75em + 6px)",
+      "calc(1.2em + 6px)"
+    ]);
   });
 
   it("updates the canonical Markdown when clicking a task widget", async () => {

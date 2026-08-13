@@ -94,6 +94,17 @@ describe("note live-preview ranges", () => {
     expect(collectNotePreviewRanges(inactiveState, false).filter((r) => r.kind === "listLayout").map((r) => r.depth)).toEqual([0, 0, 0]);
   });
 
+  it("hides one separator space after each rendered list marker", () => {
+    const doc = "- bullet\n1. ordered\n- item\n3. fallback";
+    const state = stateFor(doc, 0);
+    const hiddenSeparators = collectNotePreviewRanges(state, false)
+      .filter((range) => range.kind === "hide")
+      .map((range) => state.sliceDoc(range.from, range.to));
+
+    expect(hiddenSeparators).toEqual([" ", " ", " ", " "]);
+    expect(state.doc.toString()).toBe(doc);
+  });
+
   it("keeps a task item rendered as a checkbox without turning into a bullet", () => {
     const activeTask = stateFor("- [ ] task item", 8);
     const ranges = collectNotePreviewRanges(activeTask);

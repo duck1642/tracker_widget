@@ -81,11 +81,11 @@ function listItemDepth(listItem, state, markerFrom) {
   return Math.max(0, structuralDepth - 1, Math.floor(sourceIndent / 2));
 }
 
-/** @param {number} depth @param {boolean} task */
-function listLayoutStyle(depth, task) {
-  const positions = Array.from({ length: depth }, (_, index) => `${16 + index * 22}px 0`);
+/** @param {number} depth @param {boolean} task @param {boolean} ordered */
+function listLayoutStyle(depth, task, ordered) {
+  const positions = Array.from({ length: depth }, (_, index) => `calc(${index * 22}px + .375em) 0`);
   const guide = "linear-gradient(to bottom, var(--border-subtle), var(--border-subtle))";
-  const prefix = task ? "22px" : "calc(1.6em + 6px)";
+  const prefix = task ? "22px" : ordered ? "calc(1.2em + 6px)" : "calc(.75em + 6px)";
 
   return [
     `--cm-note-list-depth: ${depth * 22}px`,
@@ -193,7 +193,16 @@ function bulletParagraphOrderedMarkers(state, paragraph, selectionActive) {
       depth
     });
 
-    ranges.push({ kind: "listLayout", from: line.from, to: line.from, depth, task: false });
+    ranges.push({
+      kind: "listLayout",
+      from: line.from,
+      to: line.from,
+      depth,
+      task: false,
+      ordered: true
+    });
+
+    ranges.push({ kind: "hide", from: to, to: to + 1 });
   }
 
   return ranges;
@@ -295,12 +304,23 @@ export function collectNotePreviewRanges(state, selectionActive = true) {
         const depth = listItemDepth(listItem, state, ref.from);
 
         if (task || hasContent || hasFollowingSpace) {
-          pushRange({ kind: "listLayout", from: line.from, to: line.from, depth, task: Boolean(task) });
-
           const rawMarker = source.slice(ref.from, ref.to);
           const isOrdered = /^\d+[.)]$/.test(rawMarker);
           const lineNo = state.doc.lineAt(ref.from).number;
           const markerText = isOrdered ? calculateVisualOrdinal(state, lineNo, rawMarker) : rawMarker;
+
+          pushRange({
+            kind: "listLayout",
+            from: line.from,
+            to: line.from,
+            depth,
+            task: Boolean(task),
+            ordered: isOrdered
+          });
+
+          if (/[ \t]/.test(source[ref.to] || "")) {
+            pushRange({ kind: "hide", from: ref.to, to: ref.to + 1 });
+          }
 
           if (task) {
             pushRange({ kind: "listIndent", from: line.from, to: task.from });
@@ -436,7 +456,7 @@ class ListMarkerWidget extends WidgetType {
 
   toDOM() {
     const marker = document.createElement("span");
-    marker.className = "cm-note-list-marker";
+    marker.className = `cm-note-list-marker cm-note-list-marker-${this.ordered ? "ordered" : "unordered"}`;
     marker.setAttribute("aria-hidden", "true");
     marker.style.marginLeft = "0";
     marker.textContent = this.ordered ? this.marker : "•";
@@ -526,7 +546,7 @@ function buildNoteDecorations(view) {
         Decoration.line({
           attributes: {
             class: "cm-note-list-layout",
-            style: listLayoutStyle(Number(range.depth), Boolean(range.task))
+            style: listLayoutStyle(Number(range.depth), Boolean(range.task), Boolean(range.ordered))
           }
         }).range(range.from)
       );
