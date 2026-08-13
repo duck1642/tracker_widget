@@ -325,6 +325,13 @@ describe("workspace tab actions", () => {
     { id: "scratchpad", title: "Scratchpad", view: "scratchpad", path: "scratchpad.md" }
   ];
 
+  it("marks an unfocused pane's selected tab without changing the tab bar", () => {
+    const { container } = render(WorkspaceTabs, { tabs, activeId: "todo", focused: false });
+    const tabBar = container.querySelector(".workspace-tabs");
+    expect(tabBar.classList.contains("inactive")).toBe(true);
+    expect(tabBar.querySelector(".tab.active")).toBeTruthy();
+  });
+
   it("opens an inactive tab in the split pane from its context menu", async () => {
     const onSplit = vi.fn();
     render(WorkspaceTabs, { tabs, activeId: "todo", onSplit });

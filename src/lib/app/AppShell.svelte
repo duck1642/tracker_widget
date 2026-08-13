@@ -577,10 +577,10 @@
         keyboardNavigationEnabled={!showSettings && !showHelp}
       />
       <section class="main-workspace">
-        <div class="pane-wrap" style:flex-basis={splitView ? `${splitRatio * 100}%` : "100%"}><WorkspacePane bind:this={leftPane} session={leftSession} initialTabs={[{ id: "todo", view: "todo", title: "Todo", path: "" }]} onFocused={(detail) => { focusedPane = "left"; updateFocusedView(detail); }} onRequestSplit={splitView ? null : openInSplit} onMoveToRight={splitView ? (tab) => openInPane(tab, "right") : null} onEmpty={() => { if (splitView) void collapseSplit(); }} /></div>
+        <div class="pane-wrap" style:flex-basis={splitView ? `${splitRatio * 100}%` : "100%"}><WorkspacePane bind:this={leftPane} session={leftSession} initialTabs={[{ id: "todo", view: "todo", title: "Todo", path: "" }]} focused={focusedPane === "left"} onFocused={(detail) => { focusedPane = "left"; updateFocusedView(detail); }} onRequestSplit={splitView ? null : openInSplit} onMoveToRight={splitView ? (tab) => openInPane(tab, "right") : null} onEmpty={() => { if (splitView) void collapseSplit(); }} /></div>
         {#if splitView}
           <div class="split-divider" role="separator" aria-orientation="vertical" aria-label="Resize split view" onpointerdown={beginSplitResize}></div>
-          <div class="pane-wrap" style:flex-basis={`${(1 - splitRatio) * 100}%`}><WorkspacePane bind:this={rightPane} session={rightSession} onFocused={(detail) => { focusedPane = "right"; updateFocusedView(detail); }} onMoveToLeft={(tab) => openInPane(tab, "left")} onEmpty={collapseSplit} onSeparate={collapseSplit} /></div>
+          <div class="pane-wrap" style:flex-basis={`${(1 - splitRatio) * 100}%`}><WorkspacePane bind:this={rightPane} session={rightSession} focused={focusedPane === "right"} onFocused={(detail) => { focusedPane = "right"; updateFocusedView(detail); }} onMoveToLeft={(tab) => openInPane(tab, "left")} onEmpty={collapseSplit} onSeparate={collapseSplit} /></div>
         {/if}
       </section>
     </div>
