@@ -1,6 +1,6 @@
 <script>
   // @ts-nocheck
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
@@ -25,12 +25,8 @@
   import StatusToast from "./StatusToast.svelte";
   import WeekFilesDialog from "./WeekFilesDialog.svelte";
   import AppSidebar from "./AppSidebar.svelte";
-  import TodoPanel from "$lib/features/todo/components/TodoPanel.svelte";
-  import TodoToolbar from "$lib/features/todo/components/TodoToolbar.svelte";
-  import DailyPanel from "$lib/features/daily/components/DailyPanel.svelte";
-  import WeekPanel from "$lib/features/weekly/components/WeekPanel.svelte";
-  import ScratchpadPanel from "$lib/features/scratchpad/components/ScratchpadPanel.svelte";
-  import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
+  import WorkspacePane from "./WorkspacePane.svelte";
+  import { createWorkspaceSession } from "./workspaceSession.svelte.js";
 
   let showSettings = $state(false);
   let showHelp = $state(false);
@@ -38,6 +34,14 @@
   let showModeMenu = $state(false);
   let selectedPath = $state("");
   let isMaximized = $state(false);
+  let hasWorkspace = $derived(workspaceStore.hasWorkspacePath);
+  let leftPane = $state();
+  let rightPane = $state();
+  let splitView = $state(false);
+  let splitRatio = $state(0.5);
+  let focusedPane = $state("left");
+  const leftSession = { todoStore, dailyStore, weekStore, scratchpadStore };
+  const rightSession = createWorkspaceSession();
   const navigationHistory = new NavigationHistory({ view: "todo", path: "" });
 
   const viewSizeConstraints = {
@@ -53,61 +57,126 @@
     day: "Daily log"
   };
 
-  function descriptorFor(week) {
-    const date = week.days[0]?.date ? new Date(`${week.days[0].date}T12:00:00`) : new Date();
-    return getWeekDescriptor(date);
+  function dayTab(day) {
+    return { id: `day:${day.path}`, view: "day", title: day.date, path: day.path, date: day.date };
   }
 
-  async function prepareViewChange(targetView) {
-    if (appStore.currentView === targetView) return true;
-    if (await persistenceRegistry.flushAll()) return true;
-    appStore.showStatus("Resolve file conflicts before changing views");
+  function weekTab(week) {
+    return { id: `week:${week.indexPath}`, view: "week", title: week.name, path: week.indexPath };
+  }
+
+  function scratchpadTab() {
+    const path = scratchpadPathForWorkspace(appStore.logsRootPath);
+    return { id: "scratchpad", view: "scratchpad", title: "Scratchpad", path };
+  }
+
+  function activePane() { return focusedPane === "right" && splitView ? rightPane : leftPane; }
+
+  async function focusExistingTab(tab) {
+    if (rightPane?.hasTab(tab.id)) {
+      focusedPane = "right";
+      return await rightPane.openTab(tab);
+    }
+    if (leftPane?.hasTab(tab.id)) {
+      focusedPane = "left";
+      return await leftPane.openTab(tab);
+    }
     return false;
+  }
+
+  function updateFocusedView({ view, path }) {
+    selectedPath = path;
+    appStore.currentView = view;
+  }
+
+  async function openInSplit(tab) {
+    if (rightPane?.hasTab(tab.id)) {
+      focusedPane = "right";
+      await rightPane?.openTab(tab);
+      return;
+    }
+    const tabIsOnlyLeftTab = leftPane?.hasTab(tab.id)
+      && leftPane.activeTabId?.() === tab.id
+      && leftPane.tabCount?.() === 1;
+    if (tabIsOnlyLeftTab) {
+      appStore.showStatus("Choose another tab to open beside the current one");
+      return;
+    }
+    if (!splitView) splitView = true;
+    await tick();
+    if (leftPane?.hasTab(tab.id)) leftPane.takeTab(tab.id);
+    focusedPane = "right";
+    await rightPane?.openTab(tab);
+  }
+
+  function openTodoInSplit() { return openInSplit({ id: "todo", view: "todo", title: "Todo", path: "" }); }
+  function openScratchpadInSplit() { return openInSplit(scratchpadTab()); }
+  function openWeekInSplit(week) { return openInSplit(weekTab(week)); }
+  function openDayInSplit(day) { return openInSplit(dayTab(day)); }
+
+  async function collapseSplit() {
+    const tabs = rightPane?.takeAllTabs?.() || [];
+    for (const tab of tabs) await leftPane?.openTab(tab, { background: true });
+    splitView = false;
+    focusedPane = "left";
+    await tick();
+    await leftPane?.focusActive?.();
+  }
+
+  function beginSplitResize(event) {
+    event.preventDefault();
+    const workspace = event.currentTarget.parentElement;
+    const move = (moveEvent) => {
+      const rect = workspace.getBoundingClientRect();
+      splitRatio = Math.min(0.8, Math.max(0.2, (moveEvent.clientX - rect.left) / rect.width));
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+  }
+
+  async function openDayInBackground(day) {
+    if (await focusExistingTab(dayTab(day))) return true;
+    return await activePane()?.openDay(day, { background: true });
+  }
+
+  async function openTodoInBackground() {
+    if (await focusExistingTab({ id: "todo", view: "todo", title: "Todo", path: "" })) return true;
+    return activePane()?.openTodo({ background: true });
+  }
+
+  async function openScratchpadInBackground() {
+    if (await focusExistingTab(scratchpadTab())) return true;
+    return activePane()?.openScratchpad({ background: true });
+  }
+
+  async function openWeekInBackground(week) {
+    if (await focusExistingTab(weekTab(week))) return true;
+    return activePane()?.openWeek(week, { background: true });
   }
 
   async function selectWeek(week, { record = true } = {}) {
     if (!week.indexPath) return false;
-    if (!(await prepareViewChange("week"))) return false;
-    todoUiState.clearSelection();
-    if (!(await weekStore.loadPath(week.indexPath, descriptorFor(week), week.days))) return false;
-    selectedPath = week.indexPath;
-    appStore.currentView = "week";
-    if (record) navigationHistory.visit({ view: "week", path: week.indexPath });
-    return true;
+    if (await focusExistingTab(weekTab(week))) return true;
+    return await activePane()?.openWeek(week);
   }
 
   async function selectDay(day, week, { record = true } = {}) {
-    if (!(await prepareViewChange("day"))) return false;
-    todoUiState.clearSelection();
-    if (week.indexPath && weekStore.path !== week.indexPath) {
-      if (!(await weekStore.loadPath(week.indexPath, descriptorFor(week), week.days))) return false;
-    }
-    if (!(await dailyStore.loadPath(day.path, day.date))) return false;
-    selectedPath = day.path;
-    appStore.currentView = "day";
-    if (record) navigationHistory.visit({ view: "day", path: day.path });
-    return true;
+    if (await focusExistingTab(dayTab(day))) return true;
+    return await activePane()?.openDay(day);
   }
 
   async function selectTodo({ record = true } = {}) {
-    if (!(await prepareViewChange("todo"))) return false;
-    todoUiState.clearSelection();
-    selectedPath = "";
-    appStore.currentView = "todo";
-    if (record) navigationHistory.visit({ view: "todo", path: "" });
-    return true;
+    if (await focusExistingTab({ id: "todo", view: "todo", title: "Todo", path: "" })) return true;
+    return await activePane()?.openTodo();
   }
 
   async function selectScratchpad({ record = true } = {}) {
-    if (!(await prepareViewChange("scratchpad"))) return false;
-    const path = scratchpadPathForWorkspace(appStore.logsRootPath);
-    if (!(await scratchpadStore.loadPath(path))) return false;
-    workspaceStore.scratchpadExists = !scratchpadStore.fileMissing;
-    todoUiState.clearSelection();
-    selectedPath = path;
-    appStore.currentView = "scratchpad";
-    if (record) navigationHistory.visit({ view: "scratchpad", path });
-    return true;
+    if (await focusExistingTab(scratchpadTab())) return true;
+    return await activePane()?.openScratchpad();
   }
 
   async function openCurrent(kind, { record = true } = {}) {
@@ -153,9 +222,9 @@
     else navigationHistory.back();
   }
 
-  function unloadWeekDocuments(week) {
-    if (pathBelongsToWeek(weekStore.path, week.path)) weekStore.unload();
-    if (pathBelongsToWeek(dailyStore.path, week.path)) dailyStore.unload();
+  async function unloadWeekDocuments(week) {
+    await leftPane?.closeTabsUnder?.(week.path);
+    await rightPane?.closeTabsUnder?.(week.path);
   }
 
   async function reloadActiveWeekDestination(week, activeView, activePath) {
@@ -187,7 +256,7 @@
     const activeView = appStore.currentView;
     const activePath = selectedPath;
     if (!(await workspaceStore.convertWeekToPersonal(week))) return false;
-    unloadWeekDocuments(week);
+    await unloadWeekDocuments(week);
     if (!pathBelongsToWeek(activePath, week.path)) return true;
     return await reloadActiveWeekDestination(week, activeView, activePath);
   }
@@ -210,7 +279,7 @@
     }
     const wasActive = pathBelongsToWeek(selectedPath, week.path);
     if (!(await workspaceStore.recycleWeek(week))) return false;
-    unloadWeekDocuments(week);
+    await unloadWeekDocuments(week);
     navigationHistory.removePathsUnder(week.path);
     if (wasActive) await selectTodo();
     return true;
@@ -227,7 +296,7 @@
 
   async function applyViewSizeConstraints(view) {
     const constraints = viewSizeConstraints[view] ?? viewSizeConstraints.todo;
-    const sidebarWidth = (workspaceStore.sidebarOpen && !workspaceStore.needsFirstSetup) ? 180 : 0;
+    const sidebarWidth = (workspaceStore.sidebarOpen && hasWorkspace) ? 180 : 0;
     const targetWidth = constraints.width + sidebarWidth;
     const targetHeight = constraints.height;
 
@@ -309,27 +378,35 @@
     handleResize();
     (async () => {
       try {
-        unlistenResized = await appWindow.onResized(handleResize);
-        if (disposed) unlistenResized();
-      } catch {}
-      unlistenQuit = await listen("request-quit", async () => {
-        if (await persistenceRegistry.flushAll()) await invoke("exit_app");
-        else appStore.showStatus("Resolve file conflicts before quitting");
-      });
-      await appStore.loadConfig();
-      await workspaceStore.refresh();
-      await subjectHistoryStore.load(appStore.logsRootPath);
-      await sessionHistoryStore.load(appStore.logsRootPath);
-      if (appStore.filePath) await todoStore.loadFile();
-      unlistenClose = await appWindow.onCloseRequested(async (event) => {
-        event.preventDefault();
-        if (!(await persistenceRegistry.flushAll())) return appStore.showStatus("Resolve file conflicts before closing");
         try {
-          await appWindow.hide();
-        } catch (error) {
-          appStore.showStatus("Hide failed: " + error);
-        }
-      });
+          unlistenResized = await appWindow.onResized(handleResize);
+          if (disposed) unlistenResized();
+        } catch {}
+        try {
+          unlistenQuit = await listen("request-quit", async () => {
+            if (await persistenceRegistry.flushAll()) await invoke("exit_app");
+            else appStore.showStatus("Resolve file conflicts before quitting");
+          });
+        } catch {}
+        await appStore.loadConfig();
+        await workspaceStore.refresh();
+        await subjectHistoryStore.load(appStore.logsRootPath);
+        await sessionHistoryStore.load(appStore.logsRootPath);
+        if (appStore.filePath) await todoStore.loadFile();
+        try {
+          unlistenClose = await appWindow.onCloseRequested(async (event) => {
+            event.preventDefault();
+            if (!(await persistenceRegistry.flushAll())) return appStore.showStatus("Resolve file conflicts before closing");
+            try {
+              await appWindow.hide();
+            } catch (error) {
+              appStore.showStatus("Hide failed: " + error);
+            }
+          });
+        } catch {}
+      } catch (error) {
+        appStore.showStatus("Initialization error: " + error);
+      }
       if (disposed) { unlistenClose?.(); unlistenQuit?.(); }
     })();
     const handleFocus = async () => {
@@ -380,18 +457,23 @@
   }
 
   async function openActiveMarkdown() {
-    const targetPath = appStore.currentView === "todo"
-      ? (todoStore.loadedPath || appStore.filePath)
-      : appStore.currentView === "scratchpad"
-        ? (scratchpadStore.loaded ? scratchpadStore.path : "")
-      : appStore.currentView === "week"
-        ? weekStore.path
-        : dailyStore.path;
+    const targetPath = activePane()?.activeFilePath?.();
     if (!targetPath) return appStore.showStatus("No active file");
     try {
       await openPath(targetPath);
     } catch (error) {
       appStore.showStatus("Failed to open: " + error);
+    }
+  }
+
+  async function selectWorkspaceRoot() {
+    try {
+      const ok = await workspaceStore.chooseRoot();
+      if (!ok && !workspaceStore.hasWorkspacePath) {
+        appStore.showStatus("No workspace folder selected");
+      }
+    } catch (error) {
+      appStore.showStatus("Workspace selection failed: " + error);
     }
   }
 </script>
@@ -400,7 +482,7 @@
 
 <main class="app-container" class:desktop-mode={appStore.layerMode === "desktop"} class:maximized={isMaximized}>
   <AppHeader
-    title={workspaceStore.needsFirstSetup ? "Workspace setup" : (viewTitles[appStore.currentView] || "Tracker")}
+    title={!hasWorkspace ? "Workspace setup" : (viewTitles[appStore.currentView] || "Tracker")}
     currentView={appStore.currentView}
     sidebarOpen={workspaceStore.sidebarOpen}
     dragEnabled={appStore.dragEnabled}
@@ -426,13 +508,13 @@
     onMaximizeApp={toggleMaximizeApp}
     onCloseApp={closeApp}
   />
-  {#if workspaceStore.needsFirstSetup}
+  {#if !hasWorkspace}
     <section class="setup-screen">
       <div>
         <span>Workspace</span>
         <h1>Select a workspace folder</h1>
         <p>The app will use this folder for todo.md and weekly log folders.</p>
-        <button onclick={() => workspaceStore.chooseRoot()}>Select workspace</button>
+        <button onclick={selectWorkspaceRoot}>Select workspace</button>
       </div>
     </section>
   {:else}
@@ -445,15 +527,25 @@
         onSelectTodo={() => selectTodo()}
         onSelectWeek={selectWeek}
         onSelectDay={selectDay}
+        onOpenDayInBackground={openDayInBackground}
+        onOpenWeekInBackground={openWeekInBackground}
+        onMiddleClickTodo={openTodoInBackground}
+        onMiddleClickScratchpad={openScratchpadInBackground}
+        onOpenTodoInSplit={openTodoInSplit}
+        onOpenScratchpadInSplit={openScratchpadInSplit}
+        onOpenWeekInSplit={openWeekInSplit}
+        onOpenDayInSplit={openDayInSplit}
         onRepairWeek={repairWeek}
         onConvertWeek={convertWeekToPersonal}
         onDeleteWeek={deleteWeek}
         keyboardNavigationEnabled={!showSettings && !showHelp}
       />
       <section class="main-workspace">
-        {#if appStore.currentView === "todo" && todoStore.conflict}<ConflictBanner onReloadExternal={() => todoStore.resolveConflict("reload")} onKeepLocal={() => todoStore.resolveConflict("keep-local")} />{/if}
-        <div class="panel-scroll" class:todo-scroll={appStore.currentView === "todo"} class:scratchpad-scroll={appStore.currentView === "scratchpad"}>{#if appStore.currentView === "todo"}<TodoPanel />{:else if appStore.currentView === "scratchpad"}<ScratchpadPanel />{:else if appStore.currentView === "week"}<WeekPanel />{:else}<DailyPanel />{/if}</div>
-        {#if appStore.currentView === "todo" && !todoStore.fileMissing}<TodoToolbar selectedCount={todoUiState.selectedTodoIds.length} undoStackLength={todoStore.undoStack.length} redoStackLength={todoStore.redoStack.length} onAddTodo={() => todoStore.addTodo(-1, 0)} onUndo={() => todoStore.undo()} onRedo={() => todoStore.redo()} onReload={reloadTodo} onClearCompleted={() => todoStore.clearCompleted()} />{/if}
+        <div class="pane-wrap" style:flex-basis={splitView ? `${splitRatio * 100}%` : "100%"}><WorkspacePane bind:this={leftPane} session={leftSession} initialTabs={[{ id: "todo", view: "todo", title: "Todo", path: "" }]} onFocused={(detail) => { focusedPane = "left"; updateFocusedView(detail); }} onRequestSplit={openInSplit} onEmpty={() => { if (splitView) void collapseSplit(); }} /></div>
+        {#if splitView}
+          <div class="split-divider" role="separator" aria-orientation="vertical" aria-label="Resize split view" onpointerdown={beginSplitResize}></div>
+          <div class="pane-wrap" style:flex-basis={`${(1 - splitRatio) * 100}%`}><WorkspacePane bind:this={rightPane} session={rightSession} onFocused={(detail) => { focusedPane = "right"; updateFocusedView(detail); }} onEmpty={collapseSplit} onSeparate={collapseSplit} /></div>
+        {/if}
       </section>
     </div>
   {/if}
@@ -476,13 +568,10 @@
   .setup-screen button { width: fit-content; min-height: 34px; padding: 0 14px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--surface-2); color: var(--text-color); cursor: pointer; }
   .setup-screen button:hover { border-color: var(--border-strong); background: var(--surface-hover); }
   .workspace-shell { display: flex; flex: 1; min-height: 0; overflow: hidden; }
-  .main-workspace { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; background: var(--bg-panel); }
-  .panel-scroll { flex: 1; min-height: 0; overflow: auto; scroll-behavior: smooth; scrollbar-width: none; }
-  .panel-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
-  .panel-scroll.scratchpad-scroll { overflow: hidden; }
-  .panel-scroll.todo-scroll { scrollbar-width: thin; scrollbar-color: #333333 transparent; }
-  .panel-scroll.todo-scroll::-webkit-scrollbar { width: 6px; height: 6px; display: block; }
-  .panel-scroll.todo-scroll::-webkit-scrollbar-track { background: transparent; }
-  .panel-scroll.todo-scroll::-webkit-scrollbar-thumb { background: #333333; border-radius: 3px; }
-  .panel-scroll.todo-scroll::-webkit-scrollbar-thumb:hover { background: #444444; }
+  .main-workspace { display: flex; flex: 1; min-width: 0; min-height: 0; background: var(--bg-panel); }
+  .pane-wrap { display: flex; min-width: 0; min-height: 0; }
+  .split-divider { position: relative; z-index: 1; flex: 0 0 0; cursor: col-resize; touch-action: none; }
+  .split-divider::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 1px; background: var(--border-color); transition: background .12s ease, width .12s ease; }
+  .split-divider::after { content: ""; position: absolute; inset: 0 -5px; }
+  .split-divider:hover::before, .split-divider:active::before { width: 2px; background: #587b61; }
 </style>

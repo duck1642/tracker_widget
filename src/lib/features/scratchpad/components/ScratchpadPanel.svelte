@@ -2,8 +2,9 @@
   // @ts-nocheck
   import NotesEditor from "$lib/shared/components/NotesEditor.svelte";
   import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
-  import { scratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.js";
+  import { scratchpadStore as defaultScratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.js";
   import { workspaceStore } from "$lib/app/workspaceStore.svelte.js";
+  let { scratchpadStore = defaultScratchpadStore } = $props();
 </script>
 
 <main class="scratchpad-panel">

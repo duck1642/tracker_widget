@@ -5,9 +5,10 @@
   import ActualSection from "./ActualSection.svelte";
   import NotesEditor from "$lib/shared/components/NotesEditor.svelte";
   import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
-  import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
+  import { weekStore as defaultWeekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { sessionHistoryStore } from "$lib/app/sessionHistoryStore.svelte.js";
   import { buildSessionSuggestions } from "$lib/shared/services/sessionSuggestions.js";
+  let { weekStore = defaultWeekStore } = $props();
 
   let historicalSessionSuggestions = $derived(buildSessionSuggestions({ historicalSessions: sessionHistoryStore.suggestions }));
   let collapsedDays = $state([]);

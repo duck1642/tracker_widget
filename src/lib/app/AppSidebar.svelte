@@ -1,6 +1,6 @@
 <script>
   // @ts-nocheck
-  import { CalendarCheck, CalendarPlus, ArrowDownUp, CheckSquare2, ChevronsDownUp, ChevronsUpDown, ExternalLink, FileCog, StickyNote, Trash2 } from "@lucide/svelte";
+  import { CalendarCheck, CalendarPlus, ArrowDownUp, CheckSquare2, ChevronsDownUp, ChevronsUpDown, ExternalLink, FileCog, Plus, StickyNote, Trash2 } from "@lucide/svelte";
   import { openPath } from "@tauri-apps/plugin-opener";
   import FileTree from "$lib/shared/components/FileTree.svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
@@ -21,6 +21,14 @@
     onSelectTodo = () => {},
     onSelectWeek,
     onSelectDay,
+    onOpenWeekInBackground = null,
+    onOpenDayInBackground = null,
+    onMiddleClickTodo = null,
+    onMiddleClickScratchpad = null,
+    onOpenTodoInSplit = null,
+    onOpenScratchpadInSplit = null,
+    onOpenWeekInSplit = null,
+    onOpenDayInSplit = null,
     onRepairWeek = (week) => workspaceStore.repairWeek(week),
     onConvertWeek = (week) => workspaceStore.convertWeekToPersonal(week),
     onDeleteWeek = () => {},
@@ -39,6 +47,7 @@
   let weekFilesMenu = $state(null);
   let showWeekFilesDialog = $state(false);
   let weekContextMenu = $state(null);
+  let sidebarContextMenu = $state(null);
   let weekContextItems = $derived.by(() => {
     if (!weekContextMenu) return [];
     const week = weekContextMenu.week;
@@ -49,6 +58,13 @@
         : []),
       { separator: true },
       { label: "Delete week…", icon: Trash2, danger: true, onclick: () => runWeekContextAction(onDeleteWeek, week) }
+    ];
+  });
+  let sidebarContextItems = $derived.by(() => {
+    if (!sidebarContextMenu) return [];
+    return [
+      { label: "Open in new tab", icon: Plus, onclick: () => runSidebarContextAction(sidebarContextMenu.openInBackground) },
+      { label: "Open in split view", onclick: () => runSidebarContextAction(sidebarContextMenu.openInSplit) }
     ];
   });
 
@@ -141,6 +157,16 @@
     void action(week);
   }
 
+  function openSidebarContextMenu(event, openInBackground, openInSplit = null) {
+    weekFilesMenu = null;
+    sidebarContextMenu = { x: event.clientX, y: event.clientY, openInBackground, openInSplit };
+  }
+
+  function runSidebarContextAction(action) {
+    sidebarContextMenu = null;
+    action?.();
+  }
+
   function toggleAllWeeks() {
     allWeeksExpanded = !allWeeksExpanded;
     expansionCommand = { id: ++expansionCommandId, expanded: allWeeksExpanded };
@@ -191,6 +217,9 @@
       class="view-entry"
       class:active={currentView === "scratchpad"}
       onclick={onSelectScratchpad}
+      onmousedown={(event) => { if (event.button === 1) event.preventDefault(); }}
+      onauxclick={(event) => { if (event.button === 1) { event.preventDefault(); onMiddleClickScratchpad?.(); } }}
+      oncontextmenu={(event) => { event.preventDefault(); openSidebarContextMenu(event, onMiddleClickScratchpad, onOpenScratchpadInSplit); }}
       aria-current={currentView === "scratchpad" ? "page" : undefined}
     >
       <StickyNote size={14} />
@@ -200,6 +229,9 @@
       class="view-entry"
       class:active={currentView === "todo"}
       onclick={onSelectTodo}
+      onmousedown={(event) => { if (event.button === 1) event.preventDefault(); }}
+      onauxclick={(event) => { if (event.button === 1) { event.preventDefault(); onMiddleClickTodo?.(); } }}
+      oncontextmenu={(event) => { event.preventDefault(); openSidebarContextMenu(event, onMiddleClickTodo, onOpenTodoInSplit); }}
       aria-current={currentView === "todo" ? "page" : undefined}
     >
       <CheckSquare2 size={14} />
@@ -221,7 +253,7 @@
   {#if workspaceStore.unavailable}
     <div class="unavailable"><strong>Workspace unavailable</strong><span>Locate the existing workspace folder, select another one, or retry the configured path.</span><button onclick={() => workspaceStore.chooseRoot()}>Locate existing</button><button onclick={() => workspaceStore.chooseRoot()}>Select new</button><button onclick={() => workspaceStore.refresh()}>Retry</button></div>
   {:else}
-    <FileTree weeks={sortedWeeks} {selectedPath} {onSelectWeek} {onSelectDay} onOpenWeekContextMenu={openWeekContextMenu} {expansionCommand} />
+    <FileTree weeks={sortedWeeks} {selectedPath} {onSelectWeek} {onSelectDay} {onOpenWeekInBackground} {onOpenDayInBackground} onOpenWeekItemContextMenu={(event, week) => openSidebarContextMenu(event, () => onOpenWeekInBackground?.(week), () => onOpenWeekInSplit?.(week))} onOpenDayContextMenu={(event, day) => openSidebarContextMenu(event, () => onOpenDayInBackground?.(day), () => onOpenDayInSplit?.(day))} onOpenWeekContextMenu={openWeekContextMenu} {expansionCommand} />
   {/if}
 </aside>
 
@@ -233,6 +265,17 @@
     width={174}
     ariaLabel={`${weekContextMenu.week.name} actions`}
     onDismiss={() => weekContextMenu = null}
+  />
+{/if}
+
+{#if sidebarContextMenu}
+  <ContextMenu
+    x={sidebarContextMenu.x}
+    y={sidebarContextMenu.y}
+    items={sidebarContextItems}
+    width={174}
+    ariaLabel="Sidebar actions"
+    onDismiss={() => sidebarContextMenu = null}
   />
 {/if}
 

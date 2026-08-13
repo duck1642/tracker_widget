@@ -150,7 +150,10 @@ export function countTodoItems(markdown) {
 
 export async function selectLogsFolder() {
   const selected = await open({ directory: true, multiple: false, title: "Select logs folder" });
-  return typeof selected === "string" ? selected : null;
+  if (typeof selected === "string") return selected;
+  if (Array.isArray(selected) && selected.length > 0 && typeof selected[0] === "string") return selected[0];
+  if (selected && typeof selected === "object" && selected.path) return selected.path;
+  return null;
 }
 
 export async function selectTodoFile() {
@@ -165,7 +168,9 @@ export async function selectTodoFile() {
       }
     ]
   });
-  return typeof selected === "string" ? selected : null;
+  if (typeof selected === "string") return selected;
+  if (Array.isArray(selected) && selected.length > 0 && typeof selected[0] === "string") return selected[0];
+  return null;
 }
 
 export async function createWorkspaceTodo(rootPath) {

@@ -10,11 +10,12 @@
   import { appStore } from "$lib/app/appStore.svelte.js";
   import { captureEditableText } from "$lib/shared/services/editableTextClipboard.js";
   import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
-  import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
-  import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
+  import { dailyStore as defaultDailyStore } from "$lib/features/daily/dailyStore.svelte.js";
+  import { weekStore as defaultWeekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { sessionHistoryStore } from "$lib/app/sessionHistoryStore.svelte.js";
   import { buildSessionSuggestions } from "$lib/shared/services/sessionSuggestions.js";
   import { dayLabel } from "$lib/shared/services/logWorkspaceService.js";
+  let { dailyStore = defaultDailyStore, weekStore = defaultWeekStore } = $props();
   let day = $derived(dailyStore.date ? dayLabel(new Date(`${dailyStore.date}T12:00:00`)) : "");
   let suggestions = $derived(buildSessionSuggestions({
     currentWeekSessions: weekStore.currentWeekSessionNames(),

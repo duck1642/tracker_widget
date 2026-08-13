@@ -1,7 +1,7 @@
 <script>
   // @ts-nocheck
   import { ChevronDown, ChevronRight, FileText, CalendarDays } from "@lucide/svelte";
-  let { weeks = [], selectedPath = "", onSelectWeek, onSelectDay, onOpenWeekContextMenu = null, expansionCommand = null } = $props();
+  let { weeks = [], selectedPath = "", onSelectWeek, onSelectDay, onOpenWeekInBackground = null, onOpenDayInBackground = null, onOpenWeekItemContextMenu = null, onOpenDayContextMenu = null, onOpenWeekContextMenu = null, expansionCommand = null } = $props();
   let expanded = $state({});
   let handledExpansionCommandId = $state(null);
 
@@ -30,12 +30,28 @@
       {#if expanded[week.path] ?? true}
         <div class="children">
           {#if week.indexPath}
-            <button class:active={selectedPath === week.indexPath} onclick={() => onSelectWeek(week)}>
+            <button
+              class:active={selectedPath === week.indexPath}
+              onclick={() => onSelectWeek(week)}
+              onmousedown={(event) => { if (event.button === 1) event.preventDefault(); }}
+              onauxclick={(event) => { if (event.button === 1) { event.preventDefault(); onOpenWeekInBackground?.(week); } }}
+              oncontextmenu={(event) => { event.preventDefault(); onOpenWeekItemContextMenu?.(event, week); }}
+            >
               <CalendarDays size={13} /><span>Weekly index</span>
             </button>
           {/if}
           {#each week.days as day (day.path)}
-            <button class:active={selectedPath === day.path} onclick={() => onSelectDay(day, week)}>
+            <button
+              class:active={selectedPath === day.path}
+              onclick={() => onSelectDay(day, week)}
+              onmousedown={(event) => { if (event.button === 1) event.preventDefault(); }}
+              onauxclick={(event) => {
+                if (event.button !== 1) return;
+                event.preventDefault();
+                onOpenDayInBackground?.(day, week);
+              }}
+              oncontextmenu={(event) => { event.preventDefault(); onOpenDayContextMenu?.(event, day, week); }}
+            >
               <FileText size={13} /><span>{day.date}</span>
             </button>
           {/each}

@@ -14,6 +14,9 @@ class WorkspaceStore {
   sidebarOpen = $state(true);
   todoExists = $state(false);
   scratchpadExists = $state(false);
+  get needsFirstSetup() {
+    return !appStore.logsRootPath && !appStore.filePath;
+  }
 
   get hasWorkspacePath() {
     return Boolean(appStore.logsRootPath);
@@ -33,10 +36,6 @@ class WorkspaceStore {
 
   get weekCount() {
     return this.weeks.length;
-  }
-
-  get needsFirstSetup() {
-    return !appStore.logsRootPath && !appStore.filePath;
   }
 
   async applyWorkspace(path) {

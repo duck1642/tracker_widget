@@ -1,11 +1,11 @@
 <script>
   import { tick } from "svelte";
   import { appStore } from "$lib/app/appStore.svelte.js";
-  import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
-  import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
+  import { dailyStore as defaultDailyStore } from "$lib/features/daily/dailyStore.svelte.js";
+  import { todoStore as defaultTodoStore } from "$lib/features/todo/todoStore.svelte.js";
   import { buildVisibleTodoRows, todoFoldStore } from "$lib/features/todo/todoFolding.svelte.js";
   import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
-  import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
+  import { weekStore as defaultWeekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { workspaceStore } from "$lib/app/workspaceStore.svelte.js";
   import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
   import TodoList from "./TodoList.svelte";
@@ -15,6 +15,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import TodoSendSessionMenu from "./TodoSendSessionMenu.svelte";
   import TodoSendWeeklyPlanMenu from "./TodoSendWeeklyPlanMenu.svelte";
+  let { todoStore = defaultTodoStore, dailyStore = defaultDailyStore, weekStore = defaultWeekStore } = $props();
 
   let focusedTodoId = $state("");
   /** @type {{ x: number, y: number, editable: ReturnType<typeof captureEditableText> } | null} */

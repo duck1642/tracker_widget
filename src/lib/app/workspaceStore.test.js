@@ -83,6 +83,14 @@ describe("WorkspaceStore workspace status", () => {
     expect(todoStore.loadFile).toHaveBeenCalled();
   });
 
+  it("leaves first setup as soon as a workspace path is applied", async () => {
+    expect(workspaceStore.needsFirstSetup).toBe(true);
+
+    await workspaceStore.chooseRoot();
+
+    expect(workspaceStore.needsFirstSetup).toBe(false);
+  });
+
   it("tracks Todo and Scratchpad existence in an available workspace", async () => {
     appStore.logsRootPath = "C:\\Tracker";
     appStore.filePath = "C:\\Tracker\\todo.md";

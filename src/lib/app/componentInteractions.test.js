@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/sve
 import { tick } from "svelte";
 import AppHeader from "./AppHeader.svelte";
 import AppSidebar from "./AppSidebar.svelte";
+import WorkspaceTabs from "./WorkspaceTabs.svelte";
 import SettingsPanel from "./SettingsPanel.svelte";
 import SettingsDialog from "./SettingsDialog.svelte";
 import HelpDialog from "./HelpDialog.svelte";
@@ -368,6 +369,37 @@ describe("shared context menu behavior", () => {
     await fireEvent.wheel(window);
 
     expect(onDismiss).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe("workspace tab actions", () => {
+  const tabs = [
+    { id: "todo", title: "Todo", view: "todo", path: "" },
+    { id: "scratchpad", title: "Scratchpad", view: "scratchpad", path: "scratchpad.md" }
+  ];
+
+  it("opens an inactive tab in the split pane from its context menu", async () => {
+    const onSplit = vi.fn();
+    render(WorkspaceTabs, { tabs, activeId: "todo", onSplit });
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Scratchpad" }));
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Open in split view" }));
+
+    expect(onSplit).toHaveBeenCalledWith(tabs[1]);
+  });
+
+  it("offers separate and close actions for a split-pane tab", async () => {
+    const onSeparate = vi.fn();
+    const onClose = vi.fn();
+    render(WorkspaceTabs, { tabs, activeId: "todo", onSeparate, onClose });
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Todo" }));
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Separate split view" }));
+    expect(onSeparate).toHaveBeenCalledOnce();
+
+    await fireEvent.contextMenu(screen.getByRole("button", { name: "Todo" }));
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Close tab" }));
+    expect(onClose).toHaveBeenCalledWith(tabs[0]);
   });
 });
 
