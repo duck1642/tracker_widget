@@ -381,7 +381,7 @@ class ListFoldWidget extends WidgetType {
     const control = document.createElement("button");
     control.type = "button";
     control.className = `cm-note-list-fold-control cm-fold-marker cm-fold-marker-${this.open ? "open" : "folded"}`;
-    control.style.left = "calc(.525em - 18px)";
+    control.style.left = "-16px";
     control.setAttribute("aria-label", this.open ? "Fold list" : "Unfold list");
     control.title = this.open ? "Fold list" : "Unfold list";
 

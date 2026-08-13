@@ -85,12 +85,17 @@ function listItemDepth(listItem, state, markerFrom) {
 
 /** @param {number} depth @param {boolean} task @param {boolean} ordered */
 function listLayoutStyle(depth, task, ordered) {
-  const positions = Array.from({ length: depth }, (_, index) => `calc(${index * 20}px + .525em) 0px`);
+  const nestingStep = "16px + 1.05em";
+  const depthOffset = Array(depth).fill(nestingStep).join(" + ");
+  const positions = Array.from({ length: depth }, (_, index) => {
+    const offset = Array(index).fill(nestingStep).join(" + ");
+    return `calc(.525em${offset ? ` + ${offset}` : ""}) 0px`;
+  });
   const guide = "linear-gradient(to bottom, var(--border-subtle), var(--border-subtle))";
   const prefix = task ? "24px" : ordered ? "calc(1.2em + 6px)" : "calc(.75em + 6px)";
 
   return [
-    `--cm-note-list-depth: ${depth * 20}px`,
+    `--cm-note-list-depth: ${depthOffset ? `calc(${depthOffset})` : "0px"}`,
     `--cm-note-list-prefix: ${prefix}`,
     "padding-left: calc(var(--cm-note-list-depth) + var(--cm-note-list-prefix))",
     "text-indent: calc(-1 * var(--cm-note-list-prefix))",

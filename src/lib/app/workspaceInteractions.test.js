@@ -389,10 +389,10 @@ describe("NotesEditor interactions", () => {
     expect(markers.every((marker) => marker.className === "cm-note-list-marker cm-note-list-marker-ordered")).toBe(true);
     expect(lines.map((line) => line.style.getPropertyValue("--cm-note-list-depth"))).toEqual([
       "0px",
-      "20px",
-      "20px",
-      "40px",
-      "40px"
+      "calc(16px + 1.05em)",
+      "calc(16px + 1.05em)",
+      "calc(16px + 1.05em + 16px + 1.05em)",
+      "calc(16px + 1.05em + 16px + 1.05em)"
     ]);
     expect(lines.map((line) => line.style.getPropertyValue("--cm-note-list-prefix"))).toEqual(
       Array(5).fill("calc(1.2em + 6px)")
@@ -400,10 +400,10 @@ describe("NotesEditor interactions", () => {
     expect(lines.map((line) => (line.getAttribute("style")?.match(/linear-gradient/g) ?? []).length)).toEqual([0, 1, 1, 2, 2]);
     expect(lines.map((line) => line.style.backgroundPosition)).toEqual([
       "",
-      "calc(0.525em + 0px) 0px",
-      "calc(0.525em + 0px) 0px",
-      "calc(0.525em + 0px) 0px, calc(0.525em + 20px) 0px",
-      "calc(0.525em + 0px) 0px, calc(0.525em + 20px) 0px"
+      "calc(0.525em) 0px",
+      "calc(0.525em) 0px",
+      "calc(0.525em) 0px, calc(0.525em + 1.05em + 16px) 0px",
+      "calc(0.525em) 0px, calc(0.525em + 1.05em + 16px) 0px"
     ]);
     expect(lines.slice(1).every((line) => line.style.backgroundSize.split(", ").every((size) => size === "1px 100%"))).toBe(true);
     expect(lines.slice(1).every((line) => line.style.backgroundRepeat.split(", ").every((repeat) => repeat === "no-repeat"))).toBe(true);
@@ -418,7 +418,7 @@ describe("NotesEditor interactions", () => {
     const lines = Array.from(container.querySelectorAll(".cm-note-list-layout"));
 
     expect(lines).toHaveLength(4);
-    expect(lines[1].style.backgroundPosition).toBe("calc(0.525em + 0px) 0px");
+    expect(lines[1].style.backgroundPosition).toBe("calc(0.525em) 0px");
     expect(lines[3].style.backgroundPosition).toBe(lines[1].style.backgroundPosition);
   });
 
@@ -667,8 +667,8 @@ describe("NotesEditor interactions", () => {
     expect(controls).toHaveLength(2);
     const childControl = controls[0];
     expect(childControl.getAttribute("aria-label")).toBe("Fold list");
-    expect(childControl.style.left).toBe("calc(0.525em - 18px)");
-    expect(controls[1].style.left).toBe("calc(0.525em - 18px)");
+    expect(childControl.style.left).toBe("-16px");
+    expect(controls[1].style.left).toBe("-16px");
     expect(getComputedStyle(childControl).fontSize).toBe(getComputedStyle(childControl.closest(".cm-line")).fontSize);
 
     await fireEvent.click(childControl);

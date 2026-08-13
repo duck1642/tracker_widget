@@ -132,6 +132,7 @@ Daily, Weekly, and Scratchpad notes share one continuous Markdown editor:
 - Source view uses a monospace font.
 - Headings, emphasis, links, code, lists, and task markers are supported.
 - Enter continues normal, numbered, and task lists.
+- Scratchpad headings and nested lists can be folded without changing their Markdown; fold state is retained for the app session.
 - Scratchpad stores raw Markdown at `<workspace>/scratchpad.md` without frontmatter or wrapper fences.
 - Daily and Weekly `## Notes` sections use dynamically sized `tracker-notes` fences so headings inside notes cannot alter document structure.
 
