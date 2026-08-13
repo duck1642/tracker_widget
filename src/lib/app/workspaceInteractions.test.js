@@ -400,11 +400,13 @@ describe("NotesEditor interactions", () => {
     expect(lines.map((line) => (line.getAttribute("style")?.match(/linear-gradient/g) ?? []).length)).toEqual([0, 1, 1, 2, 2]);
     expect(lines.map((line) => line.style.backgroundPosition)).toEqual([
       "",
-      "calc(0.375em + 0px) 0px",
-      "calc(0.375em + 0px) 0px",
-      "calc(0.375em + 0px) 0px, calc(0.375em + 20px) 0px",
-      "calc(0.375em + 0px) 0px, calc(0.375em + 20px) 0px"
+      "calc(0.525em + 0px) 0px",
+      "calc(0.525em + 0px) 0px",
+      "calc(0.525em + 0px) 0px, calc(0.525em + 20px) 0px",
+      "calc(0.525em + 0px) 0px, calc(0.525em + 20px) 0px"
     ]);
+    expect(lines.slice(1).every((line) => line.style.backgroundSize.split(", ").every((size) => size === "1px 100%"))).toBe(true);
+    expect(lines.slice(1).every((line) => line.style.backgroundRepeat.split(", ").every((repeat) => repeat === "no-repeat"))).toBe(true);
     expect(lines.every((line) => line.style.paddingLeft === "calc(var(--cm-note-list-depth) + var(--cm-note-list-prefix))")).toBe(true);
     expect(lines.every((line) => line.style.textIndent === "calc(-1 * var(--cm-note-list-prefix))")).toBe(true);
     expect(view.state.doc.toString()).toBe(value);
@@ -416,7 +418,7 @@ describe("NotesEditor interactions", () => {
     const lines = Array.from(container.querySelectorAll(".cm-note-list-layout"));
 
     expect(lines).toHaveLength(4);
-    expect(lines[1].style.backgroundPosition).toBe("calc(0.375em + 0px) 0px");
+    expect(lines[1].style.backgroundPosition).toBe("calc(0.525em + 0px) 0px");
     expect(lines[3].style.backgroundPosition).toBe(lines[1].style.backgroundPosition);
   });
 
@@ -430,6 +432,7 @@ describe("NotesEditor interactions", () => {
       "cm-note-list-marker cm-note-list-marker-ordered"
     ]);
     expect(markers.map((marker) => getComputedStyle(marker).width)).toEqual(["0.75em", "1.2em"]);
+    expect(markers.map((marker) => getComputedStyle(marker).transform)).toEqual(["translateX(.15em)", "translateX(.525em)"]);
     expect(markers.map((marker) => getComputedStyle(marker).textIndent)).toEqual(["0px", "0px"]);
     expect(lines.map((line) => line.style.getPropertyValue("--cm-note-list-prefix"))).toEqual([
       "calc(.75em + 6px)",

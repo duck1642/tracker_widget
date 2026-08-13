@@ -98,7 +98,7 @@ export const noteEditorTheme = [
       ".cm-note-list-marker-ordered": {
         width: "1.2em",
         textAlign: "left",
-        transform: "translateX(.375em)"
+        transform: "translateX(.525em)"
       },
       ".cm-note-list-marker-unordered": {
         width: ".75em",

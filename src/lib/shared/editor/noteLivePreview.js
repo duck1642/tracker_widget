@@ -83,7 +83,7 @@ function listItemDepth(listItem, state, markerFrom) {
 
 /** @param {number} depth @param {boolean} task @param {boolean} ordered */
 function listLayoutStyle(depth, task, ordered) {
-  const positions = Array.from({ length: depth }, (_, index) => `calc(${index * 20}px + .375em) 0px`);
+  const positions = Array.from({ length: depth }, (_, index) => `calc(${index * 20}px + .525em) 0px`);
   const guide = "linear-gradient(to bottom, var(--border-subtle), var(--border-subtle))";
   const prefix = task ? "24px" : ordered ? "calc(1.2em + 6px)" : "calc(.75em + 6px)";
 
