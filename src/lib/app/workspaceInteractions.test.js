@@ -574,6 +574,111 @@ describe("NotesEditor interactions", () => {
     expect(rendered.view.state.selection.main.head).toBe(3);
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it("mounts fold gutter only when folding prop is enabled", async () => {
+    const withoutFolding = await renderNotes({ value: "# Header\nContent", onChange: vi.fn() });
+    expect(withoutFolding.container.querySelector(".cm-foldGutter")).toBeNull();
+
+    cleanup();
+
+    const withFolding = await renderNotes({
+      value: "# Header\nContent",
+      onChange: vi.fn(),
+      folding: true,
+      filePath: "C:/test/scratchpad.md"
+    });
+    const foldGutter = withFolding.container.querySelector(".cm-foldGutter");
+    const content = withFolding.container.querySelector(".cm-content");
+    expect(foldGutter).toBeTruthy();
+    const marker = withFolding.container.querySelector(".cm-fold-marker");
+    const markerIcon = marker?.querySelector("svg");
+    expect(marker).toBeTruthy();
+    expect(getComputedStyle(foldGutter).width).toBe("24px");
+    expect(getComputedStyle(content).paddingLeft).toBe("0px");
+    expect(getComputedStyle(content).paddingRight).toBe("24px");
+    expect(getComputedStyle(marker).width).toBe("16px");
+    expect(getComputedStyle(marker).height).toBe("20px");
+    expect(getComputedStyle(marker).marginLeft).toBe("8px");
+    expect(getComputedStyle(marker).transform).toBe("none");
+    expect(markerIcon?.getAttribute("width")).toBe("13");
+    expect(markerIcon?.getAttribute("height")).toBe("13");
+
+    await fireEvent.click(marker);
+    await tick();
+
+    const placeholder = withFolding.container.querySelector(".cm-foldPlaceholder");
+    expect(placeholder?.textContent).toBe("...");
+    expect(placeholder?.getAttribute("aria-label")).toBeTruthy();
+    expect(getComputedStyle(placeholder).borderTopWidth).toBe("0px");
+    expect(getComputedStyle(placeholder).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+
+    await fireEvent.click(placeholder);
+    await tick();
+    expect(withFolding.container.querySelector(".cm-foldPlaceholder")).toBeNull();
+  });
+
+  it("preserves Scratchpad fold state across unmount and remount during session", async () => {
+    const filePath = "C:/test/session_scratchpad.md";
+    const value = "# Parent\nChild content\n# Sibling\nOther content";
+
+    const firstMount = await renderNotes({
+      value,
+      onChange: vi.fn(),
+      folding: true,
+      filePath
+    });
+
+    const { getFoldSnapshot, foldEffect } = await import("$lib/shared/editor/noteFolding.js");
+    // Fold # Parent
+    firstMount.view.dispatch({ effects: [foldEffect.of({ from: 8, to: 22 })] });
+    expect(getFoldSnapshot(firstMount.view)).toEqual([{ from: 8, to: 22 }]);
+
+    cleanup();
+    await tick();
+
+    // Re-mount identical Scratchpad (e.g. returning to tab)
+    const secondMount = await renderNotes({
+      value,
+      onChange: vi.fn(),
+      folding: true,
+      filePath
+    });
+
+    expect(getFoldSnapshot(secondMount.view)).toEqual([{ from: 8, to: 22 }]);
+    expect(secondMount.view.state.doc.toString()).toBe(value);
+  });
+
+  it("places fold controls on nested list guides without changing Markdown", async () => {
+    const value = [
+      "1. root",
+      "  1. child",
+      "    1. grandchild",
+      "      1. great-grandchild",
+      "2. sibling"
+    ].join("\n");
+    const rendered = await renderNotes({
+      value,
+      onChange: vi.fn(),
+      folding: true,
+      filePath: "C:/test/nested-folds.md"
+    });
+
+    const controls = rendered.container.querySelectorAll(".cm-note-list-fold-control");
+    expect(controls).toHaveLength(2);
+    const childControl = controls[0];
+    expect(childControl.getAttribute("aria-label")).toBe("Fold list");
+    expect(childControl.style.left).toBe("calc(0.525em - 18px)");
+    expect(controls[1].style.left).toBe("calc(0.525em - 18px)");
+    expect(getComputedStyle(childControl).fontSize).toBe(getComputedStyle(childControl.closest(".cm-line")).fontSize);
+
+    await fireEvent.click(childControl);
+    await tick();
+
+    const { getFoldSnapshot } = await import("$lib/shared/editor/noteFolding.js");
+    expect(getFoldSnapshot(rendered.view)).toHaveLength(1);
+    expect(rendered.container.querySelector(".cm-note-list-fold-control")?.getAttribute("aria-label")).toBe("Unfold list");
+    expect(rendered.view.state.doc.toString()).toBe(value);
+  });
 });
 
 describe("sidebar keyboard file navigation", () => {

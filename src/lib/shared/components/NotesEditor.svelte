@@ -19,6 +19,13 @@
   import { continueNoteMarkdownList } from "$lib/shared/editor/noteMarkdownCommands.js";
   import { noteEditorFillTheme, noteEditorTheme } from "$lib/shared/editor/noteEditorTheme.js";
   import {
+    createNoteFoldingExtension,
+    getFoldSnapshot,
+    getScratchpadFoldState,
+    restoreFoldSnapshot,
+    saveScratchpadFoldState
+  } from "$lib/shared/editor/noteFolding.js";
+  import {
     createNoteMarkdownExtension,
     externalDocumentAnnotation,
     externalDocumentUpdate,
@@ -26,7 +33,7 @@
   } from "$lib/shared/editor/noteLivePreview.js";
   import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
 
-  let { value = "", onChange, label = "Notes", fillHeight = false, helpPlacement = "above" } = $props();
+  let { value = "", onChange, label = "Notes", fillHeight = false, helpPlacement = "above", folding = false, filePath = "" } = $props();
 
   let editorHost = $state(null);
   let editorView = $state(null);
@@ -75,6 +82,7 @@
         placeholder("Click to add notes..."),
         previewCompartment.of(noteLivePreview),
         noteEditorTheme,
+        ...(folding ? createNoteFoldingExtension() : []),
         ...(fillHeight ? [noteEditorFillTheme] : []),
         EditorView.inputHandler.of(completeTaskMarkerInput),
         EditorView.contentAttributes.of({
@@ -89,6 +97,9 @@
           }
         }),
         EditorView.updateListener.of((update) => {
+          if (folding && filePath) {
+            saveScratchpadFoldState(filePath, update.state.doc.toString(), getFoldSnapshot(update.view));
+          }
           if (!update.docChanged) return;
           if (update.transactions.some((transaction) => transaction.annotation(externalDocumentAnnotation))) return;
           const nextValue = update.state.doc.toString();
@@ -100,7 +111,17 @@
 
     editorView = new EditorView({ state, parent: editorHost });
 
+    if (folding && filePath) {
+      const savedFolds = getScratchpadFoldState(filePath, value);
+      if (savedFolds) {
+        restoreFoldSnapshot(editorView, savedFolds);
+      }
+    }
+
     return () => {
+      if (folding && filePath && editorView) {
+        saveScratchpadFoldState(filePath, editorView.state.doc.toString(), getFoldSnapshot(editorView));
+      }
       editorView?.destroy();
       editorView = null;
     };

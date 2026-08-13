@@ -29,6 +29,8 @@
         onChange={(value) => scratchpadStore.updateContent(value)}
         label="Scratchpad"
         helpPlacement="below"
+        folding={true}
+        filePath={scratchpadStore.path}
       />
     </div>
   {/if}
