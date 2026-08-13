@@ -1,6 +1,7 @@
 <script>
   // @ts-nocheck
   import { ArrowLeft, ArrowRight, Columns2, X } from "@lucide/svelte";
+  import CollapseSplitIcon from "./CollapseSplitIcon.svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
 
   let { tabs = [], activeId = "", focused = true, onActivate = () => {}, onClose = () => {}, onSplit = null, onMoveToLeft = null, onMoveToRight = null, onSeparate = null } = $props();
@@ -53,7 +54,7 @@
   <ContextMenu
     x={tabContextMenu.x}
     y={tabContextMenu.y}
-    items={[...(onSplit ? [{ label: "Open in split view", icon: Columns2, onclick: splitFromContextMenu }] : []), ...(onMoveToLeft ? [{ label: "Move to left pane", icon: ArrowLeft, onclick: () => moveFromContextMenu("left") }] : []), ...(onMoveToRight ? [{ label: "Move to right pane", icon: ArrowRight, onclick: () => moveFromContextMenu("right") }] : []), ...(onSeparate ? [{ label: "Separate split view", onclick: separateFromContextMenu }] : []), { label: "Close tab", icon: X, onclick: closeFromContextMenu }]}
+    items={[...(onSplit ? [{ label: "Open in split view", icon: Columns2, onclick: splitFromContextMenu }] : []), ...(onMoveToLeft ? [{ label: "Move to left pane", icon: ArrowLeft, onclick: () => moveFromContextMenu("left") }] : []), ...(onMoveToRight ? [{ label: "Move to right pane", icon: ArrowRight, onclick: () => moveFromContextMenu("right") }] : []), ...(onSeparate ? [{ label: "Separate split view", icon: CollapseSplitIcon, onclick: separateFromContextMenu }] : []), { label: "Close tab", icon: X, onclick: closeFromContextMenu }]}
     width={176}
     ariaLabel={`${tabContextMenu.tab.title} tab actions`}
     onDismiss={() => tabContextMenu = null}

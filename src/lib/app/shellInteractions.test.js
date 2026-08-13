@@ -348,7 +348,9 @@ describe("workspace tab actions", () => {
     render(WorkspaceTabs, { tabs, activeId: "todo", onSeparate, onClose });
 
     await fireEvent.contextMenu(screen.getByRole("button", { name: "Todo" }));
-    await fireEvent.click(screen.getByRole("menuitem", { name: "Separate split view" }));
+    const separate = screen.getByRole("menuitem", { name: "Separate split view" });
+    expect(separate.querySelector("svg")).toBeTruthy();
+    await fireEvent.click(separate);
     expect(onSeparate).toHaveBeenCalledOnce();
 
     await fireEvent.contextMenu(screen.getByRole("button", { name: "Todo" }));
