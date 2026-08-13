@@ -40,6 +40,7 @@
   let splitView = $state(false);
   let splitRatio = $state(0.5);
   let focusedPane = $state("left");
+  let historyRestoreInProgress = false;
   const leftSession = { todoStore, dailyStore, weekStore, scratchpadStore };
   const rightSession = createWorkspaceSession();
   const navigationHistory = new NavigationHistory({ view: "todo", path: "" });
@@ -87,6 +88,16 @@
   function updateFocusedView({ view, path }) {
     selectedPath = path;
     appStore.currentView = view;
+    if (!historyRestoreInProgress) navigationHistory.visit({ view, path });
+  }
+
+  async function withoutHistoryRecording(action) {
+    historyRestoreInProgress = true;
+    try {
+      return await action();
+    } finally {
+      historyRestoreInProgress = false;
+    }
   }
 
   async function openInSplit(tab) {
@@ -181,40 +192,40 @@
     return activePane()?.openWeek(week, { background: true });
   }
 
-  async function selectWeek(week, { record = true } = {}) {
+  async function selectWeek(week) {
     if (!week.indexPath) return false;
     if (await focusExistingTab(weekTab(week))) return true;
     return await activePane()?.openWeek(week);
   }
 
-  async function selectDay(day, week, { record = true } = {}) {
+  async function selectDay(day, week) {
     if (await focusExistingTab(dayTab(day))) return true;
     return await activePane()?.openDay(day);
   }
 
-  async function selectTodo({ record = true } = {}) {
+  async function selectTodo() {
     if (await focusExistingTab({ id: "todo", view: "todo", title: "Todo", path: "" })) return true;
     return await activePane()?.openTodo();
   }
 
-  async function selectScratchpad({ record = true } = {}) {
+  async function selectScratchpad() {
     if (await focusExistingTab(scratchpadTab())) return true;
     return await activePane()?.openScratchpad();
   }
 
-  async function openCurrent(kind, { record = true } = {}) {
+  async function openCurrent(kind) {
     if (kind !== "todo") todoUiState.clearSelection();
-    if (kind === "scratchpad") return await selectScratchpad({ record });
+    if (kind === "scratchpad") return await selectScratchpad();
     const today = formatDate(new Date());
     const weekName = getWeekDescriptor(new Date()).folderName;
     const week = workspaceStore.weeks.find((item) => item.name === weekName);
     if (kind === "day") {
       const day = week?.days.find((item) => item.date === today);
-      if (day) return await selectDay(day, week, { record });
+      if (day) return await selectDay(day, week);
     } else if (kind === "week" && week?.indexPath) {
-      return await selectWeek(week, { record });
+      return await selectWeek(week);
     } else if (kind === "todo") {
-      return await selectTodo({ record });
+      return await selectTodo();
     }
     appStore.showStatus(kind === "day" ? "Today log not found" : "Current week not found");
     return false;
@@ -222,19 +233,21 @@
 
   async function restoreNavigationDestination(destination) {
     if (!destination) return false;
-    if (destination.view === "todo") return await selectTodo({ record: false });
-    if (destination.view === "scratchpad") return await selectScratchpad({ record: false });
-    for (const week of workspaceStore.weeks) {
-      if (destination.view === "week" && week.indexPath === destination.path) {
-        return selectWeek(week, { record: false });
+    return await withoutHistoryRecording(async () => {
+      if (destination.view === "todo") return await selectTodo();
+      if (destination.view === "scratchpad") return await selectScratchpad();
+      for (const week of workspaceStore.weeks) {
+        if (destination.view === "week" && week.indexPath === destination.path) {
+          return await selectWeek(week);
+        }
+        if (destination.view === "day") {
+          const day = week.days.find((item) => item.path === destination.path);
+          if (day) return await selectDay(day, week);
+        }
       }
-      if (destination.view === "day") {
-        const day = week.days.find((item) => item.path === destination.path);
-        if (day) return selectDay(day, week, { record: false });
-      }
-    }
-    appStore.showStatus("Navigation target is no longer available");
-    return false;
+      appStore.showStatus("Navigation target is no longer available");
+      return false;
+    });
   }
 
   async function moveThroughHistory(direction) {
@@ -254,11 +267,11 @@
     const refreshedWeek = workspaceStore.weeks.find((item) => item.name === week.name);
     if (!refreshedWeek) return false;
     if (activeView === "week" && refreshedWeek.indexPath === activePath) {
-      return await selectWeek(refreshedWeek, { record: false });
+      return await withoutHistoryRecording(() => selectWeek(refreshedWeek));
     }
     if (activeView === "day") {
       const day = refreshedWeek.days.find((item) => item.path === activePath);
-      if (day) return await selectDay(day, refreshedWeek, { record: false });
+      if (day) return await withoutHistoryRecording(() => selectDay(day, refreshedWeek));
     }
     return false;
   }
@@ -467,11 +480,6 @@
     } catch (error) {
       appStore.showStatus("Maximize failed: " + error);
     }
-  }
-
-  async function reloadTodo() {
-    todoUiState.clearSelection();
-    await todoStore.loadFile();
   }
 
   function toggleSettings() {
