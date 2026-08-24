@@ -1,20 +1,24 @@
 ---
 name: Feature request
-about: Suggest an idea for this project
+about: Suggest an improvement for Tracker Widget
 title: ''
 labels: ''
 assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+## Problem or use case
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+<!-- What problem would this solve, and who would benefit from it? -->
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+## Proposed solution
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+<!-- Describe the behavior or workflow you would like to see. -->
+
+## Alternatives considered
+
+<!-- Describe any alternative solutions or workarounds you have considered. -->
+
+## Additional context
+
+<!-- Add screenshots, examples, or other relevant details. Avoid sharing private workspace data. -->
