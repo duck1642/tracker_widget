@@ -10,6 +10,7 @@
   import DailyPanel from "$lib/features/daily/components/DailyPanel.svelte";
   import WeekPanel from "$lib/features/weekly/components/WeekPanel.svelte";
   import ScratchpadPanel from "$lib/features/scratchpad/components/ScratchpadPanel.svelte";
+  import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
 
   let { session, initialTabs = [], focused = true, onFocused = () => {}, onRequestSplit = null, onMoveToLeft = null, onMoveToRight = null, onEmpty = null, onSeparate = null } = $props();
   let tabs = $state([]);
@@ -65,8 +66,15 @@
   }
 
   async function open(tab, { background = false } = {}) {
-    if (!tabs.some((item) => item.id === tab.id)) tabs = [...tabs, tab];
-    if (!background) return activate(tab);
+    const existing = tabs.find((item) => item.id === tab.id);
+    if (existing) return background ? true : await activate(existing);
+    if (background) {
+      tabs = [...tabs, tab];
+      return true;
+    }
+    if (!(await load(tab))) return false;
+    tabs = [...tabs, tab];
+    focus(tab);
     return true;
   }
 
@@ -98,14 +106,50 @@
     return session.dailyStore.path;
   }
   export async function focusActive() { return activate(activeTab); }
-  export function takeTab(id) {
+
+  function storeForTab(tab) {
+    if (!tab) return null;
+    return tab.view === "todo" ? session.todoStore
+      : tab.view === "scratchpad" ? session.scratchpadStore
+      : tab.view === "week" ? session.weekStore
+      : session.dailyStore;
+  }
+
+  function detachTab(id) {
     const tab = tabs.find((item) => item.id === id);
     if (!tab) return null;
     tabs = tabs.filter((item) => item.id !== id);
     if (activeId === id) activeId = tabs.at(-1)?.id || "";
     return tab;
   }
-  export function takeAllTabs() {
+
+  export async function checkActiveExternalChanges() {
+    const store = storeForTab(activeTab);
+    return store ? await store.checkExternalChanges() : false;
+  }
+
+  export async function transferTab(id, accept) {
+    const tab = tabs.find((item) => item.id === id);
+    if (!tab) return false;
+    const wasActive = activeId === id;
+    const nextTab = wasActive ? tabs.filter((item) => item.id !== id).at(-1) : null;
+    if (!(await flushTab(tab))) {
+      appStore.showStatus("Resolve file conflicts before moving the tab");
+      return false;
+    }
+    if (!(await accept(tab))) return false;
+    detachTab(id);
+    if (nextTab && !(await load(nextTab))) activeId = "";
+    return true;
+  }
+
+  export async function releaseAllTabs() {
+    const stores = [...new Set(tabs.map(storeForTab).filter(Boolean))];
+    const results = await Promise.all(stores.map((store) => store.flushSave()));
+    if (!results.every(Boolean)) {
+      appStore.showStatus("Resolve file conflicts before separating split view");
+      return null;
+    }
     const allTabs = tabs;
     tabs = [];
     activeId = "";
@@ -118,10 +162,7 @@
   }
 
   async function flushTab(tab) {
-    const store = tab.view === "todo" ? session.todoStore
-      : tab.view === "scratchpad" ? session.scratchpadStore
-      : tab.view === "week" ? session.weekStore
-      : session.dailyStore;
+    const store = storeForTab(tab);
     return await store.flushSave();
   }
 
@@ -151,6 +192,12 @@
 
 <section class="pane" role="presentation" onpointerdown={() => activeTab && onFocused({ view: activeTab.view, path: activeTab.path })}>
   <WorkspaceTabs {tabs} {activeId} {focused} onActivate={activate} onClose={close} onSplit={onRequestSplit ? requestSplit : null} {onMoveToLeft} {onMoveToRight} {onSeparate} />
+  {#if activeTab?.view === "todo" && session.todoStore.conflict}
+    <ConflictBanner
+      onReloadExternal={() => session.todoStore.resolveConflict("reload")}
+      onKeepLocal={() => session.todoStore.resolveConflict("keep-local")}
+    />
+  {/if}
   <div class="panel-scroll" class:todo-scroll={activeTab?.view === "todo"}>
     {#if activeTab?.view === "todo"}<TodoPanel {...session} />
     {:else if activeTab?.view === "scratchpad"}<ScratchpadPanel scratchpadStore={session.scratchpadStore} />

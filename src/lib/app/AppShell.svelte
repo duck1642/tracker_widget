@@ -113,11 +113,20 @@
       appStore.showStatus("Choose another tab to open beside the current one");
       return;
     }
-    if (!splitView) splitView = true;
-    await tick();
-    if (leftPane?.hasTab(tab.id)) leftPane.takeTab(tab.id);
+    const createdSplit = !splitView;
+    if (createdSplit) {
+      splitView = true;
+      await tick();
+    }
+    const opened = leftPane?.hasTab(tab.id)
+      ? await leftPane.transferTab(tab.id, (movedTab) => rightPane?.openTab(movedTab))
+      : await rightPane?.openTab(tab);
+    if (!opened) {
+      if (createdSplit && rightPane?.tabCount() === 0) splitView = false;
+      return false;
+    }
     focusedPane = "right";
-    await rightPane?.openTab(tab);
+    return true;
   }
 
   function openTodoInSplit() { return openInSplit({ id: "todo", view: "todo", title: "Todo", path: "" }); }
@@ -136,9 +145,9 @@
       return await leftPane?.openTab(tab);
     }
 
-    rightPane.takeTab(tab.id);
+    const opened = await rightPane.transferTab(tab.id, (movedTab) => leftPane?.openTab(movedTab));
+    if (!opened) return false;
     focusedPane = "left";
-    const opened = await leftPane?.openTab(tab);
     if (rightPane.tabCount() === 0) await collapseSplit();
     return opened;
   }
@@ -149,12 +158,14 @@
   function openDayInPane(day, targetPane) { return openInPane(dayTab(day), targetPane); }
 
   async function collapseSplit() {
-    const tabs = rightPane?.takeAllTabs?.() || [];
+    const tabs = await rightPane?.releaseAllTabs?.();
+    if (tabs === null || tabs === undefined) return false;
     for (const tab of tabs) await leftPane?.openTab(tab, { background: true });
     splitView = false;
     focusedPane = "left";
     await tick();
     await leftPane?.focusActive?.();
+    return true;
   }
 
   function beginSplitResize(event) {
@@ -450,7 +461,7 @@
       if (disposed) { unlistenClose?.(); unlistenQuit?.(); }
     })();
     const handleFocus = async () => {
-      await persistenceRegistry.checkActive(appStore.currentView);
+      await activePane()?.checkActiveExternalChanges?.();
       if (["week", "day"].includes(appStore.currentView)) await workspaceStore.refresh();
     };
     window.addEventListener("focus", handleFocus);
