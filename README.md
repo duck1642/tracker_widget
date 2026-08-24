@@ -113,6 +113,8 @@ Subject and session history are app-local files and are ignored by Git:
 
 ## Development
 
+**Development note:** This project was human-directed and developed with substantial AI coding assistance. Product direction, design decisions, code review, and release preparation were led by me.
+
 Install Node.js and Rust, then start the development app:
 
 ```bash
