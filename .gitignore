@@ -45,7 +45,8 @@ graphify-out/
 .graphifyignore
 
 # Local planning documents
-/docs/
+/docs/CURRENT_WORK.md
+/docs/archive/
 /CURRENT_WORK.md
 /WALKTHROUGH.md
 
