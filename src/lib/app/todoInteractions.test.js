@@ -693,6 +693,85 @@ describe("todo actions", () => {
     }
   });
 
+  it.each([
+    ["Move Up", "First", ["todo-2", "todo-1", "todo-3"]],
+    ["Move Down", "Third", ["todo-1", "todo-3", "todo-2"]]
+  ])("preserves selection and focus for %s and leaves the boundary row in place", async (action, boundaryText, expectedIds) => {
+    const originalTodos = todoStore.todos;
+    todoStore.todos = [
+      { id: "todo-1", isTodo: true, text: "First", checked: false, indent: 0 },
+      { id: "todo-2", isTodo: true, text: "Second", checked: false, indent: 0 },
+      { id: "todo-3", isTodo: true, text: "Third", checked: false, indent: 0 }
+    ];
+    try {
+      vi.spyOn(todoStore, "scheduleSave").mockResolvedValue(true);
+      render(TodoPanel);
+      await fireEvent.contextMenu(screen.getByDisplayValue(boundaryText));
+      await fireEvent.click(screen.getByRole("menuitem", { name: action, exact: true }));
+      expect(todoStore.todos.map((todo) => todo.id)).toEqual(["todo-1", "todo-2", "todo-3"]);
+      expect(screen.queryByRole("menu", { name: "Todo selection actions" })).toBeNull();
+
+      await fireEvent.contextMenu(screen.getByDisplayValue("Second"));
+      await fireEvent.click(screen.getByRole("menuitem", { name: action, exact: true }));
+      expect(todoStore.todos.map((todo) => todo.id)).toEqual(expectedIds);
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-2"]);
+      expect(document.activeElement).toBe(screen.getByDisplayValue("Second"));
+      expect(screen.queryByRole("menu", { name: "Todo selection actions" })).toBeNull();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it.each(["Send to weekly objective", "Send to weekly planned"])("keeps selection and does not send when %s cannot load the week", async (action) => {
+    const originalTodos = todoStore.todos;
+    const descriptor = getWeekDescriptor(new Date());
+    todoStore.todos = [{ id: "todo-1", isTodo: true, text: "Keep me", checked: false, indent: 0 }];
+    workspaceStore.weeks = [{ name: descriptor.folderName, indexPath: "week.md", days: [] }];
+    weekStore.path = "other-week.md";
+    weekStore.plan = [{ id: "p1", day: "Mon", session: "Work", activities: [] }];
+    const loadPath = vi.spyOn(weekStore, "loadPath").mockResolvedValue(false);
+    const addObjectives = vi.spyOn(weekStore, "addObjectives");
+    const addPlanActivities = vi.spyOn(weekStore, "addPlanActivities");
+    try {
+      render(TodoPanel);
+      await fireEvent.contextMenu(screen.getByDisplayValue("Keep me"));
+      await fireEvent.click(screen.getByRole("menuitem", { name: action, exact: true }));
+      expect(loadPath).toHaveBeenCalledWith("week.md", descriptor, []);
+      expect(addObjectives).not.toHaveBeenCalled();
+      expect(addPlanActivities).not.toHaveBeenCalled();
+      expect(todoUiState.selectedTodoIds).toEqual(["todo-1"]);
+      expect(screen.queryByRole("menu", { name: "Choose weekly planned session" })).toBeNull();
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
+  it.each(["Send to weekly objective", "Send to weekly planned"])("reuses the loaded week for %s without refreshing or reloading it", async (action) => {
+    const originalTodos = todoStore.todos;
+    const descriptor = getWeekDescriptor(new Date());
+    todoStore.todos = [{ id: "todo-1", isTodo: true, text: "Reuse week", checked: false, indent: 0 }];
+    workspaceStore.weeks = [{ name: descriptor.folderName, indexPath: "week.md", days: [] }];
+    weekStore.path = "week.md";
+    weekStore.plan = [{ id: "p1", day: "Mon", session: "Work", activities: [] }];
+    const loadPath = vi.spyOn(weekStore, "loadPath");
+    const refresh = vi.spyOn(workspaceStore, "refresh");
+    const addObjectives = vi.spyOn(weekStore, "addObjectives").mockReturnValue(true);
+    try {
+      render(TodoPanel);
+      await fireEvent.contextMenu(screen.getByDisplayValue("Reuse week"));
+      await fireEvent.click(screen.getByRole("menuitem", { name: action, exact: true }));
+      expect(loadPath).not.toHaveBeenCalled();
+      expect(refresh).not.toHaveBeenCalled();
+      if (action === "Send to weekly objective") {
+        expect(addObjectives).toHaveBeenCalledWith(["Reuse week"]);
+      } else {
+        expect(screen.getByRole("menu", { name: "Choose weekly planned session" })).toBeTruthy();
+      }
+    } finally {
+      todoStore.todos = originalTodos;
+    }
+  });
+
   it("sends selected todos to weekly objectives and clears selection", async () => {
     const originalTodos = todoStore.todos;
     const originalWeeks = workspaceStore.weeks;

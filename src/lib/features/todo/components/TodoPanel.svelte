@@ -10,8 +10,9 @@
   import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
   import TodoList from "./TodoList.svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
-  import { CheckSquare2, ChevronDown, ChevronUp, ClipboardList, ClipboardPaste, Copy, Flag, IndentDecrease, IndentIncrease, ListTodo, Scissors, Square, TextSelect, Trash2, X, Terminal } from "@lucide/svelte";
-  import { captureEditableText, copyEditableSelection, cutEditableSelection, editableTextValue, hasEditableSelection, pasteIntoEditable, selectAllEditableText } from "$lib/shared/services/editableTextClipboard.js";
+  import { CheckSquare2, ChevronDown, ChevronUp, ClipboardList, Flag, IndentDecrease, IndentIncrease, ListTodo, Square, Trash2, X, Terminal } from "@lucide/svelte";
+  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.js";
+  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
   import { invoke } from "@tauri-apps/api/core";
   import TodoSendSessionMenu from "./TodoSendSessionMenu.svelte";
   import TodoSendWeeklyPlanMenu from "./TodoSendWeeklyPlanMenu.svelte";
@@ -48,15 +49,13 @@
       { label: `${selectedCount} selected`, isHeader: true }
     ];
 
-    if (editable) {
-      items.push(
-        { label: "Cut", icon: Scissors, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(cutEditableSelection, editable) },
-        { label: "Copy", icon: Copy, disabled: !hasEditableSelection(editable), onclick: () => runTextAction(copyEditableSelection, editable) },
-        { label: "Paste", icon: ClipboardPaste, onclick: () => runTextAction(pasteIntoEditable, editable) },
-        { label: "Select All", icon: TextSelect, disabled: !editableTextValue(editable), onclick: () => runTextAction(selectAllEditableText, editable) },
-        { separator: true }
-      );
-    }
+    items.push(...buildEditableTextMenuItems(editable, {
+      beforeAction: () => {
+        closeContextMenu();
+        todoUiState.clearSelection();
+      },
+      onError: (error) => appStore.showStatus(`Clipboard failed: ${error}`)
+    }));
 
     items.push(
       {
@@ -102,12 +101,12 @@
         {
           label: "Move Up",
           icon: ChevronUp,
-          onclick: handleMoveSelectedUp
+          onclick: () => handleMoveSelected(-1)
         },
         {
           label: "Move Down",
           icon: ChevronDown,
-          onclick: handleMoveSelectedDown
+          onclick: () => handleMoveSelected(1)
         }
       );
     }
@@ -270,17 +269,6 @@
     clearSelection();
   }
 
-  /** @param {any} action @param {any} editable */
-  async function runTextAction(action, editable) {
-    closeContextMenu();
-    todoUiState.clearSelection();
-    try {
-      await action(editable);
-    } catch (error) {
-      appStore.showStatus(`Clipboard failed: ${error}`);
-    }
-  }
-
   function selectedTodoDescriptions() {
     const selectedIds = new Set(todoUiState.selectedTodoIds);
     return todoStore.todos
@@ -289,24 +277,27 @@
       .filter(Boolean);
   }
 
-  async function handleSendToWeeklyObjective() {
-    const descriptions = selectedTodoDescriptions();
+  async function loadCurrentWeek() {
     const descriptor = getWeekDescriptor(new Date());
     let week = workspaceStore.weeks.find((item) => item.name === descriptor.folderName);
-    closeContextMenu();
-    if (!descriptions.length) return;
     if (!week?.indexPath) {
       await workspaceStore.refresh();
       week = workspaceStore.weeks.find((item) => item.name === descriptor.folderName);
     }
     if (!week?.indexPath) {
       appStore.showStatus("Current week not found");
-      return;
+      return false;
     }
     if (weekStore.path !== week.indexPath) {
-      const loaded = await weekStore.loadPath(week.indexPath, descriptor, week.days);
-      if (!loaded) return;
+      return await weekStore.loadPath(week.indexPath, descriptor, week.days);
     }
+    return true;
+  }
+
+  async function handleSendToWeeklyObjective() {
+    const descriptions = selectedTodoDescriptions();
+    closeContextMenu();
+    if (!descriptions.length || !(await loadCurrentWeek())) return;
     if (weekStore.addObjectives(descriptions)) {
       appStore.showStatus(`Sent ${descriptions.length} ${descriptions.length === 1 ? "objective" : "objectives"}`);
       clearSelection();
@@ -346,23 +337,9 @@
 
   async function handleOpenWeeklyPlannedSessions() {
     const descriptions = selectedTodoDescriptions();
-    const descriptor = getWeekDescriptor(new Date());
-    let week = workspaceStore.weeks.find((item) => item.name === descriptor.folderName);
     const menuPosition = contextMenu || { x: 0, y: 0 };
     closeContextMenu();
-    if (!descriptions.length) return;
-    if (!week?.indexPath) {
-      await workspaceStore.refresh();
-      week = workspaceStore.weeks.find((item) => item.name === descriptor.folderName);
-    }
-    if (!week?.indexPath) {
-      appStore.showStatus("Current week not found");
-      return;
-    }
-    if (weekStore.path !== week.indexPath) {
-      const loaded = await weekStore.loadPath(week.indexPath, descriptor, week.days);
-      if (!loaded) return;
-    }
+    if (!descriptions.length || !(await loadCurrentWeek())) return;
     const plan = weekStore.plan.filter((entry) => entry.session?.trim());
     if (!plan.length) {
       appStore.showStatus("No weekly planned sessions");
@@ -423,34 +400,18 @@
     }
   }
 
-  function handleMoveSelectedUp() {
+  /** @param {-1 | 1} direction */
+  function handleMoveSelected(direction) {
     if (todoUiState.selectedTodoIds.length === 1) {
       const id = todoUiState.selectedTodoIds[0];
       const index = todoStore.todos.findIndex((t) => t.id === id);
-      if (index > 0) {
-        todoStore.moveTodoUp(index);
+      const targetIndex = index + direction;
+      if (index >= 0 && targetIndex >= 0 && targetIndex < todoStore.todos.length) {
+        if (direction === -1) todoStore.moveTodoUp(index);
+        else todoStore.moveTodoDown(index);
         focusedTodoId = id;
         tick().then(() => {
-          if (inputElements[id]) {
-            inputElements[id].focus();
-          }
-        });
-      }
-    }
-    closeContextMenu();
-  }
-
-  function handleMoveSelectedDown() {
-    if (todoUiState.selectedTodoIds.length === 1) {
-      const id = todoUiState.selectedTodoIds[0];
-      const index = todoStore.todos.findIndex((t) => t.id === id);
-      if (index >= 0 && index < todoStore.todos.length - 1) {
-        todoStore.moveTodoDown(index);
-        focusedTodoId = id;
-        tick().then(() => {
-          if (inputElements[id]) {
-            inputElements[id].focus();
-          }
+          inputElements[id]?.focus();
         });
       }
     }

@@ -8,7 +8,7 @@ import {
   selectAllEditableText
 } from "./editableTextClipboard.js";
 
-/** @typedef {{ target: HTMLInputElement | HTMLTextAreaElement, selectionStart: number, selectionEnd: number, selectedText: string }} EditableTextContext */
+/** @typedef {import("./editableTextClipboard.js").EditableTextContext} EditableTextContext */
 /** @typedef {{ label?: string, icon?: any, disabled?: boolean, onclick?: () => Promise<void>, separator?: boolean }} EditableTextMenuItem */
 
 /**
