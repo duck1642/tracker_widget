@@ -54,6 +54,8 @@ Workspace location is managed from Settings. Todo and Scratchpad paths are deriv
 
 The sidebar keeps Todo and Scratchpad above the week tree. Use the tree to open weekly indexes and daily logs, or use **Back** and **Forward** to revisit recent views.
 
+Todo, Scratchpad, weekly indexes, and daily logs open in workspace tabs. Use sidebar and tab context menus to open or move a tab into a two-pane Split View, then drag the divider to resize the panes. Each file has one editable tab across both panes; opening it again focuses its existing tab. Back and Forward follow focus history across both panes.
+
 - `Ctrl + PageUp`: open the previous existing log.
 - `Ctrl + PageDown`: open the next existing log.
 - Navigation crosses week boundaries without expanding collapsed folders.
