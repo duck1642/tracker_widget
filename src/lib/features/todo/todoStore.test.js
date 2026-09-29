@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TodoStore } from "./todoStore.svelte.js";
+import { PersistenceRegistry } from "$lib/app/persistenceRegistry.js";
 import { clampContextMenuPosition } from "$lib/shared/services/contextMenuPosition.js";
 
 vi.mock("$lib/shared/services/logWorkspaceService.js", () => ({
@@ -110,6 +111,32 @@ describe("TodoStore persistence", () => {
     await store.loadFile({ path: "B.md" });
 
     expect(writes).toContainEqual({ path: "A.md", content: "- [ ] changed A\n" });
+    expect(store.todos[0].text).toBe("B");
+  });
+
+  it("blocks navigation and the shutdown flush until a failed pre-save read recovers", async () => {
+    const { store, fileService, files, appStore } = createHarness({
+      "A.md": "- [ ] A\n",
+      "B.md": "- [ ] B\n"
+    });
+    const registry = new PersistenceRegistry();
+    registry.register(store);
+    await store.loadFile();
+    store.updateText(store.todos[0].id, "unsaved");
+    fileService.readFile.mockRejectedValue(new Error("locked"));
+
+    await expect(store.loadFile({ path: "B.md" })).resolves.toBe(false);
+    await expect(registry.flushAll()).resolves.toBe(false);
+    expect(store.loadedPath).toBe("A.md");
+    expect(appStore.filePath).toBe("A.md");
+    expect(store.todos[0].text).toBe("unsaved");
+    expect(store.dirty).toBe(true);
+    expect(fileService.writeFile).not.toHaveBeenCalled();
+
+    fileService.readFile.mockImplementation(async (path) => files.get(path) ?? "");
+    expect(await registry.flushAll()).toBe(true);
+    expect(files.get("A.md")).toBe("- [ ] unsaved\n");
+    expect(await store.loadFile({ path: "B.md" })).toBe(true);
     expect(store.todos[0].text).toBe("B");
   });
 

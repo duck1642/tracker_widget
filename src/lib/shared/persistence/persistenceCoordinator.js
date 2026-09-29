@@ -72,15 +72,15 @@ export class PersistenceCoordinator {
     while (this.pending && !this.conflict) {
       const write = this.pending;
       this.pending = null;
-      const diskContent = await this.fileService.readFile(write.path);
-      if (diskContent !== this.baseContent) {
-        this.pending = write;
-        this.conflict = { path: write.path, diskContent, localContent: write.content };
-        this.onStatus("External change detected");
-        this.emit();
-        return false;
-      }
       try {
+        const diskContent = await this.fileService.readFile(write.path);
+        if (diskContent !== this.baseContent) {
+          this.pending ||= write;
+          this.conflict = { path: write.path, diskContent, localContent: this.pending.content };
+          this.onStatus("External change detected");
+          this.emit();
+          return false;
+        }
         await this.fileService.writeFile(write.path, write.content);
         this.baseContent = write.content;
       } catch (error) {
