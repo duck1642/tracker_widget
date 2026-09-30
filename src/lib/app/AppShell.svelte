@@ -41,6 +41,7 @@
   let splitRatio = $state(0.5);
   let focusedPane = $state("left");
   let historyRestoreInProgress = false;
+  let paneOperationId = 0;
   const leftSession = { todoStore, dailyStore, weekStore, scratchpadStore };
   const rightSession = createWorkspaceSession();
   const navigationHistory = new NavigationHistory({ view: "todo", path: "" });
@@ -73,16 +74,26 @@
 
   function activePane() { return focusedPane === "right" && splitView ? rightPane : leftPane; }
 
+  function beginPaneOperation() {
+    const id = ++paneOperationId;
+    return { isCurrent: () => paneOperationId === id };
+  }
+
+  function cancelPendingLoads() {
+    paneOperationId += 1;
+    leftPane?.cancelPending?.();
+    rightPane?.cancelPending?.();
+    persistenceRegistry.cancelPendingOpens?.();
+  }
+
   async function focusExistingTab(tab) {
     if (rightPane?.hasTab(tab.id)) {
-      focusedPane = "right";
       return await rightPane.openTab(tab);
     }
     if (leftPane?.hasTab(tab.id)) {
-      focusedPane = "left";
       return await leftPane.openTab(tab);
     }
-    return false;
+    return null;
   }
 
   function updateFocusedView({ view, path }) {
@@ -101,10 +112,9 @@
   }
 
   async function openInSplit(tab) {
+    const operation = beginPaneOperation();
     if (rightPane?.hasTab(tab.id)) {
-      focusedPane = "right";
-      await rightPane?.openTab(tab);
-      return;
+      return await rightPane?.openTab(tab);
     }
     const tabIsOnlyLeftTab = leftPane?.hasTab(tab.id)
       && leftPane.activeTabId?.() === tab.id
@@ -118,14 +128,20 @@
       splitView = true;
       await tick();
     }
+    if (!operation.isCurrent()) {
+      if (createdSplit && rightPane?.tabCount() === 0) splitView = false;
+      return false;
+    }
     const opened = leftPane?.hasTab(tab.id)
-      ? await leftPane.transferTab(tab.id, (movedTab) => rightPane?.openTab(movedTab))
+      ? await leftPane.transferTab(tab.id, (movedTab, sourceStore, transfer) => rightPane?.acceptTransfer(movedTab, sourceStore, transfer), operation)
       : await rightPane?.openTab(tab);
+    if (!operation.isCurrent()) return false;
     if (!opened) {
       if (createdSplit && rightPane?.tabCount() === 0) splitView = false;
       return false;
     }
     focusedPane = "right";
+    if (leftPane?.hasTab(tab.id) === false && rightPane?.hasTab(tab.id)) await rightPane.focusActive?.();
     return true;
   }
 
@@ -136,18 +152,19 @@
 
   async function openInPane(tab, targetPane) {
     if (targetPane === "right") return await openInSplit(tab);
+    const operation = beginPaneOperation();
     if (leftPane?.hasTab(tab.id)) {
-      focusedPane = "left";
       return await leftPane.openTab(tab);
     }
     if (!rightPane?.hasTab(tab.id)) {
-      focusedPane = "left";
       return await leftPane?.openTab(tab);
     }
 
-    const opened = await rightPane.transferTab(tab.id, (movedTab) => leftPane?.openTab(movedTab));
+    const opened = await rightPane.transferTab(tab.id, (movedTab, sourceStore, transfer) => leftPane?.acceptTransfer(movedTab, sourceStore, transfer), operation);
+    if (!operation.isCurrent()) return false;
     if (!opened) return false;
     focusedPane = "left";
+    if (leftPane?.hasTab(tab.id)) await leftPane.focusActive?.();
     if (rightPane.tabCount() === 0) await collapseSplit();
     return opened;
   }
@@ -158,12 +175,26 @@
   function openDayInPane(day, targetPane) { return openInPane(dayTab(day), targetPane); }
 
   async function collapseSplit() {
-    const tabs = await rightPane?.releaseAllTabs?.();
+    const rightActiveId = rightPane?.activeTabId?.();
+    const rightTabs = rightPane?.tabsSnapshot?.() || [];
+    const operation = beginPaneOperation();
+    const tabs = await rightPane?.releaseAllTabs?.({
+      isCurrent: operation.isCurrent,
+      commit: () => {
+        leftPane?.acceptReleasedTabs?.(rightTabs, rightActiveId);
+        splitView = false;
+        focusedPane = "left";
+      }
+    });
     if (tabs === null || tabs === undefined) return false;
-    for (const tab of tabs) await leftPane?.openTab(tab, { background: true });
+    if (!operation.isCurrent()) return false;
+    leftPane?.acceptReleasedTabs?.(tabs, rightActiveId);
     splitView = false;
     focusedPane = "left";
     await tick();
+    if (!leftPane?.activeTabId?.() && tabs.length) {
+      return await leftPane?.openTab(tabs.find((tab) => tab.id === rightActiveId) ?? tabs[0]);
+    }
     await leftPane?.focusActive?.();
     return true;
   }
@@ -184,46 +215,54 @@
   }
 
   async function openDayInBackground(day) {
-    if (await focusExistingTab(dayTab(day))) return true;
+    const existing = await focusExistingTab(dayTab(day));
+    if (existing !== null) return existing;
     return await activePane()?.openDay(day, { background: true });
   }
 
   async function openTodoInBackground() {
-    if (await focusExistingTab({ id: "todo", view: "todo", title: "Todo", path: "" })) return true;
+    const existing = await focusExistingTab({ id: "todo", view: "todo", title: "Todo", path: "" });
+    if (existing !== null) return existing;
     return activePane()?.openTodo({ background: true });
   }
 
   async function openScratchpadInBackground() {
-    if (await focusExistingTab(scratchpadTab())) return true;
+    const existing = await focusExistingTab(scratchpadTab());
+    if (existing !== null) return existing;
     return activePane()?.openScratchpad({ background: true });
   }
 
   async function openWeekInBackground(week) {
-    if (await focusExistingTab(weekTab(week))) return true;
+    const existing = await focusExistingTab(weekTab(week));
+    if (existing !== null) return existing;
     return activePane()?.openWeek(week, { background: true });
   }
 
   async function selectWeek(week, { replace = true } = {}) {
     if (!week.indexPath) return false;
-    if (await focusExistingTab(weekTab(week))) return true;
+    const existing = await focusExistingTab(weekTab(week));
+    if (existing !== null) return existing;
     if (replace) return await activePane()?.replaceActiveTab(weekTab(week));
     return await activePane()?.openWeek(week);
   }
 
   async function selectDay(day, week, { replace = true } = {}) {
-    if (await focusExistingTab(dayTab(day))) return true;
+    const existing = await focusExistingTab(dayTab(day));
+    if (existing !== null) return existing;
     if (replace) return await activePane()?.replaceActiveTab(dayTab(day));
     return await activePane()?.openDay(day);
   }
 
   async function selectTodo({ replace = true } = {}) {
-    if (await focusExistingTab({ id: "todo", view: "todo", title: "Todo", path: "" })) return true;
+    const existing = await focusExistingTab({ id: "todo", view: "todo", title: "Todo", path: "" });
+    if (existing !== null) return existing;
     if (replace) return await activePane()?.replaceActiveTab({ id: "todo", view: "todo", title: "Todo", path: "" });
     return await activePane()?.openTodo();
   }
 
   async function selectScratchpad({ replace = true } = {}) {
-    if (await focusExistingTab(scratchpadTab())) return true;
+    const existing = await focusExistingTab(scratchpadTab());
+    if (existing !== null) return existing;
     if (replace) return await activePane()?.replaceActiveTab(scratchpadTab());
     return await activePane()?.openScratchpad();
   }
@@ -301,7 +340,7 @@
 
   async function convertWeekToPersonal(week) {
     if (!(await persistenceRegistry.flushAll())) {
-      appStore.showStatus("Resolve file conflicts before converting the week");
+      appStore.showStatus(persistenceRegistry.blockedMessage("converting the week"));
       return false;
     }
     const activeView = appStore.currentView;
@@ -325,7 +364,7 @@
     }
     if (!approved) return false;
     if (!(await persistenceRegistry.flushAll())) {
-      appStore.showStatus("Resolve file conflicts before deleting the week");
+      appStore.showStatus(persistenceRegistry.blockedMessage("deleting the week"));
       return false;
     }
     const wasActive = pathBelongsToWeek(selectedPath, week.path);
@@ -426,6 +465,7 @@
       event.preventDefault();
     };
     window.addEventListener("contextmenu", handleContextMenu);
+    cancelPendingLoads();
     handleResize();
     (async () => {
       try {
@@ -435,8 +475,9 @@
         } catch {}
         try {
           unlistenQuit = await listen("request-quit", async () => {
+            cancelPendingLoads();
             if (await persistenceRegistry.flushAll()) await invoke("exit_app");
-            else appStore.showStatus("Resolve file conflicts before quitting");
+            else appStore.showStatus(persistenceRegistry.blockedMessage("quitting"));
           });
         } catch {}
         await appStore.loadConfig();
@@ -447,7 +488,8 @@
         try {
           unlistenClose = await appWindow.onCloseRequested(async (event) => {
             event.preventDefault();
-            if (!(await persistenceRegistry.flushAll())) return appStore.showStatus("Resolve file conflicts before closing");
+            cancelPendingLoads();
+            if (!(await persistenceRegistry.flushAll())) return appStore.showStatus(persistenceRegistry.blockedMessage("closing"));
             try {
               await appWindow.hide();
             } catch (error) {
@@ -469,7 +511,8 @@
   });
 
   async function closeApp() {
-    if (!(await persistenceRegistry.flushAll())) return appStore.showStatus("Resolve file conflicts before closing");
+    cancelPendingLoads();
+    if (!(await persistenceRegistry.flushAll())) return appStore.showStatus(persistenceRegistry.blockedMessage("closing"));
     try {
       const appWindow = getCurrentWindow();
       await appWindow.hide();

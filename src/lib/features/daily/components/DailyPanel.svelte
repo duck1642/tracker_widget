@@ -4,7 +4,6 @@
   import SessionCard from "./SessionCard.svelte";
   import AddSessionForm from "./AddSessionForm.svelte";
   import NotesEditor from "$lib/shared/components/NotesEditor.svelte";
-  import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
   import { ChevronDown, ChevronUp, Trash2 } from "@lucide/svelte";
   import { appStore } from "$lib/app/appStore.svelte.js";
@@ -128,7 +127,6 @@
     <div class="empty"><strong>No daily log selected</strong><span>Choose a day from the file tree or open Day.</span></div>
   {:else}
     <DailyHeader date={dailyStore.date} totalMinutes={dailyStore.totalMinutes} unknownDurationCount={dailyStore.unknownDurationCount} />
-    {#if dailyStore.conflict}<ConflictBanner onReloadExternal={() => dailyStore.resolveConflict("reload")} onKeepLocal={() => dailyStore.resolveConflict("keep-local")} />{/if}
     <section class="sessions">
       {#each dailyStore.sessions as session (session.id)}
         <SessionCard

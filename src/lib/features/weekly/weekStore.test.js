@@ -31,7 +31,7 @@ describe("WeekStore editing", () => {
     await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
     store.foldedObjectiveIds = ["objective-0"];
 
-    store.unload();
+    await store.unload();
 
     expect(store.loaded).toBe(false);
     expect(store.path).toBe("");
@@ -126,7 +126,9 @@ describe("WeekStore editing", () => {
     store.removeObjective(grandchild.id);
     expect(store.foldedObjectiveIds).toEqual([parent.id]);
 
-    store.applyExternal(files.get("A.md"));
+    await store.flushSave();
+    files.set("A.md", files.get("A.md") + "\nexternal note\n");
+    await store.checkExternalChanges();
     expect(store.foldedObjectiveIds).toEqual([]);
   });
 
@@ -150,6 +152,91 @@ describe("WeekStore editing", () => {
     expect(store.objectives[0].description).toBe("External parent");
   });
 
+  it("keeps a conflicted week accessible when the same path is focused again", async () => {
+    const { store, files } = harness();
+    files.set("A.md", weekWithObjectives("A", [
+      "- {subjects: (general), status: open} Parent",
+      "  - {subjects: (general), status: open} Child"
+    ]));
+    const descriptor = { year: 2026, week: 26, rangeLabel: "A" };
+    await store.loadPath("A.md", descriptor);
+    store.updateNotes("local pending");
+    files.set("A.md", files.get("A.md").replace("## Notes", "## Notes\n\nexternal note"));
+
+    expect(await store.loadPath("A.md", descriptor)).toBe(true);
+    expect(store.loaded).toBe(true);
+    expect(store.path).toBe("A.md");
+    expect(store.conflict).toBeTruthy();
+    expect(store.notesRaw).toContain("local pending");
+  });
+
+  it("invalidates fold state after an external notes-only reload", async () => {
+    const { store, files } = harness();
+    files.set("A.md", weekWithObjectives("A", [
+      "- {subjects: (general), status: open} Parent",
+      "  - {subjects: (general), status: open} Child"
+    ]));
+    await store.loadPath("A.md", { year: 2026, week: 26, rangeLabel: "A" });
+    await store.flushSave();
+    store.toggleObjectiveFold(store.objectives[0].id);
+    files.set("A.md", files.get("A.md").replace("## Notes", "## Notes\n\nexternal note"));
+
+    expect(await store.checkExternalChanges()).toBe(true);
+    expect(store.foldedObjectiveIds).toEqual([]);
+    expect(store.objectiveFoldCache.has("A.md")).toBe(false);
+  });
+
+  it("preserves fold and calculation state when close is blocked by a conflict", async () => {
+    const { store, files } = harness();
+    files.set("A.md", weekWithObjectives("A", [
+      "- {subjects: (general), status: open} Parent",
+      "  - {subjects: (general), status: open} Child"
+    ]));
+    await store.loadPath("A.md", { year: 2026, week: 26, rangeLabel: "A" });
+    store.toggleObjectiveFold(store.objectives[0].id);
+    store.captureObjectiveFolds();
+    store.updateNotes("local pending");
+    files.set("A.md", files.get("A.md").replace("Parent", "External Parent"));
+    expect(await store.flushSave()).toBe(false);
+    const requestBeforeClose = store.actualRequest;
+
+    expect(await store.unload()).toBe(false);
+    expect(store.objectiveFoldCache.has("A.md")).toBe(true);
+    expect(store.actualRequest).toBe(requestBeforeClose);
+    expect(store.loaded).toBe(true);
+    expect(store.path).toBe("A.md");
+  });
+
+  it("waits for refreshActualWithDaily and reports its failed save", async () => {
+    const { store } = harness();
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    let releaseRead;
+    store.fileService.readFile = vi.fn(async (path) => {
+      if (path === "other-day.md") {
+        return new Promise((resolve) => { releaseRead = () => resolve("# 2026-06-23\n\n## Work\n"); });
+      }
+      return index;
+    });
+    store.fileService.writeFile = vi.fn(async () => { throw new Error("write failed"); });
+
+    const refresh = store.refreshActualWithDaily("2026-06-22", [
+      { id: "session-1", name: "Work", activities: [{ id: "activity-1", subjects: ["rust"], minutes: 25, description: "Current" }] }
+    ], [
+      { date: "2026-06-22", path: "current-day.md" },
+      { date: "2026-06-23", path: "other-day.md" }
+    ]);
+    while (!releaseRead) await Promise.resolve();
+    let flushed = false;
+    const flush = store.flushSave().then((result) => { flushed = true; return result; });
+    await Promise.resolve();
+    expect(flushed).toBe(false);
+    releaseRead();
+
+    await refresh;
+    expect(await flush).toBe(false);
+    expect(store.actual[0].session).toBe("Work");
+  });
+
   it("starts a fresh store without session fold state", () => {
     const first = harness().store;
     first.foldedObjectiveIds = ["objective-0"];
@@ -168,6 +255,7 @@ describe("WeekStore editing", () => {
   it("accepts an edit after a clean external reload without a false conflict", async () => {
     const { store, files } = harness();
     await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    await store.flushSave();
     files.set("week.md", index.replace("## Notes", "## Reference\n\nexternal\n\n## Notes"));
     await store.checkExternalChanges();
     store.updateNotes("local after reload");
@@ -433,5 +521,73 @@ describe("WeekStore editing", () => {
       activities: [{ description: "Current", subjects: ["rust"], minutes: 25 }]
     }]);
     expect(files.get("week.md")).toContain("| Mon | Work | rust | 25 |");
+  });
+
+  it("does not apply a delayed older actual calculation after a newer one", async () => {
+    const { store, files } = harness();
+    await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "June 22-28" });
+    let releaseOld;
+    let releaseNew;
+    files.set("old-day.md", "old");
+    files.set("new-day.md", "new");
+    store.fileService.readFile = vi.fn(async (path) => {
+      if (path === "old-day.md") return new Promise((resolve) => { releaseOld = () => resolve("# 2026-06-22\n\n## Old\n\n- {subjects: (rust), time: 10m} old\n"); });
+      if (path === "new-day.md") return new Promise((resolve) => { releaseNew = () => resolve("# 2026-06-23\n\n## New\n\n- {subjects: (rust), time: 10m} new\n"); });
+      return files.get(path);
+    });
+
+    const oldCalculation = store.refreshActual([{ date: "2026-06-22", path: "old-day.md" }]);
+    while (!releaseOld) await Promise.resolve();
+    const newCalculation = store.refreshActual([{ date: "2026-06-23", path: "new-day.md" }]);
+    while (!releaseNew) await Promise.resolve();
+    releaseNew();
+    await newCalculation;
+    releaseOld();
+    await oldCalculation;
+
+    expect(store.actual.map((row) => row.session)).toEqual(["New"]);
+    expect(files.get("week.md")).toContain("New");
+    expect(files.get("week.md")).not.toContain("Old");
+  });
+
+  it("opens without waiting for Actual and ignores an old week's late calculation", async () => {
+    const { store, files } = harness();
+    files.set("B.md", weekWithObjectives("B", ["- {subjects: (general), status: open} B"]));
+    let finishDay;
+    const day = new Promise((resolve) => { finishDay = resolve; });
+    const read = store.fileService.readFile.getMockImplementation();
+    store.fileService.readFile.mockImplementation((path) => path === "pending-day.md" ? day : read(path));
+    expect(await store.loadPath("week.md", { year: 2026, week: 26, rangeLabel: "A" }, [{ date: "2026-06-22", path: "pending-day.md" }])).toBe(true);
+    const oldActual = store.actualTask;
+    expect(await store.loadPath("B.md", { year: 2026, week: 27, rangeLabel: "B" })).toBe(true);
+    await store.flushSave();
+    const savedB = files.get("B.md");
+    store.fileService.writeFile.mockClear();
+    finishDay("# 2026-06-22\n\n## Old session\n\n- {subjects: (rust), time: 10m} Old activity\n");
+    await oldActual;
+    expect(store.path).toBe("B.md");
+    expect(store.actual).toEqual([]);
+    expect(files.get("B.md")).toBe(savedB);
+    expect(store.fileService.writeFile).not.toHaveBeenCalled();
+  });
+
+  it("does not let a delayed old-week read replace a newer week", async () => {
+    const { store, files } = harness();
+    files.set("A.md", weekWithObjectives("A", ["- {subjects: (general), status: open} A"]));
+    files.set("B.md", weekWithObjectives("B", ["- {subjects: (general), status: open} B"]));
+    let releaseA;
+    store.fileService.readFile = vi.fn(async (path) => {
+      if (path === "A.md") return new Promise((resolve) => { releaseA = () => resolve(files.get(path)); });
+      return files.get(path);
+    });
+
+    const oldOpen = store.loadPath("A.md", { year: 2026, week: 26, rangeLabel: "A" });
+    while (!releaseA) await Promise.resolve();
+    const newOpen = store.loadPath("B.md", { year: 2026, week: 27, rangeLabel: "B" });
+    releaseA();
+
+    await Promise.all([oldOpen, newOpen]);
+    expect(store.path).toBe("B.md");
+    expect(store.objectives[0].description).toBe("B");
   });
 });

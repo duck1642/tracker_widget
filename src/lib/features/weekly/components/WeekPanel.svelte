@@ -4,7 +4,6 @@
   import PlanSection from "./PlanSection.svelte";
   import ActualSection from "./ActualSection.svelte";
   import NotesEditor from "$lib/shared/components/NotesEditor.svelte";
-  import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
   import { weekStore as defaultWeekStore } from "$lib/features/weekly/weekStore.svelte.js";
   import { sessionHistoryStore } from "$lib/app/sessionHistoryStore.svelte.js";
   import { buildSessionSuggestions } from "$lib/shared/services/sessionSuggestions.js";
@@ -47,7 +46,6 @@
         <a href="#week-notes" onclick={(e) => scrollToSection(e, "week-notes")}>Notes</a>
       </nav>
     </header>
-    {#if weekStore.conflict}<ConflictBanner onReloadExternal={() => weekStore.resolveConflict("reload")} onKeepLocal={() => weekStore.resolveConflict("keep-local")} />{/if}
     <ObjectivesSection objectives={weekStore.objectives} foldedObjectiveIds={weekStore.foldedObjectiveIds} onFoldChange={(ids) => weekStore.setObjectiveFolds(ids)} onAdd={() => weekStore.addObjective()} onUpdate={(id, patch) => weekStore.updateObjective(id, patch)} onDelete={(id) => weekStore.removeObjective(id)} onMove={(id, direction) => weekStore.moveObjective(id, direction)} onIndent={(id) => weekStore.indentObjective(id)} onOutdent={(id) => weekStore.outdentObjective(id)} />
     <PlanSection
       plan={weekStore.plan}

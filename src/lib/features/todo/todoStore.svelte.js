@@ -3,9 +3,9 @@ import { markdownToTodos, todosToMarkdown } from "./todoParser.js";
 import { createTodoItem } from "./todoItems.js";
 import { applyAction } from "./todoActions.js";
 import * as defaultFileService from "$lib/shared/services/fileService.js";
-import { PersistenceCoordinator } from "$lib/shared/persistence/persistenceCoordinator.js";
+import { DocumentController, documentSucceeded } from "$lib/shared/persistence/documentController.js";
 import { appStore as defaultAppStore } from "$lib/app/appStore.svelte.js";
-import { persistenceRegistry } from "$lib/app/persistenceRegistry.js";
+import { persistenceRegistry as defaultRegistry } from "$lib/app/persistenceRegistry.js";
 import { selectTodoFile } from "$lib/shared/services/logWorkspaceService.js";
 
 function cloneAction(action) {
@@ -21,22 +21,37 @@ export class TodoStore {
   saving = $state(false);
   conflict = $state(null);
   fileMissing = $state(false);
+  loading = $state(false);
+  error = $state(null);
 
-  constructor({ fileService = defaultFileService, appStore = defaultAppStore, debounceMs = 250 } = {}) {
+  constructor({ fileService = defaultFileService, appStore = defaultAppStore, registry = defaultRegistry, debounceMs = 250 } = {}) {
     this.fileService = fileService;
     this.appStore = appStore;
     this.loadedPath = "";
-    this.persistence = new PersistenceCoordinator({
+    this.persistence = new DocumentController({
       fileService,
       debounceMs,
+      loadLabel: "Todo",
+      prepare: (content) => markdownToTodos(content),
+      apply: (todos, { path, reason }) => {
+        this.todos = todos;
+        this.appStore.filePath = path;
+        this.resetHistory();
+        this.appStore.showStatus(reason === "open" ? "Loaded" : "Reloaded");
+      },
+      clear: () => { this.todos = []; this.resetHistory(); },
       onState: (state) => {
+        this.loadedPath = state.loaded ? state.path : "";
+        this.loading = state.loading;
+        this.error = state.error;
+        this.fileMissing = state.missing;
         this.dirty = state.dirty;
         this.saving = state.saving;
         this.conflict = state.conflict;
       },
       onStatus: (message) => this.appStore.showStatus(message)
     });
-    persistenceRegistry.register(this);
+    registry.register(this);
   }
 
   resetHistory() {
@@ -49,33 +64,8 @@ export class TodoStore {
     this.redoStack = [];
   }
 
-  async loadFile({ path } = {}) {
-    let targetPath = path || this.appStore.filePath;
-    if (!targetPath) {
-      this.fileMissing = true;
-      return false;
-    }
-    const exists = await this.fileService.pathExists(targetPath);
-    if (!exists) {
-      this.fileMissing = true;
-      return false;
-    }
-    if (this.loadedPath && !(await this.flushSave())) return false;
-    try {
-      const content = await this.fileService.readFile(targetPath);
-      this.loadedPath = targetPath;
-      this.appStore.filePath = targetPath;
-      this.todos = markdownToTodos(content);
-      this.resetHistory();
-      this.persistence.reset(targetPath, content);
-      this.fileMissing = false;
-      this.appStore.showStatus("Loaded");
-      return true;
-    } catch (error) {
-      this.appStore.showStatus("Todo load failed: " + error);
-      this.fileMissing = true;
-      return false;
-    }
+  async loadFile({ path, isCurrent } = {}) {
+    return documentSucceeded(await this.persistence.open(path || this.appStore.filePath, { isCurrent }));
   }
 
   async chooseFile() {
@@ -83,42 +73,34 @@ export class TodoStore {
     if (!selected) return false;
     const ok = await this.loadFile({ path: selected });
     if (ok) {
-      this.fileMissing = false;
       await this.appStore.saveConfig();
     }
     return ok;
   }
 
   scheduleSave({ immediate = false } = {}) {
-    return this.persistence.schedule(todosToMarkdown(this.todos), immediate);
+    this.persistence.setDraft(todosToMarkdown(this.todos));
+    return immediate ? this.flushSave() : Promise.resolve(!this.conflict);
   }
 
   saveFile() {
     return this.scheduleSave({ immediate: true });
   }
 
-  flushSave() {
-    return this.persistence.flush();
+  async flushSave() {
+    return documentSucceeded(await this.persistence.flush());
   }
 
   async checkExternalChanges() {
-    const content = await this.persistence.checkExternal();
-    if (typeof content === "string") {
-      this.todos = markdownToTodos(content);
-      this.resetHistory();
-      this.persistence.reset(this.loadedPath, content);
-      this.appStore.showStatus("Reloaded");
-    }
-    return Boolean(content);
+    return Boolean((await this.persistence.checkExternal()).applied);
   }
 
   async resolveConflict(choice) {
-    const content = await this.persistence.resolve(choice);
-    if (choice === "reload" && typeof content === "string") {
-      this.todos = markdownToTodos(content);
-      this.resetHistory();
-    }
-    return content !== null;
+    return documentSucceeded(await this.persistence.resolveConflict(choice));
+  }
+
+  async unload() {
+    return documentSucceeded(await this.persistence.close());
   }
 
   toggleTodo(id) {
@@ -253,21 +235,25 @@ export class TodoStore {
   }
 
   async undo() {
+    const generation = this.persistence.generation;
     if (!this.undoStack.length || !(await this.flushSave())) return;
+    if (generation !== this.persistence.generation || !this.undoStack.length) return;
     const action = this.undoStack.pop();
     this.todos = applyAction(this.todos, action, true);
     this.redoStack.push(action);
-    await this.scheduleSave({ immediate: true });
-    this.appStore.showStatus("Undone");
+    const saved = await this.scheduleSave({ immediate: true });
+    if (saved && generation === this.persistence.generation) this.appStore.showStatus("Undone");
   }
 
   async redo() {
+    const generation = this.persistence.generation;
     if (!this.redoStack.length || !(await this.flushSave())) return;
+    if (generation !== this.persistence.generation || !this.redoStack.length) return;
     const action = this.redoStack.pop();
     this.todos = applyAction(this.todos, action, false);
     this.undoStack.push(action);
-    await this.scheduleSave({ immediate: true });
-    this.appStore.showStatus("Redone");
+    const saved = await this.scheduleSave({ immediate: true });
+    if (saved && generation === this.persistence.generation) this.appStore.showStatus("Redone");
   }
 }
 

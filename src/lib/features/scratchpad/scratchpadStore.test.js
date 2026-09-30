@@ -21,6 +21,16 @@ function harness(initialFiles = {}) {
 }
 
 describe("ScratchpadStore", () => {
+  it("refreshes a previously loaded file when another pane releases it", async () => {
+    const { store, files } = harness({ "scratchpad.md": "original" });
+    await store.loadPath("scratchpad.md");
+    files.set("scratchpad.md", "other pane edit");
+    await store.loadPath("scratchpad.md", { reload: true });
+    expect(store.content).toBe("other pane edit");
+    store.updateContent("next edit");
+    expect(await store.flushSave()).toBe(true);
+    expect(files.get("scratchpad.md")).toBe("next edit");
+  });
   it("registers as scratchpad persistence and reports a missing file without creating it", async () => {
     const { store, fileService, registry } = harness();
 

@@ -1,7 +1,6 @@
 <script>
   // @ts-nocheck
   import NotesEditor from "$lib/shared/components/NotesEditor.svelte";
-  import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
   import { scratchpadStore as defaultScratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.js";
   import { workspaceStore } from "$lib/app/workspaceStore.svelte.js";
   let { scratchpadStore = defaultScratchpadStore } = $props();
@@ -17,12 +16,6 @@
   {:else if !scratchpadStore.loaded}
     <div class="empty"><strong>Scratchpad unavailable</strong><span>Open Scratchpad again to retry.</span></div>
   {:else}
-    {#if scratchpadStore.conflict}
-      <ConflictBanner
-        onReloadExternal={() => scratchpadStore.resolveConflict("reload")}
-        onKeepLocal={() => scratchpadStore.resolveConflict("keep-local")}
-      />
-    {/if}
     <div class="scratchpad-editor">
       <NotesEditor
         value={scratchpadStore.content}

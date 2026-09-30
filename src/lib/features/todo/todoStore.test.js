@@ -37,6 +37,37 @@ function createHarness(initialFiles = { "A.md": "- [ ] A\n" }, debounceMs = 250)
 describe("TodoStore persistence", () => {
   beforeEach(() => vi.useFakeTimers());
 
+  it("preserves both versions when focus checking overlaps closing and saving", async () => {
+    const { store, fileService, files, writes } = createHarness();
+    await store.loadFile();
+    store.updateText(store.todos[0].id, "local unsaved");
+    let finishCheck, finishSave;
+    fileService.readFile
+      .mockImplementationOnce(() => new Promise(resolve => { finishCheck = resolve; }))
+      .mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve; }));
+    files.set("A.md", "- [ ] external\n");
+    const checking = store.checkExternalChanges();
+    const saving = store.flushSave();
+    finishCheck(files.get("A.md"));
+    await checking;
+    finishSave(files.get("A.md"));
+    expect(await saving).toBe(false);
+    expect(writes).toEqual([]);
+    expect(store.todos[0].text).toBe("local unsaved");
+    expect(store.conflict.diskContent).toBe("- [ ] external\n");
+    await store.resolveConflict("keep-local");
+    expect(files.get("A.md")).toBe("- [ ] local unsaved\n");
+  });
+
+  it("reloads an externally emptied file", async () => {
+    const { store, files } = createHarness();
+    await store.loadFile();
+    files.set("A.md", "");
+    expect(await store.checkExternalChanges()).toBe(true);
+    expect(store.todos).toEqual([]);
+    expect(store.dirty).toBe(false);
+  });
+
   it("does not auto-select a default todo path when no path is configured", async () => {
     const { store, appStore, fileService } = createHarness();
     appStore.filePath = "";
@@ -94,8 +125,11 @@ describe("TodoStore persistence", () => {
     fileService.writeFile.mockRejectedValueOnce(new Error("locked"));
     store.updateText(store.todos[0].id, "retry me");
 
-    await store.flushSave();
-
+    expect(await store.flushSave()).toBe(false);
+    expect(store.dirty).toBe(true);
+    expect(store.todos[0].text).toBe("retry me");
+    expect(files.get("A.md")).toBe("- [ ] A\n");
+    expect(await store.flushSave()).toBe(true);
     expect(files.get("A.md")).toBe("- [ ] retry me\n");
     expect(store.dirty).toBe(false);
   });
@@ -206,8 +240,28 @@ describe("todo context menu positioning", () => {
 describe("TodoStore session history", () => {
   beforeEach(() => vi.useFakeTimers());
 
-  it("clears undo and redo when the document reloads", async () => {
-    const { store } = createHarness();
+  it.each(["undo", "redo"])("does not apply a delayed %s to a newer document", async (operation) => {
+    const { store, files } = createHarness({ "A.md": "- [ ] A\n", "B.md": "- [ ] B\n" });
+    await store.loadFile();
+    store.toggleTodo(store.todos[0].id);
+    await store.flushSave();
+    if (operation === "redo") await store.undo();
+    let finishSave;
+    const saving = new Promise((resolve) => { finishSave = resolve; });
+    vi.spyOn(store, "flushSave").mockReturnValueOnce(saving);
+    const pending = store[operation]();
+    await store.loadFile({ path: "B.md" });
+    finishSave(true);
+    await pending;
+    expect(store.loadedPath).toBe("B.md");
+    expect(store.todos[0]).toMatchObject({ text: "B", checked: false });
+    expect(files.get("B.md")).toBe("- [ ] B\n");
+    expect(store.undoStack).toEqual([]);
+    expect(store.redoStack).toEqual([]);
+  });
+
+  it("preserves history on reactivation and clears it on accepted external reload", async () => {
+    const { store, files } = createHarness();
     await store.loadFile();
     store.toggleTodo(store.todos[0].id);
     await store.undo();
@@ -216,6 +270,10 @@ describe("TodoStore session history", () => {
     await store.loadFile();
 
     expect(store.undoStack).toHaveLength(0);
+    expect(store.redoStack).toHaveLength(1);
+    files.set("A.md", "- [ ] externally updated\n");
+    await store.loadFile();
+    expect(store.todos[0].text).toBe("externally updated");
     expect(store.redoStack).toHaveLength(0);
   });
 

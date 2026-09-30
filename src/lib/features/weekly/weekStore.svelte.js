@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as defaultFileService from "$lib/shared/services/fileService.js";
-import { PersistenceCoordinator } from "$lib/shared/persistence/persistenceCoordinator.js";
+import { DocumentController, documentSucceeded } from "$lib/shared/persistence/documentController.js";
 import { parseWeeklyIndex, serializeWeeklyIndex } from "./weeklyIndexParser.js";
 import { parseDailyLog } from "$lib/features/daily/dailyLogParser.js";
 import { aggregateWeeklyActual } from "./actualAggregator.js";
@@ -46,21 +46,40 @@ export class WeekStore {
   actual = $state([]);
   notesRaw = $state("");
   loaded = $state(false);
+  loading = $state(false);
   dirty = $state(false);
   saving = $state(false);
   conflict = $state(null);
+  missing = $state(false);
+  error = $state(null);
   foldedObjectiveIds = $state([]);
 
   constructor({ fileService = defaultFileService, appStore = defaultAppStore, registry = defaultRegistry, debounceMs = 250 } = {}) {
     this.fileService = fileService;
     this.appStore = appStore;
-    this.persistence = new PersistenceCoordinator({
+    this.actualRequest = 0;
+    this.actualTask = Promise.resolve();
+    this.persistence = new DocumentController({
       fileService,
       debounceMs,
+      loadLabel: "Week",
+      prepare: (content, { context }) => parseWeeklyIndex(content, context?.descriptor || this.descriptor),
+      apply: (parsed, meta) => this.applyControllerContent(parsed, meta),
+      clear: () => this.clearDomain(),
+      afterApply: ({ path, context, reason }) => {
+        if (reason === "open" || reason === "transfer") {
+          this.launchActualRefresh(context?.days || [], path);
+        }
+      },
       onState: (state) => {
+        this.path = state.path;
+        this.loaded = state.loaded;
+        this.loading = state.loading;
         this.dirty = state.dirty;
         this.saving = state.saving;
         this.conflict = state.conflict;
+        this.missing = state.missing;
+        this.error = state.error;
       },
       onStatus: (message) => this.appStore.showStatus(message)
     });
@@ -72,35 +91,20 @@ export class WeekStore {
     return { frontmatterRaw: this.frontmatterRaw || "", preambleRaw: this.preambleRaw || "", unknownSectionsRaw: this.unknownSectionsRaw || [], isoWeek: this.descriptor, objectives: this.objectives, objectiveRawLines: this.objectiveRawLines || [], plan: this.plan, actual: this.actual, notesRaw: this.notesRaw };
   }
 
-  async loadPath(path, descriptor, days = []) {
-    if (this.loaded && !(await this.flushSave())) return false;
-    this.captureObjectiveFolds();
-    try {
-      const content = await this.fileService.readFile(path);
-      const parsed = parseWeeklyIndex(content, descriptor);
-      this.path = path;
-      this.descriptor = descriptor;
-      this.objectives = parsed.objectives;
-      this.objectiveRawLines = parsed.objectiveRawLines;
-      this.plan = parsed.plan;
-      this.actual = parsed.actual;
-      this.notesRaw = parsed.notesRaw;
-      this.frontmatterRaw = parsed.frontmatterRaw;
-      this.preambleRaw = parsed.preambleRaw;
-      this.unknownSectionsRaw = parsed.unknownSectionsRaw;
-      this.foldedObjectiveIds = this.objectiveFoldCache.restore(path, this.objectives);
-      this.loaded = true;
-      this.persistence.reset(path, content);
-      await this.refreshActual(days);
-      return true;
-    } catch (error) {
-      this.appStore.showStatus("Week load failed: " + error);
-      return false;
-    }
+  async loadPath(path, descriptor, days = [], options = {}) {
+    if (options.isCurrent && !options.isCurrent()) return false;
+    const result = await this.persistence.open(path, { context: { descriptor, days }, isCurrent: options.isCurrent });
+    if (!documentSucceeded(result)) return false;
+    if (options.isCurrent && !options.isCurrent()) return false;
+    // Focus follows the accepted document, not its asynchronous derived work.
+    // flushSave waits for Actual whenever a completed save is required.
+    return this.persistence.path === path && this.persistence.loaded && (!options.isCurrent || options.isCurrent());
   }
 
   save(immediate = false) {
-    return this.persistence.schedule(serializeWeeklyIndex(this.document()), immediate);
+    this.persistence.setDraft(serializeWeeklyIndex(this.document()));
+    if (immediate) return this.persistence.flush().then(documentSucceeded);
+    return true;
   }
 
   addObjective() {
@@ -354,8 +358,7 @@ export class WeekStore {
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
   }
 
-  async refreshActual(days = this.dayEntries || []) {
-    this.dayEntries = days;
+  async calculateActual(days = this.dayEntries || []) {
     const parsedDays = [];
     for (const day of days) {
       try {
@@ -366,38 +369,74 @@ export class WeekStore {
         // Missing or locked daily files are omitted from Actual.
       }
     }
-    this.actual = aggregateWeeklyActual(this.plan, parsedDays);
-    if (this.loaded) await this.save(true);
+    return aggregateWeeklyActual(this.plan, parsedDays);
+  }
+
+  launchActualRefresh(days = [], expectedPath = this.persistence.path) {
+    const generation = this.persistence.generation;
+    const path = expectedPath;
+    const request = ++this.actualRequest;
+    this.dayEntries = days;
+    this.actualTask = (async () => {
+      const actual = await this.calculateActual(days);
+      if (request !== this.actualRequest || generation !== this.persistence.generation || path !== this.persistence.path || !this.persistence.loaded) return;
+      this.actual = actual;
+      await this.save(true);
+    })();
+    return this.actualTask;
+  }
+
+  refreshActual(days = this.dayEntries || []) {
+    return this.launchActualRefresh(days);
   }
 
   async refreshActualWithDaily(date, sessions, days = this.dayEntries || []) {
-    if (!this.loaded || !date) return;
+    if (!this.persistence.loaded || !date) return;
+    const generation = this.persistence.generation;
+    const path = this.persistence.path;
+    const request = ++this.actualRequest;
     this.dayEntries = days;
-    const parsedDays = [];
-    for (const day of days) {
-      try {
-        if (day.date === date) {
-          parsedDays.push({ day: dayLabel(new Date(`${day.date}T12:00:00`)), sessions });
-        } else {
-          const content = await this.fileService.readFile(day.path);
-          const parsed = parseDailyLog(content, day.date);
-          parsedDays.push({ day: dayLabel(new Date(`${day.date}T12:00:00`)), sessions: parsed.sessions });
+    this.actualTask = (async () => {
+      const parsedDays = [];
+      for (const day of days) {
+        try {
+          if (day.date === date) {
+            parsedDays.push({ day: dayLabel(new Date(`${day.date}T12:00:00`)), sessions });
+          } else {
+            const content = await this.fileService.readFile(day.path);
+            const parsed = parseDailyLog(content, day.date);
+            parsedDays.push({ day: dayLabel(new Date(`${day.date}T12:00:00`)), sessions: parsed.sessions });
+          }
+        } catch {
+          // Missing or locked daily files are omitted from Actual.
         }
-      } catch {
-        // Missing or locked daily files are omitted from Actual.
       }
+      const actual = aggregateWeeklyActual(this.plan, parsedDays);
+      if (request !== this.actualRequest || generation !== this.persistence.generation || path !== this.persistence.path || !this.persistence.loaded) return;
+      this.actual = actual;
+      await this.save(true);
+    })();
+    return this.actualTask;
+  }
+
+  async flushSave() {
+    while (true) {
+      const task = this.actualTask;
+      await task;
+      if (task !== this.actualTask) continue;
+      const result = await this.persistence.flush();
+      if (task === this.actualTask) return documentSucceeded(result);
     }
-    this.actual = aggregateWeeklyActual(this.plan, parsedDays);
-    await this.save(true);
   }
 
-  flushSave() {
-    return this.persistence.flush();
+  async unload() {
+    const result = await this.persistence.close();
+    return documentSucceeded(result);
   }
 
-  unload() {
+  clearDomain() {
     this.objectiveFoldCache.delete(this.path);
-    this.path = "";
+    ++this.actualRequest;
     this.descriptor = null;
     this.objectives = [];
     this.objectiveRawLines = [];
@@ -408,28 +447,30 @@ export class WeekStore {
     this.preambleRaw = "";
     this.unknownSectionsRaw = [];
     this.foldedObjectiveIds = [];
-    this.loaded = false;
-    this.persistence.reset("", "");
   }
 
   async checkExternalChanges() {
-    const content = await this.persistence.checkExternal();
-    if (typeof content === "string") {
-      this.applyExternal(content);
-      this.persistence.reset(this.path, content);
-    }
-    return Boolean(content);
+    const result = await this.persistence.checkExternal();
+    return Boolean(result.applied);
   }
 
   async resolveConflict(choice) {
-    const content = await this.persistence.resolve(choice);
-    if (choice === "reload" && typeof content === "string") this.applyExternal(content);
+    const result = await this.persistence.resolveConflict(choice);
+    return documentSucceeded(result);
   }
 
-  applyExternal(content) {
-    this.objectiveFoldCache.delete(this.path);
-    this.foldedObjectiveIds = [];
-    const parsed = parseWeeklyIndex(content, this.descriptor);
+  applyControllerContent(parsed, { path, context, reason }) {
+    if (reason === "open" || reason === "transfer") {
+      this.captureObjectiveFolds();
+    } else {
+      this.objectiveFoldCache.delete(path);
+      this.foldedObjectiveIds = [];
+    }
+    this.applyParsed(path, context?.descriptor || this.descriptor, parsed);
+  }
+
+  applyParsed(path, descriptor, parsed) {
+    this.descriptor = descriptor;
     this.objectives = parsed.objectives;
     this.objectiveRawLines = parsed.objectiveRawLines;
     this.plan = parsed.plan;
@@ -438,6 +479,7 @@ export class WeekStore {
     this.frontmatterRaw = parsed.frontmatterRaw;
     this.preambleRaw = parsed.preambleRaw;
     this.unknownSectionsRaw = parsed.unknownSectionsRaw;
+    this.foldedObjectiveIds = this.objectiveFoldCache.restore(path, this.objectives);
   }
 }
 

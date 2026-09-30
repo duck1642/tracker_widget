@@ -21,11 +21,35 @@ function harness(initial, overrides = {}) {
 }
 
 describe("DailyStore editing", () => {
+  it("ignores an older load after a newer day has been edited", async () => {
+    vi.useFakeTimers();
+    try {
+      const { store } = harness("");
+      let finishA, finishB;
+      const a = new Promise((resolve) => { finishA = resolve; });
+      const b = new Promise((resolve) => { finishB = resolve; });
+      store.fileService.readFile.mockImplementation((path) => path === "A.md" ? a : b);
+      const loadingA = store.loadPath("A.md", "2026-09-28");
+      const loadingB = store.loadPath("B.md", "2026-09-29");
+      finishB("# 2026-09-29\n\n## Notes\n\nB\n");
+      expect(await loadingB).toBe(true);
+      store.updateNotes("Unsaved B edit");
+      finishA("# 2026-09-28\n\n## Notes\n\nA\n");
+      await loadingA;
+      expect(store.path).toBe("B.md");
+      expect(store.notesRaw).toBe("Unsaved B edit");
+      expect(store.dirty).toBe(true);
+      expect(store.fileService.writeFile).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("unloads a recycled daily log without retaining persistence or document state", async () => {
     const { store } = harness("# 2026-06-22\n\n## Work\n\n## Total Time\n\n0m\n\n## Notes\n");
     await store.loadPath("day.md", "2026-06-22");
 
-    store.unload();
+    await store.unload();
 
     expect(store.loaded).toBe(false);
     expect(store.path).toBe("");

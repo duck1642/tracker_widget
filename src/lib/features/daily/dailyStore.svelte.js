@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as defaultFileService from "$lib/shared/services/fileService.js";
-import { PersistenceCoordinator } from "$lib/shared/persistence/persistenceCoordinator.js";
+import { DocumentController, documentSucceeded } from "$lib/shared/persistence/documentController.js";
 import { parseDailyLog, serializeDailyLog } from "./dailyLogParser.js";
 import { appStore as defaultAppStore } from "$lib/app/appStore.svelte.js";
 import { persistenceRegistry as defaultRegistry } from "$lib/app/persistenceRegistry.js";
@@ -23,16 +23,40 @@ export class DailyStore {
   dirty = $state(false);
   saving = $state(false);
   conflict = $state(null);
+  loading = $state(false);
+  missing = $state(false);
+  error = $state(null);
 
   constructor({ fileService = defaultFileService, appStore = defaultAppStore, registry = defaultRegistry, weekStore = defaultWeekStore, sessionHistoryStore = defaultSessionHistoryStore, debounceMs = 250 } = {}) {
     this.fileService = fileService;
     this.appStore = appStore;
     this.weekStore = weekStore;
     this.sessionHistoryStore = sessionHistoryStore;
-    this.persistence = new PersistenceCoordinator({
+    this.persistence = new DocumentController({
       fileService,
       debounceMs,
+      loadLabel: "Daily",
+      prepare: (content, { context }) => parseDailyLog(content, context.date),
+      apply: (parsed) => {
+        this.date = parsed.date;
+        this.sessions = parsed.sessions;
+        this.notesRaw = parsed.notesRaw;
+        this.frontmatterRaw = parsed.frontmatterRaw;
+        this.preambleRaw = parsed.preambleRaw;
+      },
+      clear: () => {
+        this.date = "";
+        this.sessions = [];
+        this.notesRaw = "";
+        this.frontmatterRaw = "";
+        this.preambleRaw = "";
+      },
       onState: (state) => {
+        this.path = state.path;
+        this.loaded = state.loaded;
+        this.loading = state.loading;
+        this.missing = state.missing;
+        this.error = state.error;
         this.dirty = state.dirty;
         this.saving = state.saving;
         this.conflict = state.conflict;
@@ -58,28 +82,13 @@ export class DailyStore {
     return { frontmatterRaw: this.frontmatterRaw || "", preambleRaw: this.preambleRaw || "", date: this.date, sessions: this.sessions, notesRaw: this.notesRaw };
   }
 
-  async loadPath(path, date) {
-    if (this.loaded && !(await this.flushSave())) return false;
-    try {
-      const content = await this.fileService.readFile(path);
-      const parsed = parseDailyLog(content, date);
-      this.path = path;
-      this.date = parsed.date;
-      this.sessions = parsed.sessions;
-      this.notesRaw = parsed.notesRaw;
-      this.frontmatterRaw = parsed.frontmatterRaw;
-      this.preambleRaw = parsed.preambleRaw;
-      this.loaded = true;
-      this.persistence.reset(path, content);
-      return true;
-    } catch (error) {
-      this.appStore.showStatus("Daily load failed: " + error);
-      return false;
-    }
+  async loadPath(path, date, { isCurrent } = {}) {
+    return documentSucceeded(await this.persistence.open(path, { context: { date }, isCurrent }));
   }
 
   save(immediate = false) {
-    return this.persistence.schedule(serializeDailyLog(this.document()), immediate);
+    this.persistence.setDraft(serializeDailyLog(this.document()));
+    return immediate ? this.flushSave() : Promise.resolve(!this.conflict);
   }
 
   refreshWeeklyActual() {
@@ -194,42 +203,22 @@ export class DailyStore {
     void this.save();
   }
 
-  flushSave() {
-    return this.persistence.flush();
+  async flushSave() {
+    return documentSucceeded(await this.persistence.flush());
   }
 
-  unload() {
-    this.path = "";
-    this.date = "";
-    this.sessions = [];
-    this.notesRaw = "";
-    this.frontmatterRaw = "";
-    this.preambleRaw = "";
-    this.loaded = false;
-    this.persistence.reset("", "");
+  async unload() {
+    return documentSucceeded(await this.persistence.close());
   }
 
   async checkExternalChanges() {
-    const content = await this.persistence.checkExternal();
-    if (typeof content === "string") {
-      await this.applyExternal(content);
-      this.persistence.reset(this.path, content);
-    }
-    return Boolean(content);
+    return Boolean((await this.persistence.checkExternal()).applied);
   }
 
   async resolveConflict(choice) {
-    const content = await this.persistence.resolve(choice);
-    if (choice === "reload" && typeof content === "string") await this.applyExternal(content);
+    return documentSucceeded(await this.persistence.resolveConflict(choice));
   }
 
-  async applyExternal(content) {
-    const parsed = parseDailyLog(content, this.date);
-    this.sessions = parsed.sessions;
-    this.notesRaw = parsed.notesRaw;
-    this.frontmatterRaw = parsed.frontmatterRaw;
-    this.preambleRaw = parsed.preambleRaw;
-  }
 }
 
 export const dailyStore = new DailyStore();

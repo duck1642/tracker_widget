@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as defaultFileService from "$lib/shared/services/fileService.js";
-import { PersistenceCoordinator } from "$lib/shared/persistence/persistenceCoordinator.js";
+import { DocumentController, documentSucceeded } from "$lib/shared/persistence/documentController.js";
 import { appStore as defaultAppStore } from "$lib/app/appStore.svelte.js";
 import { persistenceRegistry as defaultRegistry } from "$lib/app/persistenceRegistry.js";
 
@@ -13,6 +13,8 @@ export class ScratchpadStore {
   dirty = $state(false);
   saving = $state(false);
   conflict = $state(null);
+  loading = $state(false);
+  error = $state(null);
 
   constructor({
     fileService = defaultFileService,
@@ -22,10 +24,19 @@ export class ScratchpadStore {
   } = {}) {
     this.fileService = fileService;
     this.appStore = appStore;
-    this.persistence = new PersistenceCoordinator({
+    this.persistence = new DocumentController({
       fileService,
       debounceMs,
+      loadLabel: "Scratchpad",
+      missingMode: "placeholder",
+      apply: (content) => { this.content = content; },
+      clear: () => { this.content = ""; },
       onState: (state) => {
+        this.path = state.path;
+        this.loaded = state.loaded;
+        this.loading = state.loading;
+        this.error = state.error;
+        this.fileMissing = state.missing;
         this.dirty = state.dirty;
         this.saving = state.saving;
         this.conflict = state.conflict;
@@ -35,73 +46,32 @@ export class ScratchpadStore {
     registry.register(this);
   }
 
-  async loadPath(path) {
-    if (!path) return false;
-    if (this.loaded && this.path === path) return true;
-    if (this.loaded && !(await this.flushSave())) return false;
-
-    try {
-      const exists = await this.fileService.pathExists(path);
-      if (!exists) {
-        this.path = path;
-        this.content = "";
-        this.loaded = false;
-        this.fileMissing = true;
-        this.persistence.reset("", "");
-        return true;
-      }
-      const content = await this.fileService.readFile(path);
-      this.path = path;
-      this.content = content;
-      this.loaded = true;
-      this.fileMissing = false;
-      this.persistence.reset(path, content);
-      return true;
-    } catch (error) {
-      this.loaded = false;
-      this.fileMissing = false;
-      this.appStore.showStatus("Scratchpad load failed: " + error);
-      return false;
-    }
+  async loadPath(path, { isCurrent } = {}) {
+    const result = await this.persistence.open(path, { isCurrent });
+    return documentSucceeded(result) || (result.status === "missing" && !this.loaded);
   }
 
   updateContent(content) {
     this.content = content;
-    void this.persistence.schedule(content);
+    this.persistence.setDraft(content);
   }
 
-  flushSave() {
-    return this.persistence.flush();
+  async flushSave() {
+    return documentSucceeded(await this.persistence.flush());
   }
 
   async checkExternalChanges() {
-    if (!this.loaded) return false;
-    try {
-      const content = await this.persistence.checkExternal();
-      if (typeof content === "string") {
-        this.content = content;
-        this.persistence.reset(this.path, content);
-      }
-      return Boolean(content);
-    } catch (error) {
-      this.appStore.showStatus("Scratchpad check failed: " + error);
-      return false;
-    }
+    return Boolean((await this.persistence.checkExternal()).applied);
   }
 
   async resolveConflict(choice) {
-    const content = await this.persistence.resolve(choice);
-    if (choice === "reload" && typeof content === "string") this.content = content;
-    return typeof content === "string";
+    return documentSucceeded(await this.persistence.resolveConflict(choice));
   }
 
-  unload() {
-    this.path = "";
-    this.content = "";
-    this.loaded = false;
-    this.fileMissing = false;
-    this.persistence.reset("", "");
+  async unload() {
+    return documentSucceeded(await this.persistence.close());
   }
+
 }
 
 export const scratchpadStore = new ScratchpadStore();
