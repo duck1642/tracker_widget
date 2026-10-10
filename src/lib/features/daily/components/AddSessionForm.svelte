@@ -1,18 +1,23 @@
-<script>
+<script lang="ts">
   import { Plus } from "@lucide/svelte";
   import SuggestionDropdown from "$lib/shared/components/SuggestionDropdown.svelte";
 
-  let { suggestions = [], existingSessions = [], onAdd } = $props();
+  import type { SessionSuggestion } from "$lib/shared/services/types.ts";
+  let { suggestions = [], existingSessions = [], onAdd }: {
+      suggestions?: SessionSuggestion[];
+      existingSessions?: string[];
+      onAdd: (name: string) => boolean;
+  } = $props();
   let name = $state("");
   let editing = $state(false);
   let showDropdown = $state(false);
   let highlightedIndex = $state(-1);
 
-  /** @type {HTMLInputElement | null} */
-  let inputEl = $state(null);
 
-  /** @param {string} value */
-  const normalize = (value) => value.trim().toLowerCase();
+  let inputEl: HTMLInputElement | null = $state(null);
+
+
+  const normalize = (value: string) => value.trim().toLowerCase();
 
   let filteredSuggestions = $derived(
     suggestions.filter(s => {
@@ -41,8 +46,8 @@
     highlightedIndex = -1;
   }
 
-  /** @param {string} value */
-  function submitName(value) {
+
+  function submitName(value: string) {
     if (onAdd(value)) {
       name = "";
       editing = false;
@@ -56,16 +61,16 @@
     return filteredSuggestions.find((suggestion) => normalize(suggestion.name) === normalize(trimmed))?.name || trimmed;
   }
 
-  /** @param {SubmitEvent} event */
-  function handleSubmit(event) {
+
+  function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     if (name.trim()) {
       submitName(resolveSubmittedName());
     }
   }
 
-  /** @param {KeyboardEvent} event */
-  function handleKeyDown(event) {
+
+  function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Escape") {
       cancelEditing();
     } else if (event.key === "ArrowDown") {
@@ -94,21 +99,21 @@
     }, 150);
   }
 
-  /** @param {string} suggestion */
-  function selectSuggestion(suggestion) {
+
+  function selectSuggestion(suggestion: string) {
     name = suggestion;
     showDropdown = false;
     highlightedIndex = -1;
     submitName(name);
   }
 
-  /** @param {number} index */
-  function highlightSuggestion(index) {
+
+  function highlightSuggestion(index: number) {
     highlightedIndex = index;
   }
 
-  /** @param {{ name: string }} suggestion */
-  function selectSuggestionEntry(suggestion) {
+
+  function selectSuggestionEntry(suggestion: { name: string }) {
     selectSuggestion(suggestion.name);
   }
 

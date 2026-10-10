@@ -1,6 +1,15 @@
-<script>
-  // @ts-nocheck
-  let { subjects = [], minutes = undefined, incomplete = false, placeholder = "-" } = $props();
+<script lang="ts">
+  let { subjects = [], minutes = undefined, incomplete = false, placeholder = "-" }: {
+
+      subjects?: string[];
+
+      minutes?: number | null;
+
+      incomplete?: boolean;
+
+      placeholder?: string;
+
+  } = $props();
   const visibleSubjects = $derived(subjects.length ? subjects : [placeholder]);
 </script>
 

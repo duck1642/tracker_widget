@@ -1,9 +1,21 @@
-<script>
-  // @ts-nocheck
-  import { CalendarCheck2, CalendarPlus2, CalendarRange } from "@lucide/svelte";
-  import { clampContextMenuPosition } from "$lib/shared/services/contextMenuPosition.js";
+<script lang="ts">
 
-  let { x = 0, y = 0, onCurrent, onNext, onChoose } = $props();
+  import { CalendarCheck2, CalendarPlus2, CalendarRange } from "@lucide/svelte";
+  import { clampContextMenuPosition } from "$lib/shared/services/contextMenuPosition.ts";
+
+  let { x = 0, y = 0, onCurrent, onNext, onChoose }: {
+
+      x?: number;
+
+      y?: number;
+
+      onCurrent(): unknown;
+
+      onNext(): unknown;
+
+      onChoose(): unknown;
+
+  } = $props();
   const width = 206;
   const height = 118;
   let position = $derived(clampContextMenuPosition({

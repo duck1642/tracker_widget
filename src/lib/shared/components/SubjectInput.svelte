@@ -1,25 +1,30 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
   import { X } from "@lucide/svelte";
-  import { subjectHistoryStore } from "$lib/app/subjectHistoryStore.svelte.js";
-  import { isValidSubject } from "$lib/shared/parsers/inlineMetadata.js";
+  import { subjectHistoryStore } from "$lib/app/subjectHistoryStore.svelte.ts";
+  import { isValidSubject } from "$lib/shared/parsers/inlineMetadata.ts";
   import SuggestionDropdown from "$lib/shared/components/SuggestionDropdown.svelte";
 
-  let { subjects = [], onChange, label = "Subjects", variant = "default" } = $props();
+  import type { InputKeyboardEvent } from "./types.ts";
+  let { subjects = [], onChange, label = "Subjects", variant = "default" }: {
+      subjects?: string[];
+      onChange: (subjects: string[]) => void;
+      label?: string;
+      variant?: "default" | "badge";
+  } = $props();
   let invalid = $state(false);
   let addText = $state("");
-  let editingIndex = $state(null);
+  let editingIndex = $state<number | null>(null);
   let editText = $state("");
   let showSuggestions = $state(false);
   let highlightedSuggestion = $state(0);
   let editSession = 0;
   let addSession = 0;
 
-  /** @type {HTMLInputElement | null} */
-  let addInput = $state(null);
 
-  const normalize = (value) => value.trim().normalize("NFC");
-  const keyFor = (value) => normalize(value).toLowerCase();
+  let addInput: HTMLInputElement | null = $state(null);
+
+  const normalize = (value: string) => value.trim().normalize("NFC");
+  const keyFor = (value: string) => normalize(value).toLowerCase();
   const canRemove = $derived(subjects.length > 1);
   const activeText = $derived(editingIndex === null ? addText : editText);
   const activeAllowedIndex = $derived(editingIndex === null ? null : editingIndex);
@@ -37,7 +42,7 @@
     }
   });
 
-  function focus(node) {
+  function focus(node: HTMLInputElement) {
     node.focus();
   }
 
@@ -52,12 +57,12 @@
     highlightedSuggestion = 0;
   }
 
-  function isDuplicate(value, allowedIndex = null) {
+  function isDuplicate(value: string, allowedIndex: number | null = null) {
     const key = keyFor(value);
     return subjects.some((subject, index) => index !== allowedIndex && keyFor(subject) === key);
   }
 
-  function validSubject(value, allowedIndex = null) {
+  function validSubject(value: string, allowedIndex: number | null = null) {
     const next = normalize(value);
     return Boolean(next) && isValidSubject(next) && !isDuplicate(next, allowedIndex);
   }
@@ -76,7 +81,7 @@
     return true;
   }
 
-  function startEdit(index) {
+  function startEdit(index: number) {
     addSession += 1;
     editSession += 1;
     addText = "";
@@ -113,7 +118,7 @@
     return true;
   }
 
-  function scheduleEditCommit(index) {
+  function scheduleEditCommit(index: number) {
     if (!normalize(editText)) {
       cancelEdit();
       return;
@@ -133,13 +138,13 @@
     }, 120);
   }
 
-  function removeSubject(index) {
+  function removeSubject(index: number) {
     if (!canRemove) return;
     onChange(subjects.filter((_, subjectIndex) => subjectIndex !== index));
     if (editingIndex === index) cancelEdit();
   }
 
-  function handleAddKeydown(event) {
+  function handleAddKeydown(event: InputKeyboardEvent) {
     if (event.key === "Enter" || event.key === "Tab" || event.key === ",") {
       if ((event.key === "Enter" || event.key === "Tab") && showSuggestions && filteredSuggestions.length > 0) {
         event.preventDefault();
@@ -172,7 +177,7 @@
     }
   }
 
-  function handleEditKeydown(event) {
+  function handleEditKeydown(event: KeyboardEvent) {
     if (event.key === "Enter" || event.key === "Tab" || event.key === ",") {
       event.preventDefault();
       if ((event.key === "Enter" || event.key === "Tab") && showSuggestions && filteredSuggestions.length > 0) {
@@ -195,7 +200,7 @@
     }
   }
 
-  function handleContainerKeydown(event) {
+  function handleContainerKeydown(event: KeyboardEvent) {
     if (event.target !== event.currentTarget) return;
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
@@ -203,13 +208,13 @@
     }
   }
 
-  function handleLegacyInput(event) {
+  function handleLegacyInput(event: Event & { currentTarget: HTMLInputElement }) {
     const next = event.currentTarget.value.split(",").map(normalize).filter(Boolean);
     invalid = next.length === 0 || next.some((subject, index) => !isValidSubject(subject) || next.findIndex((item) => keyFor(item) === keyFor(subject)) !== index);
     if (!invalid) onChange(next);
   }
 
-  function selectSuggestion(suggestion) {
+  function selectSuggestion(suggestion: string) {
     if (editingIndex === null) {
       addText = suggestion;
       commitAdd();

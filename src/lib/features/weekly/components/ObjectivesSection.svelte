@@ -1,12 +1,15 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+import type { ActivityFields, Objective, ObjectiveFields } from "$lib/shared/parsers/types.ts";
+import type { ActualEntry, PlanEntry } from "../types.ts";
+import type { MenuItem, MenuPosition } from "$lib/shared/components/types.ts";
+
   import { ChevronDown, ChevronUp, ChevronsDownUp, ChevronsUpDown, IndentDecrease, IndentIncrease, Plus, Trash2 } from "@lucide/svelte";
-  import { appStore } from "$lib/app/appStore.svelte.js";
+  import { appStore } from "$lib/app/appStore.svelte.ts";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
-  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.js";
-  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
+  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.ts";
+  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.ts";
   import ObjectiveRow from "./ObjectiveRow.svelte";
-  import { buildVisibleObjectiveRows, getFoldableObjectiveIds } from "../objectiveFolding.js";
+  import { buildVisibleObjectiveRows, getFoldableObjectiveIds } from "../objectiveFolding.ts";
   let {
     objectives,
     foldedObjectiveIds = [],
@@ -17,45 +20,56 @@
     onMove,
     onIndent,
     onOutdent
+  }: {
+      objectives: Objective[];
+      foldedObjectiveIds?: string[];
+      onFoldChange?(ids: string[]): unknown;
+      onAdd(): unknown;
+      onUpdate(id: string, patch: Partial<ObjectiveFields>): unknown;
+      onDelete(id: string): unknown;
+      onMove(id: string, direction: "up" | "down"): unknown;
+      onIndent(id: string): unknown;
+      onOutdent(id: string): unknown;
   } = $props();
 
-  let contextMenu = $state(null);
+  let contextMenu = $state<(MenuPosition & {id:string})|null>(null);
   let visibleObjectives = $derived(buildVisibleObjectiveRows(objectives, foldedObjectiveIds));
   let foldableObjectiveIds = $derived([...getFoldableObjectiveIds(objectives)]);
   let allObjectivesFolded = $derived(
     foldableObjectiveIds.length > 0
       && foldableObjectiveIds.every((id) => foldedObjectiveIds.includes(id))
   );
-  let contextObjective = $derived(contextMenu ? objectives.find((objective) => objective.id === contextMenu.id) : null);
-  let contextObjectiveIndex = $derived(contextObjective ? objectives.findIndex((objective) => objective.id === contextObjective.id) : -1);
-  let contextMenuItems = $derived.by(() => {
+  let contextObjective = $derived(contextMenu ? objectives.find((objective) => objective.id === contextMenu?.id) : null);
+  let contextObjectiveIndex = $derived(contextObjective ? objectives.findIndex((objective) => objective.id === contextObjective?.id) : -1);
+  let contextMenuItems = $derived.by((): MenuItem[] => {
     if (!contextObjective) return [];
+    const objectiveId = contextObjective.id;
     const editable = contextMenu?.editable;
     return [
       ...buildEditableTextMenuItems(editable, {
         beforeAction: closeContextMenu,
         onError: (error) => appStore.showStatus(`Clipboard failed: ${error}`)
       }),
-      { label: "Indent", icon: IndentIncrease, disabled: (contextObjective.indent || 0) >= 2, onclick: () => runContextAction(onIndent, contextObjective.id) },
-      { label: "Outdent", icon: IndentDecrease, disabled: (contextObjective.indent || 0) <= 0, onclick: () => runContextAction(onOutdent, contextObjective.id) },
-      { label: "Move Up", icon: ChevronUp, disabled: contextObjectiveIndex <= 0, onclick: () => runContextAction(onMove, contextObjective.id, "up") },
-      { label: "Move Down", icon: ChevronDown, disabled: contextObjectiveIndex >= objectives.length - 1, onclick: () => runContextAction(onMove, contextObjective.id, "down") },
+      { label: "Indent", icon: IndentIncrease, disabled: (contextObjective.indent || 0) >= 2, onclick: () => runContextAction(onIndent, objectiveId) },
+      { label: "Outdent", icon: IndentDecrease, disabled: (contextObjective.indent || 0) <= 0, onclick: () => runContextAction(onOutdent, objectiveId) },
+      { label: "Move Up", icon: ChevronUp, disabled: contextObjectiveIndex <= 0, onclick: () => runContextAction(onMove, objectiveId, "up") },
+      { label: "Move Down", icon: ChevronDown, disabled: contextObjectiveIndex >= objectives.length - 1, onclick: () => runContextAction(onMove, objectiveId, "down") },
       { separator: true },
       { label: "Collapse All Objectives", icon: ChevronsDownUp, disabled: foldableObjectiveIds.length === 0 || allObjectivesFolded, onclick: () => runContextAction(onFoldChange, foldableObjectiveIds) },
       { label: "Expand All Objectives", icon: ChevronsUpDown, disabled: foldedObjectiveIds.length === 0, onclick: () => runContextAction(onFoldChange, []) },
       { separator: true },
-      { label: "Delete", icon: Trash2, danger: true, onclick: () => runContextAction(onDelete, contextObjective.id) }
+      { label: "Delete", icon: Trash2, danger: true, onclick: () => runContextAction(onDelete, objectiveId) }
     ];
   });
 
-  function toggleFold(id) {
+  function toggleFold(id: string) {
     const next = foldedObjectiveIds.includes(id)
       ? foldedObjectiveIds.filter((item) => item !== id)
       : [...foldedObjectiveIds, id];
     return onFoldChange(next);
   }
 
-  function openContextMenu(event, id) {
+  function openContextMenu(event: MouseEvent, id: string) {
     event.preventDefault();
     contextMenu = { x: event.clientX, y: event.clientY, id, editable: captureEditableText(event.target) };
   }
@@ -64,7 +78,7 @@
     contextMenu = null;
   }
 
-  function runContextAction(action, ...args) {
+  function runContextAction<Args extends unknown[]>(action: (...args:Args)=>unknown, ...args:Args) {
     closeContextMenu();
     return action(...args);
   }

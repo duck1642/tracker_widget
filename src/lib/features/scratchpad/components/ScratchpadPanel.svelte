@@ -1,9 +1,9 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
   import NotesEditor from "$lib/shared/components/NotesEditor.svelte";
-  import { scratchpadStore as defaultScratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.js";
-  import { workspaceStore } from "$lib/app/workspaceStore.svelte.js";
-  let { scratchpadStore = defaultScratchpadStore } = $props();
+  import { scratchpadStore as defaultScratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.ts";
+  import { workspaceStore } from "$lib/app/workspaceStore.svelte.ts";
+  import type { ScratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.ts";
+  let { scratchpadStore = defaultScratchpadStore }: { scratchpadStore?: ScratchpadStore } = $props();
 </script>
 
 <main class="scratchpad-panel">
@@ -19,7 +19,7 @@
     <div class="scratchpad-editor">
       <NotesEditor
         value={scratchpadStore.content}
-        onChange={(value) => scratchpadStore.updateContent(value)}
+        onChange={(value: string) => scratchpadStore.updateContent(value)}
         label="Scratchpad"
         helpPlacement="below"
         folding={true}

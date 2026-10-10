@@ -1,17 +1,37 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+import type { LogDayEntry, LogWeekEntry } from "$lib/shared/services/types.ts";
+import type { ExpansionCommand, PaneSide, View } from "./types.ts";
+import type { MenuItem, MenuPosition } from "$lib/shared/components/types.ts";
+type Action = (()=>unknown)|null;
+type SidebarMenu = MenuPosition & {
+    openInBackground: Action;
+    openInSplit: Action;
+    openInLeft: Action;
+    openInRight: Action;
+};
+type NavigationEntry = {
+    kind: "week";
+    path: string;
+    week: LogWeekEntry;
+} | {
+    kind: "day";
+    path: string;
+    week: LogWeekEntry;
+    day: LogDayEntry;
+};
+
   import { ArrowLeft, ArrowRight, CalendarCheck, CalendarPlus, ArrowDownUp, CheckSquare2, ChevronsDownUp, ChevronsUpDown, Columns2, ExternalLink, FileCog, Plus, StickyNote, Trash2 } from "@lucide/svelte";
   import { openPath } from "@tauri-apps/plugin-opener";
   import FileTree from "$lib/shared/components/FileTree.svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
   import WeekFilesDialog from "./WeekFilesDialog.svelte";
   import WeekFilesMenu from "./WeekFilesMenu.svelte";
-  import { workspaceStore } from "./workspaceStore.svelte.js";
-  import { appStore } from "$lib/app/appStore.svelte.js";
-  import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
-  import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
-  import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
-  import { scratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.js";
+  import { workspaceStore } from "./workspaceStore.svelte.ts";
+  import { appStore } from "$lib/app/appStore.svelte.ts";
+  import { weekStore } from "$lib/features/weekly/weekStore.svelte.ts";
+  import { dailyStore } from "$lib/features/daily/dailyStore.svelte.ts";
+  import { todoStore } from "$lib/features/todo/todoStore.svelte.ts";
+  import { scratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.ts";
 
   let {
     open = true,
@@ -38,10 +58,14 @@
     onConvertWeek = (week) => workspaceStore.convertWeekToPersonal(week),
     onDeleteWeek = () => {},
     keyboardNavigationEnabled = true
-  } = $props();
+  }: {open?:boolean;currentView?:View;selectedPath?:string;onSelectScratchpad?():unknown;onSelectTodo?():unknown;onSelectWeek(week:LogWeekEntry):unknown;onSelectDay(day:LogDayEntry,week:LogWeekEntry):unknown;
+onOpenWeekInBackground?:((week:LogWeekEntry)=>unknown)|null;onOpenDayInBackground?:((day:LogDayEntry)=>unknown)|null;onMiddleClickTodo?:Action;onMiddleClickScratchpad?:Action;splitView?:boolean;
+onOpenTodoInSplit?:Action;onOpenScratchpadInSplit?:Action;onOpenWeekInSplit?:((week:LogWeekEntry)=>unknown)|null;onOpenDayInSplit?:((day:LogDayEntry)=>unknown)|null;
+onOpenTodoInPane?:((pane:PaneSide)=>unknown)|null;onOpenScratchpadInPane?:((pane:PaneSide)=>unknown)|null;onOpenWeekInPane?:((week:LogWeekEntry,pane:PaneSide)=>unknown)|null;onOpenDayInPane?:((day:LogDayEntry,pane:PaneSide)=>unknown)|null;
+onRepairWeek?(week:LogWeekEntry):unknown;onConvertWeek?(week:LogWeekEntry):unknown;onDeleteWeek?(week:LogWeekEntry):unknown;keyboardNavigationEnabled?:boolean} = $props();
   let sortAscending = $state(false);
   let allWeeksExpanded = $state(true);
-  let expansionCommand = $state(null);
+  let expansionCommand = $state<ExpansionCommand|null>(null);
   let expansionCommandId = 0;
   let sortedWeeks = $derived([...workspaceStore.weeks].sort((left, right) => sortAscending ? left.name.localeCompare(right.name) : right.name.localeCompare(left.name)));
   let sortDescription = $derived(sortAscending
@@ -49,11 +73,11 @@
     : "Week order: newest first — click for oldest first");
   let queuedNavigationPath = "";
   let navigationQueue = Promise.resolve();
-  let weekFilesMenu = $state(null);
+  let weekFilesMenu = $state<MenuPosition|null>(null);
   let showWeekFilesDialog = $state(false);
-  let weekContextMenu = $state(null);
-  let sidebarContextMenu = $state(null);
-  let weekContextItems = $derived.by(() => {
+  let weekContextMenu = $state<(MenuPosition & {week:LogWeekEntry})|null>(null);
+  let sidebarContextMenu = $state<SidebarMenu|null>(null);
+  let weekContextItems = $derived.by(():MenuItem[] => {
     if (!weekContextMenu) return [];
     const week = weekContextMenu.week;
     return [
@@ -65,27 +89,28 @@
       { label: "Delete week…", icon: Trash2, danger: true, onclick: () => runWeekContextAction(onDeleteWeek, week) }
     ];
   });
-  let sidebarContextItems = $derived.by(() => {
+  let sidebarContextItems = $derived.by(():MenuItem[] => {
     if (!sidebarContextMenu) return [];
+    const menu = sidebarContextMenu;
     const openInNewTab =
-      { label: "Open in new tab", icon: Plus, onclick: () => runSidebarContextAction(sidebarContextMenu.openInBackground) };
+      { label: "Open in new tab", icon: Plus, onclick: () => runSidebarContextAction(menu.openInBackground) };
     if (!splitView) return [
       openInNewTab,
-      { label: "Open in split view", icon: Columns2, onclick: () => runSidebarContextAction(sidebarContextMenu.openInSplit) }
+      { label: "Open in split view", icon: Columns2, onclick: () => runSidebarContextAction(menu.openInSplit) }
     ];
     return [
       openInNewTab,
-      { label: "Open at left pane", icon: ArrowLeft, onclick: () => runSidebarContextAction(sidebarContextMenu.openInLeft) },
-      { label: "Open at right pane", icon: ArrowRight, onclick: () => runSidebarContextAction(sidebarContextMenu.openInRight) }
+      { label: "Open at left pane", icon: ArrowLeft, onclick: () => runSidebarContextAction(menu.openInLeft) },
+      { label: "Open at right pane", icon: ArrowRight, onclick: () => runSidebarContextAction(menu.openInRight) }
     ];
   });
 
   const EDITOR_BLUR_SETTLE_MS = 160;
 
-  function navigationEntries() {
+  function navigationEntries():NavigationEntry[] {
     return sortedWeeks.flatMap((week) => [
-      ...(week.indexPath ? [{ kind: "week", path: week.indexPath, week }] : []),
-      ...week.days.filter((day) => day.path).map((day) => ({ kind: "day", path: day.path, week, day }))
+      ...(week.indexPath ? [{ kind: "week" as const, path: week.indexPath, week }] : []),
+      ...week.days.filter((day) => day.path).map((day) => ({ kind: "day" as const, path: day.path, week, day }))
     ]);
   }
 
@@ -104,7 +129,7 @@
     await new Promise((resolve) => setTimeout(resolve, EDITOR_BLUR_SETTLE_MS));
   }
 
-  function handleKeyboardNavigation(event) {
+  function handleKeyboardNavigation(event:KeyboardEvent) {
     if (event.key === "Escape" && weekFilesMenu) {
       weekFilesMenu = null;
       return;
@@ -139,7 +164,7 @@
       });
   }
 
-  function toggleWeekFilesMenu(event) {
+  function toggleWeekFilesMenu(event:MouseEvent & {currentTarget:HTMLButtonElement}) {
     if (weekFilesMenu) {
       weekFilesMenu = null;
       return;
@@ -148,33 +173,33 @@
     weekFilesMenu = { x: rect.left, y: rect.bottom + 5 };
   }
 
-  function dismissWeekFilesMenu(event) {
+  function dismissWeekFilesMenu(event:PointerEvent) {
     if (!weekFilesMenu) return;
     if (event.target instanceof Element && event.target.closest("[data-week-files-menu], [data-week-files-trigger]")) return;
     weekFilesMenu = null;
   }
 
-  async function runWeekFilesAction(action) {
+  async function runWeekFilesAction(action:()=>unknown) {
     weekFilesMenu = null;
     await action();
   }
 
-  function openWeekContextMenu(event, week) {
+  function openWeekContextMenu(event:MouseEvent, week:LogWeekEntry) {
     weekFilesMenu = null;
     weekContextMenu = { week, x: event.clientX, y: event.clientY };
   }
 
-  function runWeekContextAction(action, week) {
+  function runWeekContextAction(action:(week:LogWeekEntry)=>unknown, week:LogWeekEntry) {
     weekContextMenu = null;
     void action(week);
   }
 
-  function openSidebarContextMenu(event, openInBackground, openInSplit = null, openInLeft = null, openInRight = null) {
+  function openSidebarContextMenu(event:MouseEvent, openInBackground:Action, openInSplit:Action = null, openInLeft:Action = null, openInRight:Action = null) {
     weekFilesMenu = null;
     sidebarContextMenu = { x: event.clientX, y: event.clientY, openInBackground, openInSplit, openInLeft, openInRight };
   }
 
-  function runSidebarContextAction(action) {
+  function runSidebarContextAction(action:Action) {
     sidebarContextMenu = null;
     action?.();
   }

@@ -1,12 +1,15 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+import type { ActivityFields, Objective, ObjectiveFields } from "$lib/shared/parsers/types.ts";
+import type { ActualEntry, PlanEntry } from "../types.ts";
+import type { MenuItem, MenuPosition } from "$lib/shared/components/types.ts";
+
   import { X } from "@lucide/svelte";
   import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
-  import { formatDurationSummary } from "$lib/shared/utils/durationSummary.js";
+  import { formatDurationSummary } from "$lib/shared/utils/durationSummary.ts";
 
-  let { entry, onClose } = $props();
+  let { entry, onClose }: {entry:ActualEntry;onClose():void} = $props();
   const activities = $derived(entry?.activities || []);
-  const durationLabel = $derived(formatDurationSummary({ knownMinutes: entry.actualMinutes, unknownCount: entry.unknownDurationCount }));
+  const durationLabel = $derived(formatDurationSummary({ knownMinutes: entry.actualMinutes, unknownCount: entry.unknownDurationCount ?? 0 }));
 </script>
 
 <svelte:window onkeydown={(event) => { if (event.key === "Escape") onClose(); }} />

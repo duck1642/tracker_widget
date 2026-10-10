@@ -1,6 +1,7 @@
-<script>
+<script lang="ts">
+
   import { X } from "@lucide/svelte";
-  let { onClose } = $props();
+  let { onClose }: {onClose():unknown} = $props();
 </script>
 
 <svelte:window onkeydown={(event) => { if (event.key === "Escape") onClose?.(); }} />

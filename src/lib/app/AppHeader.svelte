@@ -1,5 +1,7 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+import type { LayerMode } from "$lib/shared/services/types.ts";
+import type { View } from "./types.ts";
+import type { MenuItem, MenuPosition } from "$lib/shared/components/types.ts";
   import { onMount } from "svelte";
   import {
     ArrowLeft,
@@ -46,14 +48,40 @@
     onShrinkApp,
     onMaximizeApp,
     onCloseApp 
+  }: {
+      dragEnabled: boolean;
+      layerMode: LayerMode;
+      title?: string;
+      currentView?: View;
+      sidebarOpen?: boolean;
+      showModeMenu: boolean;
+      isMaximized?: boolean;
+      canGoBack?: boolean;
+      canGoForward?: boolean;
+      onToggleSidebar(): unknown;
+      onBack(): unknown;
+      onForward(): unknown;
+      onToggleModeMenu(): unknown;
+      onDismissModeMenu?(): unknown;
+      onSelectMode(mode: LayerMode): unknown;
+      onToggleSettings(): unknown;
+      onOpenView(view: View): unknown;
+      onOpenActiveFile(): unknown;
+      onCreateCurrentWeek(): unknown;
+      onCreateNextWeek(): unknown;
+      onChooseWeeks(): unknown;
+      onOpenHelp(): unknown;
+      onShrinkApp(): unknown;
+      onMaximizeApp(): unknown;
+      onCloseApp(): unknown;
   } = $props();
 
-  /** @type {HTMLDivElement | undefined} */
-  let modeSelector;
-  /** @type {HTMLButtonElement | undefined} */
-  let modeTrigger;
-  let appMenu = $state(null);
-  let appMenuItems = $derived.by(() => {
+
+  let modeSelector: HTMLDivElement | undefined;
+
+  let modeTrigger: HTMLButtonElement | undefined;
+  let appMenu = $state<(MenuPosition & {kind:"file"|"view"})|null>(null);
+  let appMenuItems = $derived.by((): MenuItem[] => {
     if (appMenu?.kind === "file") {
       return [
         { label: "Open Active Markdown", icon: ExternalLink, onclick: () => runMenuAction(onOpenActiveFile) },
@@ -77,13 +105,13 @@
   });
 
   onMount(() => {
-    /** @param {PointerEvent} event */
-    function handlePointerDown(event) {
+
+    function handlePointerDown(event: PointerEvent) {
       if (showModeMenu && event.target instanceof Node && !modeSelector?.contains(event.target)) onDismissModeMenu?.();
     }
 
-    /** @param {KeyboardEvent} event */
-    function handleKeyDown(event) {
+
+    function handleKeyDown(event: KeyboardEvent) {
       if (!showModeMenu || event.key !== "Escape") return;
       event.preventDefault();
       onDismissModeMenu?.();
@@ -98,14 +126,14 @@
     };
   });
 
-  /** @param {string} mode */
-  function getModeLabel(mode) {
+
+  function getModeLabel(mode: string) {
     if (mode === "top") return "Top";
     if (mode === "desktop") return "Desk";
     return "Norm";
   }
 
-  function toggleAppMenu(event, kind) {
+  function toggleAppMenu(event:MouseEvent & {currentTarget:HTMLButtonElement}, kind:"file"|"view") {
     onDismissModeMenu?.();
     if (appMenu?.kind === kind) {
       appMenu = null;
@@ -115,7 +143,7 @@
     appMenu = { kind, x: rect.left, y: rect.bottom + 4 };
   }
 
-  function runMenuAction(action, ...args) {
+  function runMenuAction<Args extends unknown[]>(action:((...args:Args)=>unknown)|undefined, ...args:Args) {
     appMenu = null;
     action?.(...args);
   }

@@ -1,51 +1,73 @@
-<script>
+<script lang="ts">
+import type { TodoItem } from "../types.ts";
+import type { DailySession } from "$lib/features/daily/types.ts";
+import type { PlanEntry } from "$lib/features/weekly/types.ts";
+import type { LogDayEntry } from "$lib/shared/services/types.ts";
   import { tick } from "svelte";
-  import { appStore } from "$lib/app/appStore.svelte.js";
-  import { dailyStore as defaultDailyStore } from "$lib/features/daily/dailyStore.svelte.js";
-  import { todoStore as defaultTodoStore } from "$lib/features/todo/todoStore.svelte.js";
-  import { buildVisibleTodoRows, todoFoldStore } from "$lib/features/todo/todoFolding.svelte.js";
-  import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
-  import { weekStore as defaultWeekStore } from "$lib/features/weekly/weekStore.svelte.js";
-  import { workspaceStore } from "$lib/app/workspaceStore.svelte.js";
-  import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.js";
+  import { appStore } from "$lib/app/appStore.svelte.ts";
+  import { dailyStore as defaultDailyStore } from "$lib/features/daily/dailyStore.svelte.ts";
+  import { todoStore as defaultTodoStore } from "$lib/features/todo/todoStore.svelte.ts";
+  import { buildVisibleTodoRows, todoFoldStore } from "$lib/features/todo/todoFolding.svelte.ts";
+  import { todoUiState } from "$lib/features/todo/todoUiState.svelte.ts";
+  import { weekStore as defaultWeekStore } from "$lib/features/weekly/weekStore.svelte.ts";
+  import { workspaceStore } from "$lib/app/workspaceStore.svelte.ts";
+  import { formatDate, getWeekDescriptor } from "$lib/shared/services/logWorkspaceService.ts";
   import TodoList from "./TodoList.svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
   import { CheckSquare2, ChevronDown, ChevronUp, ClipboardList, Flag, IndentDecrease, IndentIncrease, ListTodo, Square, Trash2, X, Terminal } from "@lucide/svelte";
-  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.js";
-  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
+  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.ts";
+  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.ts";
   import { invoke } from "@tauri-apps/api/core";
   import TodoSendSessionMenu from "./TodoSendSessionMenu.svelte";
   import TodoSendWeeklyPlanMenu from "./TodoSendWeeklyPlanMenu.svelte";
-  let { todoStore = defaultTodoStore, dailyStore = defaultDailyStore, weekStore = defaultWeekStore } = $props();
+  let { todoStore = defaultTodoStore, dailyStore = defaultDailyStore, weekStore = defaultWeekStore }: {
+      todoStore?: typeof defaultTodoStore;
+      dailyStore?: typeof defaultDailyStore;
+      weekStore?: typeof defaultWeekStore;
+  } = $props();
 
   let focusedTodoId = $state("");
-  /** @type {{ x: number, y: number, editable: ReturnType<typeof captureEditableText> } | null} */
-  let contextMenu = $state(null);
-  /** @type {{ x: number, y: number, sessions: any[] } | null} */
-  let sessionMenu = $state(null);
-  /** @type {{ x: number, y: number, plan: any[] } | null} */
-  let weeklyPlanMenu = $state(null);
-  /** @type {Record<string, string>} */
-  let originalTexts = {};
 
-  /**
-   * @typedef {{
-   *   label?: string,
-   *   icon?: any,
-   *   onclick?: () => void | Promise<void>,
-   *   isHeader?: boolean,
-   *   separator?: boolean,
-   *   danger?: boolean,
-   *   disabled?: boolean
-   * }} ContextMenuItem
-   */
+  let contextMenu: {
+
+      x: number;
+
+      y: number;
+
+      editable: ReturnType<typeof captureEditableText>;
+
+  } | null = $state(null);
+
+  let sessionMenu: {
+
+      x: number;
+
+      y: number;
+
+      sessions: DailySession[];
+
+  } | null = $state(null);
+
+  let weeklyPlanMenu: {
+
+      x: number;
+
+      y: number;
+
+      plan: PlanEntry[];
+
+  } | null = $state(null);
+
+  let originalTexts: Record<string, string> = {};
+
+  export type ContextMenuItem = import("$lib/shared/components/types.ts").MenuItem;
 
   let contextMenuItems = $derived.by(() => {
     if (!contextMenu) return [];
     const selectedCount = todoUiState.selectedTodoIds.length;
     const editable = contextMenu.editable;
-    /** @type {ContextMenuItem[]} */
-    const items = [
+
+    const items: ContextMenuItem[] = [
       { label: `${selectedCount} selected`, isHeader: true }
     ];
 
@@ -148,8 +170,8 @@
   });
 
   // Keep a reference to inputs to set focus programmatically
-  /** @type {Record<string, HTMLTextAreaElement>} */
-  let inputElements = {};
+
+  let inputElements: Record<string, HTMLTextAreaElement> = {};
   let visibleTodos = $derived(buildVisibleTodoRows(todoStore.todos, todoFoldStore.foldedTodoIds));
   let visibleTodoRows = $derived(visibleTodos.rows.filter((row) => row.todo.isTodo));
   let visibleTodoIds = $derived(visibleTodoRows.map((row) => row.todo.id));
@@ -166,21 +188,18 @@
     if (!todoUiState.hasSelection) closeMenus();
   });
 
-  /** @param {number} index */
-  function isVisibleStoreIndex(index) {
+
+  function isVisibleStoreIndex(index: number) {
     return visibleTodos.rows.some((row) => row.storeIndex === index);
   }
 
-  /** @param {number} index */
-  function visiblePositionForStoreIndex(index) {
+
+  function visiblePositionForStoreIndex(index: number) {
     return visibleTodoRows.findIndex((row) => row.storeIndex === index) + 1;
   }
 
-  /**
-   * @param {number} fromIndex
-   * @param {number} targetPosition
-   */
-  function canMoveTodoToVisiblePosition(fromIndex, targetPosition) {
+
+  function canMoveTodoToVisiblePosition(fromIndex: number, targetPosition: number) {
     const sourcePosition = visiblePositionForStoreIndex(fromIndex);
     return Number.isInteger(targetPosition)
       && sourcePosition >= 1
@@ -189,11 +208,8 @@
       && targetPosition !== sourcePosition;
   }
 
-  /**
-   * @param {number} fromIndex
-   * @param {number} targetPosition
-   */
-  async function moveTodoToVisiblePosition(fromIndex, targetPosition) {
+
+  async function moveTodoToVisiblePosition(fromIndex: number, targetPosition: number) {
     if (!canMoveTodoToVisiblePosition(fromIndex, targetPosition)) return false;
     const targetIndex = visibleTodoRows[targetPosition - 1]?.storeIndex;
     const todoId = todoStore.todos[fromIndex]?.id;
@@ -204,11 +220,8 @@
     return true;
   }
 
-  /**
-   * @param {MouseEvent} event
-   * @param {string} id
-   */
-  function handleSelectTodo(event, id) {
+
+  function handleSelectTodo(event: MouseEvent, id: string) {
     if (event.shiftKey) {
       todoUiState.selectRange(visibleTodoIds, id);
     } else {
@@ -216,8 +229,8 @@
     }
   }
 
-  /** @param {string} id */
-  function setSelectionAnchor(id) {
+
+  function setSelectionAnchor(id: string) {
     todoUiState.setAnchor(id);
   }
 
@@ -226,8 +239,8 @@
     closeMenus();
   }
 
-  /** @param {string} id */
-  function toggleFold(id) {
+
+  function toggleFold(id: string) {
     clearSelection();
     todoFoldStore.toggleTodo(id);
   }
@@ -250,11 +263,8 @@
     weeklyPlanMenu = null;
   }
 
-  /**
-   * @param {MouseEvent} event
-   * @param {string} id
-   */
-  function openContextMenu(event, id) {
+
+  function openContextMenu(event: MouseEvent, id: string) {
     event.preventDefault();
     const editable = captureEditableText(event.target);
     if (!todoUiState.isSelected(id)) {
@@ -272,7 +282,7 @@
   function selectedTodoDescriptions() {
     const selectedIds = new Set(todoUiState.selectedTodoIds);
     return todoStore.todos
-      .filter((todo) => todo.isTodo && selectedIds.has(todo.id))
+      .filter((todo): todo is TodoItem => todo.isTodo && selectedIds.has(todo.id))
       .map((todo) => todo.text.trim())
       .filter(Boolean);
   }
@@ -308,13 +318,13 @@
     const descriptor = getWeekDescriptor(new Date());
     const today = formatDate(new Date());
     let week = workspaceStore.weeks.find((item) => item.name === descriptor.folderName);
-    let day = week?.days.find((/** @type {any} */ item) => item.date === today);
+    let day = week?.days.find((item: LogDayEntry) => item.date === today);
     const menuPosition = contextMenu || { x: 0, y: 0 };
     closeContextMenu();
     if (!day?.path) {
       await workspaceStore.refresh();
       week = workspaceStore.weeks.find((item) => item.name === descriptor.folderName);
-      day = week?.days.find((/** @type {any} */ item) => item.date === today);
+      day = week?.days.find((item: LogDayEntry) => item.date === today);
     }
     if (!day?.path) {
       appStore.showStatus("Today log not found");
@@ -352,8 +362,8 @@
     };
   }
 
-  /** @param {string} sessionId */
-  function handleSendToSession(sessionId) {
+
+  function handleSendToSession(sessionId: string) {
     const descriptions = selectedTodoDescriptions();
     if (dailyStore.addActivities(sessionId, descriptions)) {
       appStore.showStatus(`Sent ${descriptions.length} ${descriptions.length === 1 ? "activity" : "activities"}`);
@@ -363,8 +373,8 @@
     }
   }
 
-  /** @param {string} entryId */
-  function handleSendToWeeklyPlanEntry(entryId) {
+
+  function handleSendToWeeklyPlanEntry(entryId: string) {
     const descriptions = selectedTodoDescriptions();
     if (weekStore.addPlanActivities(entryId, descriptions)) {
       appStore.showStatus(`Sent ${descriptions.length} planned ${descriptions.length === 1 ? "activity" : "activities"}`);
@@ -375,19 +385,19 @@
     }
   }
 
-  /** @param {string} day */
-  function handleEmptyWeeklyPlanDay(day) {
+
+  function handleEmptyWeeklyPlanDay(day: string) {
     appStore.showStatus(`No planned sessions for ${day}`);
   }
 
-  /** @param {boolean} checked */
-  function handleSetSelectedChecked(checked) {
+
+  function handleSetSelectedChecked(checked: boolean) {
     todoStore.setTodosCheckedByIds(todoUiState.selectedTodoIds, checked);
     closeContextMenu();
   }
 
-  /** @param {number} delta */
-  function handleShiftSelectedIndent(delta) {
+
+  function handleShiftSelectedIndent(delta: number) {
     todoStore.shiftTodosIndentByIds(todoUiState.selectedTodoIds, delta);
     closeContextMenu();
   }
@@ -400,8 +410,8 @@
     }
   }
 
-  /** @param {-1 | 1} direction */
-  function handleMoveSelected(direction) {
+
+  function handleMoveSelected(direction: -1 | 1) {
     if (todoUiState.selectedTodoIds.length === 1) {
       const id = todoUiState.selectedTodoIds[0];
       const index = todoStore.todos.findIndex((t) => t.id === id);
@@ -418,26 +428,22 @@
     closeContextMenu();
   }
 
-  /** @param {MouseEvent} event */
-  function handleRawContextMenu(event) {
+
+  function handleRawContextMenu(event: MouseEvent) {
     event.preventDefault();
     clearSelection();
   }
 
-  /** @param {MouseEvent} event */
-  function handleBlankContextMenu(event) {
+
+  function handleBlankContextMenu(event: MouseEvent) {
     if (event.target !== event.currentTarget) return;
     event.preventDefault();
     clearSelection();
   }
 
   // Todo keyboard navigation and editing handlers
-  /**
-   * @param {KeyboardEvent} event
-   * @param {number} index
-   * @param {any} todo
-   */
-  async function handleKeyDown(event, index, todo) {
+
+  async function handleKeyDown(event: KeyboardEvent, index: number, todo: TodoItem) {
     if (event.altKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
       const sourcePosition = visiblePositionForStoreIndex(index);
       const targetPosition = event.key === "ArrowUp" ? sourcePosition - 1 : sourcePosition + 1;
@@ -478,7 +484,7 @@
       event.preventDefault();
       const newId = todoStore.addTodo(index, todo.indent);
       focusedTodoId = newId;
-      
+
       // Focus the newly inserted todo input.
       await tick();
       if (inputElements[newId]) {
@@ -560,12 +566,12 @@
     showTodoNumbers={todoUiState.showTodoNumbers}
     selectionActive={todoUiState.hasSelection}
     visiblePositionForStoreIndex={visiblePositionForStoreIndex}
-    isTodoSelected={(/** @type {string} */ id) => todoUiState.isSelected(id)}
+    isTodoSelected={(id) => todoUiState.isSelected(id)}
     inputElements={inputElements}
-    onToggleTodo={(/** @type {string} */ id) => todoStore.toggleTodo(id)}
-    onUpdateText={(/** @type {string} */ id, /** @type {string} */ text) => todoStore.updateText(id, text)}
+    onToggleTodo={(id) => todoStore.toggleTodo(id)}
+    onUpdateText={(id, text) => todoStore.updateText(id, text)}
     onMoveTodoToVisiblePosition={moveTodoToVisiblePosition}
-    onDeleteTodo={(/** @type {number} */ index) => todoStore.deleteTodo(index)}
+    onDeleteTodo={(index) => todoStore.deleteTodo(index)}
     onToggleFold={toggleFold}
     onSelectTodo={handleSelectTodo}
     onSetSelectionAnchor={setSelectionAnchor}
@@ -573,11 +579,11 @@
     onOpenContextMenu={openContextMenu}
     onRawContextMenu={handleRawContextMenu}
     onBlankContextMenu={handleBlankContextMenu}
-    onFocus={(/** @type {string} */ id, /** @type {string} */ text) => {
+    onFocus={(id, text) => {
       focusedTodoId = id;
       originalTexts[id] = text;
     }}
-    onBlur={(/** @type {string} */ id, /** @type {string} */ text) => {
+    onBlur={(id, text) => {
       if (focusedTodoId === id) {
         focusedTodoId = "";
       }

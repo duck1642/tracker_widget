@@ -1,4 +1,6 @@
-<script>
+<script lang="ts">
+import type { TodoRow as VisibleRow } from "../todoFolding.svelte.ts";
+import type { TodoRowCallbacks } from "./types.ts";
   import TodoRow from "./TodoRow.svelte";
   import RawRow from "./RawRow.svelte";
 
@@ -23,9 +25,18 @@
     onOpenContextMenu,
     onRawContextMenu,
     onBlankContextMenu
+  }: TodoRowCallbacks & {
+      rows: VisibleRow[];
+      showTodoNumbers?: boolean;
+      selectionActive?: boolean;
+      visiblePositionForStoreIndex(index: number): number;
+      isTodoSelected(id: string): boolean;
+      onDeleteTodo(index: number): unknown;
+      onRawContextMenu(event: MouseEvent): void;
+      onBlankContextMenu(event: MouseEvent): void;
   } = $props();
 
-  let numberDigits = $derived(String(Math.max(1, rows.filter((/** @type {any} */ row) => row.todo.isTodo).length)).length);
+  let numberDigits = $derived(String(Math.max(1, rows.filter(( row) => row.todo.isTodo).length)).length);
 </script>
 
 <div

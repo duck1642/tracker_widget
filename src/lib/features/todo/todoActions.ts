@@ -1,0 +1,84 @@
+
+import type { TodoAction, TodoLine } from "./types.ts";
+
+function moveOne(todos: TodoLine[], fromIndex: number, toIndex: number) {
+  if (fromIndex === toIndex) return todos;
+  if (fromIndex < 0 || fromIndex >= todos.length || toIndex < 0 || toIndex >= todos.length) return todos;
+  const updated = [...todos];
+  const [todo] = updated.splice(fromIndex, 1);
+  updated.splice(toIndex, 0, todo);
+  return updated;
+}
+
+
+export function applyAction(todos: TodoLine[], action: TodoAction, isInverse: boolean) {
+  let updatedTodos = [...todos];
+  if (action.type === "delete") {
+    if (isInverse) {
+      updatedTodos.splice(action.index, 0, action.todo);
+    } else {
+      const idx = updatedTodos.findIndex(t => t.id === action.todo.id);
+      if (idx !== -1) updatedTodos.splice(idx, 1);
+    }
+  } else if (action.type === "add") {
+    if (isInverse) {
+      const idx = updatedTodos.findIndex(t => t.id === action.todo.id);
+      if (idx !== -1) updatedTodos.splice(idx, 1);
+    } else {
+      updatedTodos.splice(action.index, 0, action.todo);
+    }
+  } else if (action.type === "toggle") {
+    const todo = updatedTodos.find(t => t.id === action.id);
+    if (todo?.isTodo) {
+      todo.checked = isInverse ? action.oldChecked : action.newChecked;
+    }
+  } else if (action.type === "set_checked_many") {
+    for (const entry of action.todos) {
+      const todo = updatedTodos.find(t => t.id === entry.id);
+      if (todo?.isTodo) {
+        todo.checked = isInverse ? entry.oldChecked : entry.newChecked;
+      }
+    }
+  } else if (action.type === "edit") {
+    const todo = updatedTodos.find(t => t.id === action.id);
+    if (todo?.isTodo) {
+      todo.text = isInverse ? action.oldText : action.newText;
+    }
+  } else if (action.type === "move") {
+    const from = isInverse ? action.toIndex : action.fromIndex;
+    const to = isInverse ? action.fromIndex : action.toIndex;
+    if (from >= 0 && from < updatedTodos.length && to >= 0 && to < updatedTodos.length) {
+      const temp = updatedTodos[from];
+      updatedTodos[from] = updatedTodos[to];
+      updatedTodos[to] = temp;
+    }
+  } else if (action.type === "move_to") {
+    const from = isInverse ? action.toIndex : action.fromIndex;
+    const to = isInverse ? action.fromIndex : action.toIndex;
+    updatedTodos = moveOne(updatedTodos, from, to);
+  } else if (action.type === "indent") {
+    const todo = updatedTodos.find(t => t.id === action.id);
+    if (todo?.isTodo) {
+      todo.indent = isInverse ? action.oldIndent : action.newIndent;
+    }
+  } else if (action.type === "shift_indent_many") {
+    for (const entry of action.todos) {
+      const todo = updatedTodos.find(t => t.id === entry.id);
+      if (todo?.isTodo) {
+        todo.indent = isInverse ? entry.oldIndent : entry.newIndent;
+      }
+    }
+  } else if (action.type === "delete_many" || action.type === "clear_completed") {
+    if (isInverse) {
+      // Restore in ascending order of original index
+      const sorted = [...action.deletedTodos].sort((a, b) => a.index - b.index);
+      for (const entry of sorted) {
+        updatedTodos.splice(entry.index, 0, entry.todo);
+      }
+    } else {
+      const idsToDelete = new Set(action.deletedTodos.map((x) => x.todo.id));
+      updatedTodos = updatedTodos.filter(t => !idsToDelete.has(t.id));
+    }
+  }
+  return updatedTodos;
+}

@@ -1,7 +1,11 @@
-<script>
+<script lang="ts">
   import { Clock3 } from "@lucide/svelte";
-  import { formatDurationSummary } from "$lib/shared/utils/durationSummary.js";
-  let { date, totalMinutes, unknownDurationCount = 0 } = $props();
+  import { formatDurationSummary } from "$lib/shared/utils/durationSummary.ts";
+  let { date, totalMinutes, unknownDurationCount = 0 }: {
+      date: string;
+      totalMinutes: number;
+      unknownDurationCount?: number;
+  } = $props();
   let displayDate = $derived(date ? new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date(`${date}T12:00:00`)) : "Select a daily log");
   let totalLabel = $derived(formatDurationSummary({ knownMinutes: totalMinutes, unknownCount: unknownDurationCount }, { hours: true }));
 </script>

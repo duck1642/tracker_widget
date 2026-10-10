@@ -1,7 +1,8 @@
-<script>
+<script lang="ts">
+
   import { ChevronsDownUp, ChevronsUpDown, ListOrdered, Plus, Undo2, Redo2, RotateCw, ListX } from "@lucide/svelte";
-  import { todoFoldStore } from "$lib/features/todo/todoFolding.svelte.js";
-  import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
+  import { todoFoldStore } from "$lib/features/todo/todoFolding.svelte.ts";
+  import { todoUiState } from "$lib/features/todo/todoUiState.svelte.ts";
 
   let { 
     selectedCount = 0,
@@ -12,6 +13,15 @@
     onRedo, 
     onReload, 
     onClearCompleted 
+  }: {
+      selectedCount?: number;
+      undoStackLength?: number;
+      redoStackLength?: number;
+      onAddTodo(): unknown;
+      onUndo(): unknown;
+      onRedo(): unknown;
+      onReload(): unknown;
+      onClearCompleted(): unknown;
   } = $props();
 </script>
 

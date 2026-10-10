@@ -1,16 +1,20 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+import type { ActivityFields, Objective, ObjectiveFields } from "$lib/shared/parsers/types.ts";
+import type { ActualEntry, PlanEntry } from "../types.ts";
+import type { MenuItem, MenuPosition } from "$lib/shared/components/types.ts";
+import type { SessionSuggestion } from "$lib/shared/services/types.ts";
+import type { DragEvent, DragOverEvent, DropEvent, DropPosition, DragState } from "$lib/shared/actions/sortableDrag.ts";
   import { Copy, GripVertical, ListTodo, Plus, Trash2 } from "@lucide/svelte";
-  import { appStore } from "$lib/app/appStore.svelte.js";
-  import { sortableDragHandle, sortableDropTarget } from "$lib/shared/actions/sortableDrag.js";
+  import { appStore } from "$lib/app/appStore.svelte.ts";
+  import { sortableDragHandle, sortableDropTarget } from "$lib/shared/actions/sortableDrag.ts";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
-  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.js";
-  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
+  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.ts";
+  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.ts";
   import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
   import DurationTotal from "$lib/shared/components/DurationTotal.svelte";
   import SuggestionDropdown from "$lib/shared/components/SuggestionDropdown.svelte";
-  import { summarizeDurations } from "$lib/shared/utils/durationSummary.js";
-  import { planSummary } from "../weeklyIndexParser.js";
+  import { summarizeDurations } from "$lib/shared/utils/durationSummary.ts";
+  import { planSummary } from "../weeklyIndexParser.ts";
   import PlanDetailsModal from "./PlanDetailsModal.svelte";
   import WeekDayHeader from "./WeekDayHeader.svelte";
 
@@ -29,6 +33,21 @@
     onUpdateActivity,
     onDeleteActivity,
     onMoveActivity
+  }: {
+      plan: PlanEntry[];
+      suggestions?: SessionSuggestion[];
+      collapsedDays?: string[];
+      toggleDay(day: string): void;
+      onAdd(day: string): unknown;
+      onUpdate(id: string, patch: Partial<Omit<PlanEntry, "id">>): unknown;
+      onDelete(id: string): unknown;
+      onDuplicate?(id: string): unknown;
+      onMove?(source: string, target: string, position: DropPosition): unknown;
+      onMoveToDay?(source: string, day: string): unknown;
+      onAddActivity(id: string): unknown;
+      onUpdateActivity(entry: string, id: string, patch: Partial<ActivityFields>): unknown;
+      onDeleteActivity(entry: string, id: string): unknown;
+      onMoveActivity(entry: string, id: string, direction: "up" | "down"): unknown;
   } = $props();
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   let gridTemplateColumns = $derived(days.map((day) => collapsedDays.includes(day) ? "56px" : "minmax(136px, 1fr)").join(" "));
@@ -36,21 +55,21 @@
     plan.flatMap((entry) => entry.activities.map((activity) => activity.minutes))
   ));
 
-  let editingSessionId = $state(null);
+  let editingSessionId = $state<string|null>(null);
   let editingOriginalSession = $state("");
   let sessionNameEdited = $state(false);
   let showSessionSuggestions = $state(false);
   let highlightedSessionIndex = $state(-1);
-  let selectedEntryId = $state(null);
-  let contextMenu = $state(null);
-  let draggedEntryId = $state(null);
-  let dragOverEntryId = $state(null);
-  let dragOverDay = $state(null);
-  let dropPosition = $state("before");
+  let selectedEntryId = $state<string|null>(null);
+  let contextMenu = $state<(MenuPosition & {entryId:string})|null>(null);
+  let draggedEntryId = $state<string|null>(null);
+  let dragOverEntryId = $state<string|null>(null);
+  let dragOverDay = $state<string|null>(null);
+  let dropPosition = $state<DropPosition>("before");
 
   let selectedEntry = $derived(plan.find((entry) => entry.id === selectedEntryId));
   let editingEntry = $derived(plan.find((entry) => entry.id === editingSessionId));
-  let contextMenuItems = $derived(contextMenu?.editable
+  let contextMenuItems: MenuItem[] = $derived(contextMenu?.editable
     ? buildEditableTextMenuItems(contextMenu.editable, {
         beforeAction: closeContextMenu,
         onError: (error) => appStore.showStatus(`Clipboard failed: ${error}`),
@@ -62,11 +81,11 @@
     return suggestion.name.toLowerCase().includes(query);
   }));
 
-  function focus(node) {
+  function focus(node: HTMLElement) {
     node.focus();
   }
 
-  function openContextMenu(event, entryId) {
+  function openContextMenu(event:MouseEvent, entryId:string) {
     event.preventDefault();
     contextMenu = {
       x: event.clientX,
@@ -86,7 +105,7 @@
     if (entryId) onDuplicate?.(entryId);
   }
 
-  function beginSessionEdit(entry) {
+  function beginSessionEdit(entry:PlanEntry) {
     editingOriginalSession = entry.session;
     editingSessionId = entry.id;
     sessionNameEdited = false;
@@ -102,12 +121,12 @@
     highlightedSessionIndex = -1;
   }
 
-  function selectSessionSuggestion(entry, suggestion) {
+  function selectSessionSuggestion(entry:PlanEntry, suggestion:SessionSuggestion) {
     onUpdate(entry.id, { session: suggestion.name });
     finishSessionEdit();
   }
 
-  function handleSessionKeydown(event, entry) {
+  function handleSessionKeydown(event:KeyboardEvent, entry:PlanEntry) {
     if (event.key === "Enter") {
       if (showSessionSuggestions && highlightedSessionIndex >= 0 && highlightedSessionIndex < filteredSessionSuggestions.length) {
         event.preventDefault();
@@ -127,7 +146,7 @@
     }
   }
 
-  function cancelSessionEdit(event, entry) {
+  function cancelSessionEdit(event:KeyboardEvent, entry:PlanEntry) {
     event.preventDefault();
     event.stopPropagation();
     onUpdate(entry.id, { session: editingOriginalSession });
@@ -141,7 +160,7 @@
     dropPosition = "before";
   }
 
-  function dragState(entryId) {
+  function dragState(entryId:string): DragState {
     return {
       dragging: draggedEntryId === entryId,
       over: dragOverEntryId === entryId && draggedEntryId !== entryId,
@@ -149,11 +168,11 @@
     };
   }
 
-  function handleDragStart({ id }) {
+  function handleDragStart({ id }:DragEvent) {
     draggedEntryId = id;
   }
 
-  function handleDragOver({ id, position }) {
+  function handleDragOver({ id, position }:DragOverEvent) {
     if (!draggedEntryId || draggedEntryId === id) return;
     const source = plan.find((entry) => entry.id === draggedEntryId);
     const target = plan.find((entry) => entry.id === id);
@@ -163,23 +182,23 @@
     dropPosition = position;
   }
 
-  function handleDragLeave({ id }) {
+  function handleDragLeave({ id }:DragEvent) {
     if (dragOverEntryId === id) {
       dragOverEntryId = null;
       dropPosition = "before";
     }
   }
 
-  function handleDrop({ sourceId, targetId, position }) {
+  function handleDrop({ sourceId, targetId, position }:DropEvent) {
     onMove?.(sourceId, targetId, position);
     resetDrag();
   }
 
-  function dayTargetId(day) {
+  function dayTargetId(day:string) {
     return `day:${day}`;
   }
 
-  function handleDayDragOver({ id }) {
+  function handleDayDragOver({ id }:DragEvent) {
     if (!draggedEntryId) return;
     const day = id.replace("day:", "");
     const source = plan.find((entry) => entry.id === draggedEntryId);
@@ -189,7 +208,7 @@
     dropPosition = "after";
   }
 
-  function handleDayDragLeave({ id }) {
+  function handleDayDragLeave({ id }:DragEvent) {
     const day = id.replace("day:", "");
     if (dragOverDay === day) {
       dragOverDay = null;
@@ -197,7 +216,7 @@
     }
   }
 
-  function handleDayDrop({ sourceId, targetId }) {
+  function handleDayDrop({ sourceId, targetId }:DropEvent) {
     const day = targetId.replace("day:", "");
     onMoveToDay?.(sourceId, day);
     resetDrag();

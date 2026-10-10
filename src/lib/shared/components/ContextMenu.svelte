@@ -1,5 +1,15 @@
-<script>
-  import { clampContextMenuPosition } from "$lib/shared/services/contextMenuPosition.js";
+<script lang="ts">
+  import { clampContextMenuPosition } from "$lib/shared/services/contextMenuPosition.ts";
+  import type { MenuItem } from "./types.ts";
+  interface Props {
+      x?: number;
+      y?: number;
+      items?: MenuItem[];
+      ariaLabel?: string;
+      preserveFocus?: boolean;
+      width?: number;
+      onDismiss?: (() => void) | null;
+  }
 
   let {
     x = 0,
@@ -9,9 +19,9 @@
     preserveFocus = false,
     width = 196,
     onDismiss = null
-  } = $props();
+  }: Props = $props();
 
-  let menuElement = $state();
+  let menuElement = $state<HTMLDivElement>();
   let menuLeft = $state(0);
   let menuTop = $state(0);
 
@@ -33,15 +43,15 @@
     onDismiss?.();
   }
 
-  /** @param {PointerEvent} event */
-  function handleWindowPointerDown(event) {
+
+  function handleWindowPointerDown(event: PointerEvent) {
     if (!onDismiss) return;
     if (event.target instanceof Node && menuElement?.contains(event.target)) return;
     dismiss();
   }
 
-  /** @param {KeyboardEvent} event */
-  function handleWindowKeydown(event) {
+
+  function handleWindowKeydown(event: KeyboardEvent) {
     if (!onDismiss || event.key !== "Escape") return;
     event.preventDefault();
     event.stopPropagation();

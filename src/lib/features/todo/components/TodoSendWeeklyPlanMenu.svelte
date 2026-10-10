@@ -1,6 +1,7 @@
-<script>
+<script lang="ts">
+import type { PlanEntry } from "$lib/features/weekly/types.ts";
   import { CalendarDays, ListTodo } from "@lucide/svelte";
-  import { clampContextMenuPosition } from "$lib/shared/services/contextMenuPosition.js";
+  import { clampContextMenuPosition } from "$lib/shared/services/contextMenuPosition.ts";
 
   let {
     x = 0,
@@ -8,11 +9,17 @@
     plan = [],
     onSelectEntry,
     onEmptyDay
+  }: {
+      x?: number;
+      y?: number;
+      plan?: PlanEntry[];
+      onSelectEntry(id: string): void;
+      onEmptyDay?(day: string): void;
   } = $props();
 
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   let selectedDay = $state(days.find((day) => plan.some((entry) => entry.day === day)) || "Mon");
-  let menuElement = $state();
+  let menuElement = $state<HTMLDivElement>();
   let menuLeft = $state(0);
   let menuTop = $state(0);
 
@@ -32,8 +39,8 @@
     menuTop = position.y;
   });
 
-  /** @param {string} day */
-  function selectDay(day) {
+
+  function selectDay(day: string) {
     selectedDay = day;
     if (!plan.some((entry) => entry.day === day)) {
       onEmptyDay?.(day);

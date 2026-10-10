@@ -1,4 +1,6 @@
-<script>
+<script lang="ts">
+import type { TodoItem } from "../types.ts";
+import type { TodoRowCallbacks } from "./types.ts";
   import { tick } from "svelte";
   import { Check, ChevronDown, ChevronRight } from "@lucide/svelte";
 
@@ -23,17 +25,26 @@
     onSetSelectionAnchor,
     onClearSelection,
     onOpenContextMenu
+  }: TodoRowCallbacks & {
+      todo: TodoItem;
+      index: number;
+      showNumber?: boolean;
+      visiblePosition?: number;
+      selected?: boolean;
+      selectionActive?: boolean;
+      hasChildren?: boolean;
+      isFolded?: boolean;
   } = $props();
 
-  /** @type {HTMLTextAreaElement | undefined} */
-  let inputEl = $state();
-  /** @type {HTMLInputElement | undefined} */
-  let targetInputEl = $state();
+
+  let inputEl: HTMLTextAreaElement | undefined = $state();
+
+  let targetInputEl: HTMLInputElement | undefined = $state();
   let editingMoveTarget = $state(false);
   let moveTargetValue = $state("");
 
-  /** @param {HTMLTextAreaElement} textarea */
-  function resizeTextarea(textarea) {
+
+  function resizeTextarea(textarea: HTMLTextAreaElement) {
     textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight}px`;
   }
@@ -63,13 +74,13 @@
     await onMoveTodoToVisiblePosition(index, targetPosition);
   }
 
-  /** @param {EventTarget | null} target */
-  function isSelectionIgnoredTarget(target) {
+
+  function isSelectionIgnoredTarget(target: EventTarget | null) {
     return target instanceof Element && Boolean(target.closest(".row-actions, .fold-btn, .todo-index-input"));
   }
 
-  /** @param {PointerEvent} event */
-  function handleRowPointerDown(event) {
+
+  function handleRowPointerDown(event: PointerEvent) {
     if (event.button === 2) return;
     if (isSelectionIgnoredTarget(event.target)) return;
     if (event.ctrlKey || event.shiftKey) {
@@ -93,9 +104,9 @@
 
   $effect(() => {
     if (!inputEl || typeof ResizeObserver === "undefined") return;
-    
+
     let prevWidth = inputEl.clientWidth;
-    
+
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width = entry.contentRect.width;
@@ -105,16 +116,16 @@
         }
       }
     });
-    
+
     resizeObserver.observe(inputEl);
-    
+
     return () => {
       resizeObserver.disconnect();
     };
   });
 
-  /** @param {Event & { currentTarget: HTMLTextAreaElement }} event */
-  function handleInput(event) {
+
+  function handleInput(event: Event & { currentTarget: HTMLTextAreaElement }) {
     const value = event.currentTarget.value.replace(/\r?\n/g, " ");
     onUpdateText(todo.id, value);
     resizeTextarea(event.currentTarget);

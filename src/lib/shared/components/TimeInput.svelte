@@ -1,8 +1,15 @@
-<script>
-  // @ts-nocheck
-  let { minutes = 0, onChange, variant = "default" } = $props();
+<script lang="ts">
+  let { minutes = 0, onChange, variant = "default" }: {
+
+      minutes?: number | null;
+
+      onChange: (minutes: number | null) => void;
+
+      variant?: "default" | "badge";
+
+  } = $props();
   let isEditing = $state(false);
-  let localValue = $state(0);
+  let localValue = $state<number | string>(0);
 
   // Sync prop changes back to localValue when not editing
   $effect(() => {
@@ -22,7 +29,7 @@
     isEditing = false;
   }
 
-  function focus(node) {
+  function focus(node: HTMLInputElement) {
     node.focus();
   }
 </script>

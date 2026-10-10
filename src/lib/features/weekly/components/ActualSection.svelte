@@ -1,19 +1,32 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+import type { ActivityFields, Objective, ObjectiveFields } from "$lib/shared/parsers/types.ts";
+import type { ActualEntry, PlanEntry } from "../types.ts";
+import type { MenuItem, MenuPosition } from "$lib/shared/components/types.ts";
+
   import { RefreshCw } from "@lucide/svelte";
   import DurationTotal from "$lib/shared/components/DurationTotal.svelte";
   import ReadonlyBadges from "$lib/shared/components/ReadonlyBadges.svelte";
   import ActualDetailsModal from "./ActualDetailsModal.svelte";
   import WeekDayHeader from "./WeekDayHeader.svelte";
 
-  let { actual, onRefresh, collapsedDays = [], toggleDay } = $props();
+  let { actual, onRefresh, collapsedDays = [], toggleDay }: {
+
+      actual: ActualEntry[];
+
+      onRefresh(): unknown;
+
+      collapsedDays?: string[];
+
+      toggleDay(day: string): void;
+
+  } = $props();
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   let gridTemplateColumns = $derived(days.map((day) => collapsedDays.includes(day) ? "56px" : "minmax(136px, 1fr)").join(" "));
   let totalDuration = $derived(actual.reduce((summary, entry) => ({
     knownMinutes: summary.knownMinutes + (Number(entry.actualMinutes) || 0),
     unknownCount: summary.unknownCount + (Number(entry.unknownDurationCount) || 0)
   }), { knownMinutes: 0, unknownCount: 0 }));
-  let selectedActual = $state(null);
+  let selectedActual = $state<ActualEntry|null>(null);
 </script>
 
 <section id="actual" class="week-section">
@@ -52,7 +65,7 @@
                 <strong title={entry.session || "Unnamed session"}>{entry.session || "Unnamed session"}</strong>
               </div>
 
-              <ReadonlyBadges subjects={entry.subjects} minutes={entry.actualMinutes} incomplete={entry.unknownDurationCount > 0} />
+              <ReadonlyBadges subjects={entry.subjects} minutes={entry.actualMinutes} incomplete={(entry.unknownDurationCount ?? 0) > 0} />
             </button>
           {/each}
 

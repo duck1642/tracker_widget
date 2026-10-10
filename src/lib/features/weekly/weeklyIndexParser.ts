@@ -1,0 +1,183 @@
+import { createId, escapeTableCell, splitFrontmatter, splitTableRow } from "$lib/shared/parsers/markdownSections.ts";
+import { parseActivityLine, parseObjectiveLine, serializeActivityLine, serializeObjectiveLine } from "$lib/shared/parsers/inlineMetadata.ts";
+import { splitTerminalNotes, wrapNoteContent } from "$lib/shared/parsers/noteSection.ts";
+import { formatDurationCell, parseDurationCell, summarizeDurations } from "$lib/shared/utils/durationSummary.ts";
+import type { ActualEntry, ISOWeek, PlanEntry, WeeklyDocument } from "./types.ts";
+import type { Objective } from "$lib/shared/parsers/types.ts";
+
+function section(body: string, name: string) {
+  const heading = new RegExp(`^## ${name}\\s*$`, "mi").exec(body);
+  if (!heading) return "";
+  const start = heading.index + heading[0].length;
+  const next = /^##\s+/gm;
+  next.lastIndex = start;
+  const following = next.exec(body);
+  return body.slice(start, following?.index ?? body.length).replace(/^\n+|\n+$/g, "");
+}
+
+function preservedMarkdown(body: string) {
+  const known = new Set(["objectives", "weekly plan", "weekly plan details", "weekly actual", "notes"]);
+  const title = /^#\s+.+$/m.exec(body);
+  const headings = [...body.matchAll(/^##\s+(.+)\s*$/gm)];
+  const preambleStart = title ? title.index + title[0].length : 0;
+  const preambleRaw = body.slice(preambleStart, headings[0]?.index ?? body.length).trim();
+  const unknownSectionsRaw = headings.flatMap((heading, index) => {
+    if (known.has(heading[1].trim().toLowerCase())) return [];
+    const end = headings[index + 1]?.index ?? body.length;
+    return [body.slice(heading.index, end).trim()];
+  });
+  return { preambleRaw, unknownSectionsRaw };
+}
+
+function parseMinutesCell(value: string) {
+  return parseDurationCell(value);
+}
+
+function subjectsCell(value: string) {
+  return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function parseIndentedObjective(line: string) {
+  const match = line.match(/^([ \t]*)(-\s+.*)$/u);
+  if (!match) return null;
+  const spaces = [...match[1]].reduce((total, character) => total + (character === "\t" ? 2 : 1), 0);
+  if (spaces % 2 !== 0) return null;
+  const indent = spaces / 2;
+  if (indent > 2) return null;
+  const objective = parseObjectiveLine(match[2]);
+  return objective ? { ...objective, indent } : null;
+}
+
+export function planSummary(entry: Pick<PlanEntry, "activities">) {
+  const activities = entry.activities || [];
+  if (!activities.length) {
+    return { subjects: ["general"], targetMinutes: 0, unknownDurationCount: 0 };
+  }
+  const subjects: string[] = [];
+  const seen = new Set();
+  const duration = summarizeDurations(activities.map((activity) => activity.minutes));
+  for (const activity of activities) {
+    for (const subject of activity.subjects || []) {
+      const key = subject.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        subjects.push(subject);
+      }
+    }
+  }
+  return {
+    subjects: subjects.length ? subjects : ["general"],
+    targetMinutes: duration.knownMinutes,
+    unknownDurationCount: duration.unknownCount
+  };
+}
+
+function tableRows(content: string, type: "plan"): PlanEntry[];
+function tableRows(content: string, type: "actual"): ActualEntry[];
+function tableRows(content: string, type: "plan" | "actual"): (PlanEntry | ActualEntry)[] {
+  return content.split("\n").filter((line) => /^\|/.test(line)).slice(2).map(splitTableRow).filter((cells) => cells.length >= 4).map((cells, index) => {
+    if (type === "plan") {
+      const hasId = cells.length >= 5;
+      const duration = parseMinutesCell(cells[hasId ? 4 : 3]);
+      return {
+        id: hasId ? cells[0] : createId("plan", index),
+        day: cells[hasId ? 1 : 0],
+        session: cells[hasId ? 2 : 1],
+        subjects: subjectsCell(cells[hasId ? 3 : 2]),
+        targetMinutes: duration.knownMinutes,
+        unknownDurationCount: duration.unknownCount,
+        activities: []
+      };
+    }
+    const duration = parseMinutesCell(cells[3]);
+    return {
+      day: cells[0],
+      session: cells[1],
+      subjects: subjectsCell(cells[2]),
+      actualMinutes: duration.knownMinutes,
+      unknownDurationCount: duration.unknownCount
+    };
+  });
+}
+
+function planDetails(body: string, plan: PlanEntry[]) {
+  const details = body.match(/<!-- tracker:plan-details:start -->([\s\S]*?)<!-- tracker:plan-details:end -->/)?.[1] || "";
+  if (!details.trim()) return plan;
+  const byId = new Map(plan.map((entry) => [entry.id, entry]));
+  const headings = [...details.matchAll(/^###\s+(.+)\s*$/gm)];
+  for (const [index, heading] of headings.entries()) {
+    const id = heading[1].trim();
+    const entry = byId.get(id);
+    if (!entry) continue;
+    const start = heading.index + heading[0].length;
+    const end = headings[index + 1]?.index ?? details.length;
+    const content = details.slice(start, end);
+    const activities = [];
+    for (const line of content.split("\n")) {
+      const activity = parseActivityLine(line);
+      if (activity) activities.push({ id: createId(`plan-activity-${id}`, activities.length), ...activity });
+    }
+    entry.activities = activities;
+  }
+  return plan;
+}
+
+export function parseWeeklyIndex(markdown: string, isoWeek: ISOWeek): WeeklyDocument {
+  const { frontmatterRaw, body } = splitFrontmatter(markdown);
+  const notes = splitTerminalNotes(body);
+  const documentBody = notes.documentBody;
+  const preserved = preservedMarkdown(documentBody);
+  const objectives: Objective[] = [];
+  const objectiveRawLines = [];
+  for (const line of section(documentBody, "Objectives").split("\n")) {
+    if (!line.trim()) continue;
+    const objective = parseIndentedObjective(line);
+    if (objective) objectives.push({ id: createId("objective", objectives.length), ...objective });
+    else objectiveRawLines.push(line);
+  }
+  const plan = planDetails(documentBody, tableRows(section(documentBody, "Weekly Plan"), "plan"));
+  const actualBlock = documentBody.match(/<!-- tracker:actual:start -->([\s\S]*?)<!-- tracker:actual:end -->/)?.[1] || "";
+  return { frontmatterRaw, ...preserved, isoWeek, objectives, objectiveRawLines, plan, actual: tableRows(actualBlock, "actual"), notesRaw: notes.notesRaw };
+}
+
+function planTable(plan: PlanEntry[]) {
+  return ["| ID | Day | Session | Subjects | Target Minutes |", "| --- | --- | --- | --- | ---: |", ...plan.map((entry) => {
+    const summary = planSummary(entry);
+    const duration = formatDurationCell({ knownMinutes: summary.targetMinutes, unknownCount: summary.unknownDurationCount });
+    return `| ${escapeTableCell(entry.id)} | ${escapeTableCell(entry.day)} | ${escapeTableCell(entry.session)} | ${escapeTableCell(summary.subjects.join(", "))} | ${duration} |`;
+  })].join("\n");
+}
+
+function planDetailsBlock(plan: PlanEntry[]) {
+  const blocks = [];
+  for (const entry of plan) {
+    const activities = entry.activities || [];
+    if (!activities.length) continue;
+    blocks.push(`### ${entry.id}\n\n${activities.map(serializeActivityLine).join("\n")}`);
+  }
+  const content = blocks.join("\n\n");
+  return `<!-- tracker:plan-details:start -->${content ? `\n\n${content}\n\n` : "\n"}<!-- tracker:plan-details:end -->`;
+}
+
+function actualTable(actual: ActualEntry[]) {
+  return ["| Day | Session | Subjects | Actual Minutes |", "| --- | --- | --- | ---: |", ...actual.map((entry) => {
+    const duration = formatDurationCell({ knownMinutes: entry.actualMinutes, unknownCount: entry.unknownDurationCount ?? 0 });
+    return `| ${escapeTableCell(entry.day)} | ${escapeTableCell(entry.session)} | ${escapeTableCell(entry.subjects.join(", "))} | ${duration} |`;
+  })].join("\n");
+}
+
+export function serializeWeeklyIndex(document: WeeklyDocument) {
+  const { year, week, rangeLabel = "" } = document.isoWeek;
+  const blocks = [];
+  if (document.frontmatterRaw) blocks.push(document.frontmatterRaw);
+  blocks.push(`# ${year} - Week ${week} - ${rangeLabel}`.trim());
+  if (document.preambleRaw) blocks.push(document.preambleRaw);
+  blocks.push(...(document.unknownSectionsRaw || []));
+  const objectiveContent = [...document.objectives.map(serializeObjectiveLine), ...(document.objectiveRawLines || [])].join("\n");
+  blocks.push(`## Objectives\n\n${objectiveContent}`);
+  blocks.push(`## Weekly Plan\n\n${planTable(document.plan)}`);
+  blocks.push(`## Weekly Plan Details\n\n${planDetailsBlock(document.plan)}`);
+  blocks.push(`## Weekly Actual\n\n<!-- tracker:actual:start -->\n${actualTable(document.actual)}\n<!-- tracker:actual:end -->`);
+  blocks.push(`## Notes\n\n${wrapNoteContent(document.notesRaw || "")}`);
+  return `${blocks.join("\n\n")}\n`;
+}

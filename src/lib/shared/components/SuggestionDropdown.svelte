@@ -1,5 +1,15 @@
-<script>
-  // @ts-nocheck
+<script lang="ts" generics="Suggestion extends string | SessionSuggestion">
+  import type { SessionSuggestion } from "$lib/shared/services/types.ts";
+  interface Props {
+      suggestions?: Suggestion[];
+      highlightedIndex?: number;
+      onSelect: (value: Suggestion) => void;
+      onHighlight?: (index: number) => void;
+      ariaLabel?: string;
+      width?: "anchor" | "bounded";
+      top?: string;
+      showPlannedMarkers?: boolean;
+  }
   let {
     suggestions = [],
     highlightedIndex = -1,
@@ -9,15 +19,15 @@
     width = "anchor",
     top = "100%",
     showPlannedMarkers = false
-  } = $props();
+  }: Props = $props();
 
-  const labelFor = (suggestion) => typeof suggestion === "string" ? suggestion : suggestion.name;
-  const isPlanned = (suggestion) => typeof suggestion !== "string" && suggestion.plannedThisWeek;
+  const labelFor = (suggestion: Suggestion) => typeof suggestion === "string" ? suggestion : suggestion.name;
+  const isPlanned = (suggestion: Suggestion) => typeof suggestion !== "string" && suggestion.plannedThisWeek;
 
-  function revealHighlighted(node, highlighted) {
+  function revealHighlighted(node: HTMLElement, highlighted: boolean) {
     if (highlighted) queueMicrotask(() => node.scrollIntoView?.({ block: "nearest" }));
     return {
-      update(next) {
+      update(next: boolean) {
         if (next) queueMicrotask(() => node.scrollIntoView?.({ block: "nearest" }));
       }
     };

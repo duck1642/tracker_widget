@@ -1,4 +1,5 @@
-<script>
+<script lang="ts">
+
   import { X } from "@lucide/svelte";
   import SettingsPanel from "./SettingsPanel.svelte";
 
@@ -8,6 +9,12 @@
     onToggleDrag,
     onToggleAutostart,
     onClose
+  }: {
+      dragEnabled: boolean;
+      autostartEnabled: boolean;
+      onToggleDrag(): unknown;
+      onToggleAutostart(): unknown;
+      onClose(): unknown;
   } = $props();
 </script>
 

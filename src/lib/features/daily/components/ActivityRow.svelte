@@ -1,13 +1,23 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
   import { ChevronDown, ChevronUp, Trash2 } from "@lucide/svelte";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
   import TimeInput from "$lib/shared/components/TimeInput.svelte";
-  let { activity, canMoveUp = true, canMoveDown = true, onUpdate, onDelete, onMoveUp, onMoveDown, onOpenContextMenu } = $props();
+  import type { Activity, ActivityFields } from "$lib/shared/parsers/types.ts";
+  interface Props {
+      activity: Activity;
+      canMoveUp?: boolean;
+      canMoveDown?: boolean;
+      onUpdate: (patch: Partial<ActivityFields>) => void;
+      onDelete: () => void;
+      onMoveUp: () => void;
+      onMoveDown: () => void;
+      onOpenContextMenu?: (event: MouseEvent) => void;
+  }
+  let { activity, canMoveUp = true, canMoveDown = true, onUpdate, onDelete, onMoveUp, onMoveDown, onOpenContextMenu }: Props = $props();
 
   let isEditingDesc = $state(false);
 
-  function focus(node) {
+  function focus(node: HTMLInputElement) {
     node.focus();
   }
 </script>

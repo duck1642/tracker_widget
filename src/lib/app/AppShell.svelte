@@ -1,24 +1,28 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+  import type { UnlistenFn } from "@tauri-apps/api/event";
+  import type { LogDayEntry, LogWeekEntry } from "$lib/shared/services/types.ts";
+  import type { Destination, FocusDetail, PaneSide, View, WorkspaceTab } from "./types.ts";
+  type Pane = ReturnType<typeof WorkspacePane>;
+
   import { onMount, tick } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
   import { openPath } from "@tauri-apps/plugin-opener";
   import { confirm } from "@tauri-apps/plugin-dialog";
-  import { appStore } from "./appStore.svelte.js";
-  import { workspaceStore } from "./workspaceStore.svelte.js";
-  import { subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
-  import { sessionHistoryStore } from "./sessionHistoryStore.svelte.js";
-  import { persistenceRegistry } from "./persistenceRegistry.js";
-  import { suppressPrintShortcut } from "./applicationShortcuts.js";
-  import { NavigationHistory } from "./navigationHistory.svelte.js";
-  import { todoStore } from "$lib/features/todo/todoStore.svelte.js";
-  import { todoUiState } from "$lib/features/todo/todoUiState.svelte.js";
-  import { dailyStore } from "$lib/features/daily/dailyStore.svelte.js";
-  import { weekStore } from "$lib/features/weekly/weekStore.svelte.js";
-  import { scratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.js";
-  import { formatDate, getWeekDescriptor, pathBelongsToWeek, scratchpadPathForWorkspace } from "$lib/shared/services/logWorkspaceService.js";
+  import { appStore } from "./appStore.svelte.ts";
+  import { workspaceStore } from "./workspaceStore.svelte.ts";
+  import { subjectHistoryStore } from "./subjectHistoryStore.svelte.ts";
+  import { sessionHistoryStore } from "./sessionHistoryStore.svelte.ts";
+  import { persistenceRegistry } from "./persistenceRegistry.ts";
+  import { suppressPrintShortcut } from "./applicationShortcuts.ts";
+  import { NavigationHistory } from "./navigationHistory.svelte.ts";
+  import { todoStore } from "$lib/features/todo/todoStore.svelte.ts";
+  import { todoUiState } from "$lib/features/todo/todoUiState.svelte.ts";
+  import { dailyStore } from "$lib/features/daily/dailyStore.svelte.ts";
+  import { weekStore } from "$lib/features/weekly/weekStore.svelte.ts";
+  import { scratchpadStore } from "$lib/features/scratchpad/scratchpadStore.svelte.ts";
+  import { formatDate, getWeekDescriptor, pathBelongsToWeek, scratchpadPathForWorkspace } from "$lib/shared/services/logWorkspaceService.ts";
   import AppHeader from "./AppHeader.svelte";
   import SettingsDialog from "./SettingsDialog.svelte";
   import HelpDialog from "./HelpDialog.svelte";
@@ -26,7 +30,7 @@
   import WeekFilesDialog from "./WeekFilesDialog.svelte";
   import AppSidebar from "./AppSidebar.svelte";
   import WorkspacePane from "./WorkspacePane.svelte";
-  import { createWorkspaceSession } from "./workspaceSession.svelte.js";
+  import { createWorkspaceSession } from "./workspaceSession.svelte.ts";
 
   let showSettings = $state(false);
   let showHelp = $state(false);
@@ -35,11 +39,11 @@
   let selectedPath = $state("");
   let isMaximized = $state(false);
   let hasWorkspace = $derived(workspaceStore.hasWorkspacePath);
-  let leftPane = $state();
-  let rightPane = $state();
+  let leftPane = $state<Pane>();
+  let rightPane = $state<Pane>();
   let splitView = $state(false);
   let splitRatio = $state(0.5);
-  let focusedPane = $state("left");
+  let focusedPane = $state<PaneSide>("left");
   let historyRestoreInProgress = false;
   let paneOperationId = 0;
   const leftSession = { todoStore, dailyStore, weekStore, scratchpadStore };
@@ -59,15 +63,15 @@
     day: "Daily log"
   };
 
-  function dayTab(day) {
+  function dayTab(day:LogDayEntry):WorkspaceTab {
     return { id: `day:${day.path}`, view: "day", title: day.date, path: day.path, date: day.date };
   }
 
-  function weekTab(week) {
-    return { id: `week:${week.indexPath}`, view: "week", title: week.name, path: week.indexPath };
+  function weekTab(week:LogWeekEntry):WorkspaceTab {
+    return { id: `week:${week.indexPath}`, view: "week", title: week.name, path: week.indexPath || "" };
   }
 
-  function scratchpadTab() {
+  function scratchpadTab():WorkspaceTab {
     const path = scratchpadPathForWorkspace(appStore.logsRootPath);
     return { id: "scratchpad", view: "scratchpad", title: "Scratchpad", path };
   }
@@ -86,7 +90,7 @@
     persistenceRegistry.cancelPendingOpens?.();
   }
 
-  async function focusExistingTab(tab) {
+  async function focusExistingTab(tab:WorkspaceTab) {
     if (rightPane?.hasTab(tab.id)) {
       return await rightPane.openTab(tab);
     }
@@ -96,13 +100,13 @@
     return null;
   }
 
-  function updateFocusedView({ view, path }) {
+  function updateFocusedView({ view, path }:FocusDetail) {
     selectedPath = path;
     appStore.currentView = view;
     if (!historyRestoreInProgress) navigationHistory.visit({ view, path });
   }
 
-  async function withoutHistoryRecording(action) {
+  async function withoutHistoryRecording<T>(action:()=>Promise<T>) {
     historyRestoreInProgress = true;
     try {
       return await action();
@@ -111,7 +115,7 @@
     }
   }
 
-  async function openInSplit(tab) {
+  async function openInSplit(tab:WorkspaceTab) {
     const operation = beginPaneOperation();
     if (rightPane?.hasTab(tab.id)) {
       return await rightPane?.openTab(tab);
@@ -133,7 +137,7 @@
       return false;
     }
     const opened = leftPane?.hasTab(tab.id)
-      ? await leftPane.transferTab(tab.id, (movedTab, sourceStore, transfer) => rightPane?.acceptTransfer(movedTab, sourceStore, transfer), operation)
+      ? await leftPane.transferTab(tab.id, async (movedTab, sourceStore, transfer) => rightPane?.acceptTransfer(movedTab, sourceStore, transfer), operation)
       : await rightPane?.openTab(tab);
     if (!operation.isCurrent()) return false;
     if (!opened) {
@@ -147,10 +151,10 @@
 
   function openTodoInSplit() { return openInSplit({ id: "todo", view: "todo", title: "Todo", path: "" }); }
   function openScratchpadInSplit() { return openInSplit(scratchpadTab()); }
-  function openWeekInSplit(week) { return openInSplit(weekTab(week)); }
-  function openDayInSplit(day) { return openInSplit(dayTab(day)); }
+  function openWeekInSplit(week:LogWeekEntry) { return openInSplit(weekTab(week)); }
+  function openDayInSplit(day:LogDayEntry) { return openInSplit(dayTab(day)); }
 
-  async function openInPane(tab, targetPane) {
+  async function openInPane(tab:WorkspaceTab, targetPane:PaneSide) {
     if (targetPane === "right") return await openInSplit(tab);
     const operation = beginPaneOperation();
     if (leftPane?.hasTab(tab.id)) {
@@ -160,7 +164,7 @@
       return await leftPane?.openTab(tab);
     }
 
-    const opened = await rightPane.transferTab(tab.id, (movedTab, sourceStore, transfer) => leftPane?.acceptTransfer(movedTab, sourceStore, transfer), operation);
+    const opened = await rightPane.transferTab(tab.id, async (movedTab, sourceStore, transfer) => leftPane?.acceptTransfer(movedTab, sourceStore, transfer), operation);
     if (!operation.isCurrent()) return false;
     if (!opened) return false;
     focusedPane = "left";
@@ -169,10 +173,10 @@
     return opened;
   }
 
-  function openTodoInPane(targetPane) { return openInPane({ id: "todo", view: "todo", title: "Todo", path: "" }, targetPane); }
-  function openScratchpadInPane(targetPane) { return openInPane(scratchpadTab(), targetPane); }
-  function openWeekInPane(week, targetPane) { return openInPane(weekTab(week), targetPane); }
-  function openDayInPane(day, targetPane) { return openInPane(dayTab(day), targetPane); }
+  function openTodoInPane(targetPane:PaneSide) { return openInPane({ id: "todo", view: "todo", title: "Todo", path: "" }, targetPane); }
+  function openScratchpadInPane(targetPane:PaneSide) { return openInPane(scratchpadTab(), targetPane); }
+  function openWeekInPane(week:LogWeekEntry, targetPane:PaneSide) { return openInPane(weekTab(week), targetPane); }
+  function openDayInPane(day:LogDayEntry, targetPane:PaneSide) { return openInPane(dayTab(day), targetPane); }
 
   async function collapseSplit() {
     const rightActiveId = rightPane?.activeTabId?.();
@@ -199,10 +203,11 @@
     return true;
   }
 
-  function beginSplitResize(event) {
+  function beginSplitResize(event:PointerEvent & {currentTarget:HTMLDivElement}) {
     event.preventDefault();
     const workspace = event.currentTarget.parentElement;
-    const move = (moveEvent) => {
+    if (!workspace) return;
+    const move = (moveEvent:PointerEvent) => {
       const rect = workspace.getBoundingClientRect();
       splitRatio = Math.min(0.8, Math.max(0.2, (moveEvent.clientX - rect.left) / rect.width));
     };
@@ -214,7 +219,7 @@
     window.addEventListener("pointerup", stop);
   }
 
-  async function openDayInBackground(day) {
+  async function openDayInBackground(day:LogDayEntry) {
     const existing = await focusExistingTab(dayTab(day));
     if (existing !== null) return existing;
     return await activePane()?.openDay(day, { background: true });
@@ -232,13 +237,13 @@
     return activePane()?.openScratchpad({ background: true });
   }
 
-  async function openWeekInBackground(week) {
+  async function openWeekInBackground(week:LogWeekEntry) {
     const existing = await focusExistingTab(weekTab(week));
     if (existing !== null) return existing;
     return activePane()?.openWeek(week, { background: true });
   }
 
-  async function selectWeek(week, { replace = true } = {}) {
+  async function selectWeek(week:LogWeekEntry, { replace = true } = {}) {
     if (!week.indexPath) return false;
     const existing = await focusExistingTab(weekTab(week));
     if (existing !== null) return existing;
@@ -246,7 +251,7 @@
     return await activePane()?.openWeek(week);
   }
 
-  async function selectDay(day, week, { replace = true } = {}) {
+  async function selectDay(day:LogDayEntry, week:LogWeekEntry | undefined, { replace = true } = {}) {
     const existing = await focusExistingTab(dayTab(day));
     if (existing !== null) return existing;
     if (replace) return await activePane()?.replaceActiveTab(dayTab(day));
@@ -267,7 +272,7 @@
     return await activePane()?.openScratchpad();
   }
 
-  async function openCurrent(kind) {
+  async function openCurrent(kind:View) {
     if (kind !== "todo") todoUiState.clearSelection();
     if (kind === "scratchpad") return await selectScratchpad();
     const today = formatDate(new Date());
@@ -285,7 +290,7 @@
     return false;
   }
 
-  async function restoreNavigationDestination(destination) {
+  async function restoreNavigationDestination(destination:Destination | null) {
     if (!destination) return false;
     return await withoutHistoryRecording(async () => {
       if (destination.view === "todo") return await selectTodo({ replace: false });
@@ -304,7 +309,7 @@
     });
   }
 
-  async function moveThroughHistory(direction) {
+  async function moveThroughHistory(direction:"back"|"forward") {
     const destination = direction === "back" ? navigationHistory.back() : navigationHistory.forward();
     if (!destination) return;
     if (await restoreNavigationDestination(destination)) return;
@@ -312,12 +317,12 @@
     else navigationHistory.back();
   }
 
-  async function unloadWeekDocuments(week) {
+  async function unloadWeekDocuments(week:LogWeekEntry) {
     await leftPane?.closeTabsUnder?.(week.path);
     await rightPane?.closeTabsUnder?.(week.path);
   }
 
-  async function reloadActiveWeekDestination(week, activeView, activePath) {
+  async function reloadActiveWeekDestination(week:LogWeekEntry, activeView:View, activePath:string) {
     const refreshedWeek = workspaceStore.weeks.find((item) => item.name === week.name);
     if (!refreshedWeek) return false;
     if (activeView === "week" && refreshedWeek.indexPath === activePath) {
@@ -330,7 +335,7 @@
     return false;
   }
 
-  async function repairWeek(week) {
+  async function repairWeek(week:LogWeekEntry) {
     const activeView = appStore.currentView;
     const activePath = selectedPath;
     if (!(await workspaceStore.repairWeek(week))) return false;
@@ -338,7 +343,7 @@
     return await reloadActiveWeekDestination(week, activeView, activePath);
   }
 
-  async function convertWeekToPersonal(week) {
+  async function convertWeekToPersonal(week:LogWeekEntry) {
     if (!(await persistenceRegistry.flushAll())) {
       appStore.showStatus(persistenceRegistry.blockedMessage("converting the week"));
       return false;
@@ -351,7 +356,7 @@
     return await reloadActiveWeekDestination(week, activeView, activePath);
   }
 
-  async function deleteWeek(week) {
+  async function deleteWeek(week:LogWeekEntry) {
     let approved;
     try {
       approved = await confirm(
@@ -375,7 +380,7 @@
     return true;
   }
 
-  function handleShellKeydown(event) {
+  function handleShellKeydown(event:KeyboardEvent) {
     if (suppressPrintShortcut(event)) return;
     if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -384,7 +389,7 @@
     void moveThroughHistory(event.key === "ArrowLeft" ? "back" : "forward");
   }
 
-  async function applyViewSizeConstraints(view) {
+  async function applyViewSizeConstraints(view:View) {
     const constraints = viewSizeConstraints[view] ?? viewSizeConstraints.todo;
     const sidebarWidth = (workspaceStore.sidebarOpen && hasWorkspace) ? 180 : 0;
     const targetWidth = constraints.width + sidebarWidth;
@@ -419,11 +424,11 @@
   $effect(() => {
     if (!appStore.devMode) return;
 
-    const handleKeyDown = async (e) => {
+    const handleKeyDown = async (e:KeyboardEvent) => {
       if (e.key === "F12" || (e.ctrlKey && e.shiftKey && (e.key === "i" || e.key === "I"))) {
         e.preventDefault();
         try {
-          await invoke("toggle_devtools");
+          await invoke<void>("toggle_devtools");
         } catch (error) {
           appStore.showStatus("Failed to toggle devtools: " + error);
         }
@@ -439,9 +444,9 @@
   onMount(() => {
     const appWindow = getCurrentWindow();
     let disposed = false;
-    let unlistenClose;
-    let unlistenQuit;
-    let unlistenResized;
+    let unlistenClose: UnlistenFn | undefined;
+    let unlistenQuit: UnlistenFn | undefined;
+    let unlistenResized: UnlistenFn | undefined;
     const handleResize = async () => {
       try {
         isMaximized = await appWindow.isMaximized();
@@ -460,7 +465,7 @@
       }, 300);
     };
     window.addEventListener("resize", handleResize);
-    const handleContextMenu = (event) => {
+    const handleContextMenu = (event:MouseEvent) => {
       if (event.defaultPrevented || appStore.devMode) return;
       event.preventDefault();
     };
@@ -476,7 +481,7 @@
         try {
           unlistenQuit = await listen("request-quit", async () => {
             cancelPendingLoads();
-            if (await persistenceRegistry.flushAll()) await invoke("exit_app");
+            if (await persistenceRegistry.flushAll()) await invoke<void>("exit_app");
             else appStore.showStatus(persistenceRegistry.blockedMessage("quitting"));
           });
         } catch {}

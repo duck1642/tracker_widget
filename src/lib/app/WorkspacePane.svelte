@@ -1,11 +1,15 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+  import type { FocusDetail, WorkspaceSession, WorkspaceTab, SessionStore, TransferOptions, TransferAcceptor, OpenOptions } from "./types.ts";
+  import type { LogDayEntry, LogWeekEntry } from "$lib/shared/services/types.ts";
+  import type { DocumentResult } from "$lib/shared/persistence/documentController.ts";
+  type Intent = {isCurrent:()=>boolean};
+
   import { createEventDispatcher, onDestroy } from "svelte";
-  import { getWeekDescriptor, scratchpadPathForWorkspace } from "$lib/shared/services/logWorkspaceService.js";
-  import { appStore } from "./appStore.svelte.js";
-  import { workspaceStore } from "./workspaceStore.svelte.js";
-  import { blockedSaveMessage } from "./persistenceRegistry.js";
-  import { DocumentController, documentSucceeded } from "$lib/shared/persistence/documentController.js";
+  import { getWeekDescriptor, scratchpadPathForWorkspace } from "$lib/shared/services/logWorkspaceService.ts";
+  import { appStore } from "./appStore.svelte.ts";
+  import { workspaceStore } from "./workspaceStore.svelte.ts";
+  import { blockedSaveMessage } from "./persistenceRegistry.ts";
+  import { DocumentController, documentSucceeded } from "$lib/shared/persistence/documentController.ts";
   import WorkspaceTabs from "./WorkspaceTabs.svelte";
   import TodoPanel from "$lib/features/todo/components/TodoPanel.svelte";
   import TodoToolbar from "$lib/features/todo/components/TodoToolbar.svelte";
@@ -14,15 +18,35 @@
   import ScratchpadPanel from "$lib/features/scratchpad/components/ScratchpadPanel.svelte";
   import ConflictBanner from "$lib/shared/components/ConflictBanner.svelte";
 
-  function succeeded(result) {
-    return typeof result === "boolean" ? result : documentSucceeded(result);
+  function succeeded(result: boolean | DocumentResult | undefined) {
+    return typeof result === "boolean" ? result : Boolean(result && documentSucceeded(result));
   }
 
-  let { session, initialTabs = [], focused = true, onFocused = () => {}, onRequestSplit = null, onMoveToLeft = null, onMoveToRight = null, onEmpty = null, onSeparate = null } = $props();
-  let tabs = $state([]);
+  let { session, initialTabs = [], focused = true, onFocused = () => {}, onRequestSplit = null, onMoveToLeft = null, onMoveToRight = null, onEmpty = null, onSeparate = null }: {
+
+      session: WorkspaceSession;
+
+      initialTabs?: WorkspaceTab[];
+
+      focused?: boolean;
+
+      onFocused?(detail: FocusDetail): unknown;
+
+      onRequestSplit?: ((tab: WorkspaceTab) => unknown) | null;
+
+      onMoveToLeft?: ((tab: WorkspaceTab) => unknown) | null;
+
+      onMoveToRight?: ((tab: WorkspaceTab) => unknown) | null;
+
+      onEmpty?: (() => unknown) | null;
+
+      onSeparate?: (() => unknown) | null;
+
+  } = $props();
+  let tabs = $state<WorkspaceTab[]>([]);
   let activeId = $state("");
   let initialized = $state(false);
-  const dispatch = createEventDispatcher();
+  const dispatch = createEventDispatcher<{focus:FocusDetail}>();
   let intentId = 0;
   let destroyed = false;
 
@@ -51,43 +75,47 @@
     onFocused({ view: activeTab.view, path: activeTab.path });
   }
 
-  function descriptorFor(week) {
-    const date = week.days[0]?.date ? new Date(`${week.days[0].date}T12:00:00`) : new Date();
+  function descriptorFor(week: LogWeekEntry | null | undefined) {
+    const date = week?.days[0]?.date ? new Date(`${week.days[0].date}T12:00:00`) : new Date();
     return getWeekDescriptor(date);
   }
 
-  function tabFor(view, data = {}) {
-    if (view === "todo") return { id: "todo", view, title: "Todo", path: "" };
-    if (view === "scratchpad") return { id: "scratchpad", view, title: "Scratchpad", path: scratchpadPathForWorkspace(appStore.logsRootPath) };
-    if (view === "week") return { id: `week:${data.indexPath}`, view, title: data.name, path: data.indexPath };
-    return { id: `day:${data.path}`, view: "day", title: data.date, path: data.path, date: data.date };
+  function tabFor(view:"todo"|"scratchpad"): WorkspaceTab;
+  function tabFor(view:"week", data:LogWeekEntry): WorkspaceTab;
+  function tabFor(view:"day", data:LogDayEntry): WorkspaceTab;
+  function tabFor(view:"todo"|"scratchpad"|"week"|"day", data?:LogWeekEntry|LogDayEntry): WorkspaceTab {
+    if(view === "todo") return {id:"todo",view,title:"Todo",path:""};
+    if(view === "scratchpad") return {id:"scratchpad",view,title:"Scratchpad",path:scratchpadPathForWorkspace(appStore.logsRootPath)};
+    if(view === "week" && data && "indexPath" in data) return {id:`week:${data.indexPath}`,view,title:data.name,path:data.indexPath || ""};
+    if(data && "date" in data) return {id:`day:${data.path}`,view:"day",title:data.date,path:data.path,date:data.date};
+    throw new Error("Tab data is required");
   }
 
-  function pathForTab(tab) {
+  function pathForTab(tab:WorkspaceTab | undefined) {
     if (!tab) return "";
     return tab.view === "todo" ? session.todoStore.loadedPath || appStore.filePath
       : tab.view === "scratchpad" ? tab.path
       : tab.path;
   }
 
-  function targetPathForTab(tab) {
+  function targetPathForTab(tab:WorkspaceTab | undefined) {
     return tab?.view === "todo" ? appStore.filePath : tab?.path || "";
   }
 
-  function hasConflictForTab(tab) {
+  function hasConflictForTab(tab:WorkspaceTab) {
     const persistence = storeForTab(tab)?.persistence;
-    const state = typeof persistence?.state === "function" ? persistence.state() : persistence?.state;
+    const state = persistence?.state();
     return Boolean(state?.conflict && persistence?.path === targetPathForTab(tab));
   }
 
-  async function load(tab, intent) {
+  async function load(tab:WorkspaceTab | undefined, intent:Intent) {
     if (!tab || !intent.isCurrent()) return false;
     let result;
     if (tab.view === "todo") {
       result = await session.todoStore.loadFile({ path: targetPathForTab(tab), isCurrent: intent.isCurrent });
     } else if (tab.view === "scratchpad") {
       const store = session.scratchpadStore;
-      result = await store.loadPath(tab.path, { reload: store.persistence?.path !== tab.path, isCurrent: intent.isCurrent });
+      result = await store.loadPath(tab.path, { isCurrent: intent.isCurrent });
     } else if (tab.view === "week") {
       const week = workspaceStore.weeks.find((item) => item.indexPath === tab.path);
       if (!week) return false;
@@ -98,7 +126,7 @@
     return intent.isCurrent() && (succeeded(result) || hasConflictForTab(tab));
   }
 
-  function focus(tab, intent) {
+  function focus(tab:WorkspaceTab | undefined, intent:Intent) {
     if (!tab || !intent.isCurrent()) return false;
     activeId = tab.id;
     const detail = { view: tab.view, path: tab.path };
@@ -107,12 +135,12 @@
     return true;
   }
 
-  async function activate(tab, intent = beginIntent()) {
+  async function activate(tab:WorkspaceTab | undefined, intent:Intent = beginIntent()) {
     if (!(await load(tab, intent)) || !intent.isCurrent()) return false;
     return focus(tab, intent);
   }
 
-  async function open(tab, { background = false } = {}) {
+  async function open(tab:WorkspaceTab, { background = false }:OpenOptions = {}) {
     const existing = tabs.find((item) => item.id === tab.id);
     if (background) {
       if (!existing) tabs = [...tabs, tab];
@@ -125,18 +153,19 @@
     return focus(tab, intent);
   }
 
-  export async function openTodo(options) { return open(tabFor("todo"), options); }
-  export async function openScratchpad(options) { return open(tabFor("scratchpad"), options); }
-  export async function openWeek(week, options) { return open(tabFor("week", week), options); }
-  export async function openDay(day, options) { return open(tabFor("day", day), options); }
-  export async function openTab(tab, options) { return open(tab, options); }
+  export async function openTodo(options?:OpenOptions) { return open(tabFor("todo"), options); }
+  export async function openScratchpad(options?:OpenOptions) { return open(tabFor("scratchpad"), options); }
+  export async function openWeek(week:LogWeekEntry, options?:OpenOptions) { return open(tabFor("week", week), options); }
+  export async function openDay(day:LogDayEntry, options?:OpenOptions) { return open(tabFor("day", day), options); }
+  export async function openTab(tab:WorkspaceTab, options?:OpenOptions) { return open(tab, options); }
 
-  export async function replaceActiveTab(tab) {
+  export async function replaceActiveTab(tab:WorkspaceTab) {
     const intent = beginIntent();
     if (tab.id === activeId) return await activate(tab, intent);
     const previousTab = activeTab;
     if (previousTab && !(await flushTab(previousTab, intent.isCurrent))) {
-      if (intent.isCurrent()) appStore.showStatus(blockedSaveMessage("changing the tab", [storeForTab(previousTab)]));
+      const previousStore = storeForTab(previousTab);
+      if (intent.isCurrent()) appStore.showStatus(blockedSaveMessage("changing the tab", previousStore ? [previousStore] : []));
       return false;
     }
     if (!intent.isCurrent() || !(await load(tab, intent)) || !intent.isCurrent()) return false;
@@ -144,17 +173,17 @@
     return focus(tab, intent);
   }
 
-  export function hasTab(id) { return tabs.some((tab) => tab.id === id); }
+  export function hasTab(id:string) { return tabs.some((tab) => tab.id === id); }
   export function tabCount() { return tabs.length; }
   export function tabsSnapshot() { return [...tabs]; }
   export function activeTabId() { return activeId; }
   export function activeFilePath() {
     if (!activeTab) return "";
-    return session[`${activeTab.view === "day" ? "daily" : activeTab.view}Store`]?.persistence?.path || pathForTab(activeTab);
+    return storeForTab(activeTab)?.persistence.path || pathForTab(activeTab);
   }
   export async function focusActive() { return activate(activeTab); }
 
-  function storeForTab(tab) {
+  function storeForTab(tab:WorkspaceTab | undefined) {
     if (!tab) return null;
     return tab.view === "todo" ? session.todoStore
       : tab.view === "scratchpad" ? session.scratchpadStore
@@ -162,7 +191,7 @@
       : session.dailyStore;
   }
 
-  function detachTab(id) {
+  function detachTab(id:string) {
     const tab = tabs.find((item) => item.id === id);
     if (!tab) return null;
     tabs = tabs.filter((item) => item.id !== id);
@@ -175,7 +204,7 @@
     return store ? await store.checkExternalChanges() : false;
   }
 
-  export async function transferTab(id, accept, { isCurrent: externalIsCurrent = () => true } = {}) {
+  export async function transferTab(id:string, accept:TransferAcceptor, { isCurrent: externalIsCurrent = () => true }:TransferOptions = {}) {
     const tab = tabs.find((item) => item.id === id);
     if (!tab) return false;
     const intent = beginIntent();
@@ -197,7 +226,7 @@
     return true;
   }
 
-  export async function acceptTransfer(tab, sourceStore, { isCurrent: sourceIsCurrent = () => true, commit = () => {} } = {}) {
+  export async function acceptTransfer(tab:WorkspaceTab, sourceStore:SessionStore | null, { isCurrent: sourceIsCurrent = () => true, commit = () => {} }:TransferOptions = {}) {
     const intent = beginIntent();
     const targetStore = storeForTab(tab);
     const path = targetPathForTab(tab);
@@ -210,14 +239,23 @@
       commit();
     };
 
-    if (canTransferOwnership) {
+    if (canTransferOwnership && sourceStore && targetStore) {
       const storesReady = await Promise.all([sourceStore, targetStore].map((store) => flushStore(store, isCurrent)));
       if (!storesReady.every(Boolean) || !isCurrent()) return false;
       const week = tab.view === "week" ? workspaceStore.weeks.find((item) => item.indexPath === tab.path) : null;
-      const context = tab.view === "week" ? { descriptor: descriptorFor(week), days: week?.days || [] }
-        : tab.view === "day" ? { date: tab.date }
-        : {};
-      const result = await controller.transferTo(targetStore.persistence, { context, isCurrent, commit: commitTransfer });
+      let result: DocumentResult;
+      const options = { isCurrent, commit: commitTransfer };
+      if (sourceStore.view === "todo" && targetStore.view === "todo") {
+        result = await sourceStore.persistence.transferTo(targetStore.persistence, options);
+      } else if (sourceStore.view === "scratchpad" && targetStore.view === "scratchpad") {
+        result = await sourceStore.persistence.transferTo(targetStore.persistence, options);
+      } else if (sourceStore.view === "week" && targetStore.view === "week") {
+        result = await sourceStore.persistence.transferTo(targetStore.persistence, {
+          ...options, context: { descriptor: descriptorFor(week), days: week?.days || [] }
+        });
+      } else if (sourceStore.view === "day" && targetStore.view === "day" && tab.view === "day") {
+        result = await sourceStore.persistence.transferTo(targetStore.persistence, { ...options, context: { date: tab.date } });
+      } else return false;
       return succeeded(result) && isCurrent();
     }
 
@@ -227,10 +265,10 @@
     return true;
   }
 
-  export async function releaseAllTabs({ isCurrent: externalIsCurrent = () => true, commit: externalCommit = () => {} } = {}) {
+  export async function releaseAllTabs({ isCurrent: externalIsCurrent = () => true, commit: externalCommit = () => {} }:TransferOptions = {}) {
     const intent = beginIntent();
     const allTabs = tabs;
-    const stores = [...new Set(allTabs.map(storeForTab).filter(Boolean))];
+    const stores = [...new Set(allTabs.map(storeForTab).filter((store): store is SessionStore => store !== null))];
     const controllers = [...new Set(stores.map((store) => store.persistence).filter((controller) =>
       controller && typeof controller.cancelOpen === "function" && typeof controller.state === "function"
     ))];
@@ -242,7 +280,7 @@
       committed = true;
       externalCommit();
     };
-    let result;
+    let result: boolean | DocumentResult;
     if (controllers.length) {
       const prepared = await Promise.all(stores.map((store) => flushStore(store, isCurrent)));
       result = prepared.every(Boolean) && isCurrent()
@@ -261,50 +299,50 @@
     return allTabs;
   }
 
-  export function acceptReleasedTabs(releasedTabs, preferredActiveId = "") {
+  export function acceptReleasedTabs(releasedTabs:WorkspaceTab[], preferredActiveId = "") {
     const knownIds = new Set(tabs.map((tab) => tab.id));
     const additions = releasedTabs.filter((tab) => !knownIds.has(tab.id));
     tabs = [...tabs, ...additions];
     if (!activeId && additions.length) activeId = additions.find((tab) => tab.id === preferredActiveId)?.id || additions[0].id;
   }
 
-  export async function closeTabsUnder(path) {
+  export async function closeTabsUnder(path:string) {
     const matchingTabs = tabs.filter((tab) => tab.path && tab.path.startsWith(path));
     for (const tab of matchingTabs) await close(tab);
   }
 
-  async function flushTab(tab, isCurrent = () => true) {
+  async function flushTab(tab:WorkspaceTab, isCurrent = () => true) {
     const store = storeForTab(tab);
     return store ? await flushStore(store, isCurrent) : true;
   }
 
-  async function flushStore(store, isCurrent = () => true) {
+  async function flushStore(store:SessionStore, isCurrent = () => true) {
     const result = typeof store.flushSave === "function"
       ? await store.flushSave()
-      : store.persistence?.flush ? await store.persistence.flush({ isCurrent }) : true;
+      : store.persistence?.flush ? await store.persistence.flush() : true;
     return succeeded(result) && isCurrent();
   }
 
-  async function close(tab) {
+  async function close(tab:WorkspaceTab) {
     const intent = beginIntent();
     const store = storeForTab(tab);
     const path = pathForTab(tab);
-    const ownsClosingPath = store?.persistence ? store.persistence.path === path : path === (store?.loadedPath || store?.path);
+    const ownsClosingPath = store?.persistence ? store.persistence.path === path : path === (store?.view === "todo" ? store.loadedPath : store?.path);
     const replacement = tabs.some((item) => item.id !== tab.id && pathForTab(item) === path && path);
 
-    if (ownsClosingPath && !replacement) {
+    if (store && ownsClosingPath && !replacement) {
       if (!(await flushStore(store, intent.isCurrent)) || !intent.isCurrent()) {
         if (intent.isCurrent()) appStore.showStatus(blockedSaveMessage("closing the tab", [store]));
         return false;
       }
-      const result = store.persistence?.close
+      const result = store.persistence
         ? await DocumentController.closeAll([store.persistence], { isCurrent: intent.isCurrent })
         : await flushStore(store, intent.isCurrent);
       if (!succeeded(result) || !intent.isCurrent()) {
         if (intent.isCurrent()) appStore.showStatus(blockedSaveMessage("closing the tab", [store]));
         return false;
       }
-    } else if (ownsClosingPath && !(await flushTab(tab, intent.isCurrent))) {
+    } else if (store && ownsClosingPath && !(await flushTab(tab, intent.isCurrent))) {
       if (intent.isCurrent()) appStore.showStatus(blockedSaveMessage("closing the tab", [store]));
       return false;
     }
@@ -319,7 +357,7 @@
     return true;
   }
 
-  function requestSplit(tab) {
+  function requestSplit(tab:WorkspaceTab) {
     if (tab.id === activeId) {
       appStore.showStatus("Choose another tab to open beside the current one");
       return;

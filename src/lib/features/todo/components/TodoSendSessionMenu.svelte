@@ -1,15 +1,21 @@
-<script>
+<script lang="ts">
+import type { DailySession } from "$lib/features/daily/types.ts";
   import { ClipboardList } from "@lucide/svelte";
-  import { clampContextMenuPosition } from "$lib/shared/services/contextMenuPosition.js";
+  import { clampContextMenuPosition } from "$lib/shared/services/contextMenuPosition.ts";
 
   let {
     x = 0,
     y = 0,
     sessions = [],
     onSelectSession
+  }: {
+      x?: number;
+      y?: number;
+      sessions?: DailySession[];
+      onSelectSession(id: string): void;
   } = $props();
 
-  let menuElement = $state();
+  let menuElement = $state<HTMLDivElement>();
   let menuLeft = $state(0);
   let menuTop = $state(0);
 

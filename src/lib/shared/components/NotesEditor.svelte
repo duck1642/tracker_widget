@@ -1,5 +1,5 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+import type { MenuPosition } from "./types.ts";
   import { onMount } from "svelte";
   import { Code2, Eye } from "@lucide/svelte";
   import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
@@ -12,33 +12,49 @@
     placeholder
   } from "@codemirror/view";
   import { markdownKeymap } from "@codemirror/lang-markdown";
-  import { appStore } from "$lib/app/appStore.svelte.js";
+  import { appStore } from "$lib/app/appStore.svelte.ts";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
-  import { captureCodeMirrorText } from "$lib/shared/editor/noteEditorContext.js";
-  import { completeTaskMarkerInput } from "$lib/shared/editor/noteEditorInput.js";
-  import { continueNoteMarkdownList } from "$lib/shared/editor/noteMarkdownCommands.js";
-  import { noteEditorFillTheme, noteEditorTheme } from "$lib/shared/editor/noteEditorTheme.js";
+  import { captureCodeMirrorText } from "$lib/shared/editor/noteEditorContext.ts";
+  import { completeTaskMarkerInput } from "$lib/shared/editor/noteEditorInput.ts";
+  import { continueNoteMarkdownList } from "$lib/shared/editor/noteMarkdownCommands.ts";
+  import { noteEditorFillTheme, noteEditorTheme } from "$lib/shared/editor/noteEditorTheme.ts";
   import {
     createNoteFoldingExtension,
     getFoldSnapshot,
     getScratchpadFoldState,
     restoreFoldSnapshot,
     saveScratchpadFoldState
-  } from "$lib/shared/editor/noteFolding.js";
+  } from "$lib/shared/editor/noteFolding.ts";
   import {
     createNoteMarkdownExtension,
     externalDocumentAnnotation,
     externalDocumentUpdate,
     noteLivePreview
-  } from "$lib/shared/editor/noteLivePreview.js";
-  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
+  } from "$lib/shared/editor/noteLivePreview.ts";
+  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.ts";
 
-  let { value = "", onChange, label = "Notes", fillHeight = false, helpPlacement = "above", folding = false, filePath = "" } = $props();
+  let { value = "", onChange, label = "Notes", fillHeight = false, helpPlacement = "above", folding = false, filePath = "" }: {
 
-  let editorHost = $state(null);
-  let editorView = $state(null);
+      value?: string;
+
+      onChange(value: string): unknown;
+
+      label?: string;
+
+      fillHeight?: boolean;
+
+      helpPlacement?: "above" | "below";
+
+      folding?: boolean;
+
+      filePath?: string;
+
+  } = $props();
+
+  let editorHost = $state<HTMLDivElement|null>(null);
+  let editorView = $state<EditorView|null>(null);
   let showHelp = $state(false);
-  let contextMenu = $state(null);
+  let contextMenu = $state<MenuPosition|null>(null);
   let livePreviewEnabled = $state(true);
 
   const previewCompartment = new Compartment();
@@ -70,6 +86,7 @@
   });
 
   onMount(() => {
+    if (!editorHost) return;
     const state = EditorState.create({
       doc: value,
       extensions: [
@@ -127,7 +144,7 @@
     };
   });
 
-  function revealBottomGap(editor) {
+  function revealBottomGap(editor:EditorView) {
     requestAnimationFrame(() => {
       if (!editor.hasFocus || editor.state.selection.main.head !== editor.state.doc.length) return;
       const scrollPanel = editor.dom.closest(".panel-scroll");
@@ -138,7 +155,7 @@
     });
   }
 
-  function openContextMenu(event, editor) {
+  function openContextMenu(event:MouseEvent, editor:EditorView) {
     event.preventDefault();
     contextMenu = {
       x: event.clientX,

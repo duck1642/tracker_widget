@@ -1,7 +1,12 @@
-<script>
+<script lang="ts">
+import type { LayerMode } from "$lib/shared/services/types.ts";
   import { Check } from "@lucide/svelte";
-  let { layerMode, onSelectMode } = $props();
-  const modes = [
+  let { layerMode, onSelectMode }: {layerMode:LayerMode;onSelectMode(mode:LayerMode):unknown} = $props();
+  const modes: {
+      id: LayerMode;
+      label: string;
+      detail?: string;
+  }[] = [
     { id: "top", label: "Always on Top" },
     { id: "normal", label: "Normal Window" },
     { id: "desktop", label: "Widget", detail: "Tray only" }

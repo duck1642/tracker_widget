@@ -1,11 +1,16 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+
   import { Check, FolderOpen, FilePlus, RefreshCw, Upload } from "@lucide/svelte";
-  import { workspaceStore } from "./workspaceStore.svelte.js";
-  import { appStore } from "./appStore.svelte.js";
-  import { subjectHistoryStore } from "./subjectHistoryStore.svelte.js";
-  import { sessionHistoryStore } from "./sessionHistoryStore.svelte.js";
-  let { dragEnabled, autostartEnabled, onToggleDrag, onToggleAutostart } = $props();
+  import { workspaceStore } from "./workspaceStore.svelte.ts";
+  import { appStore } from "./appStore.svelte.ts";
+  import { subjectHistoryStore } from "./subjectHistoryStore.svelte.ts";
+  import { sessionHistoryStore } from "./sessionHistoryStore.svelte.ts";
+  let { dragEnabled, autostartEnabled, onToggleDrag, onToggleAutostart }: {
+      dragEnabled: boolean;
+      autostartEnabled: boolean;
+      onToggleDrag(): unknown;
+      onToggleAutostart(): unknown;
+  } = $props();
 </script>
 
 <div class="settings-panel">

@@ -1,5 +1,6 @@
-<script>
-  let { open = false, size = 15 } = $props();
+<script lang="ts">
+
+  let { open = false, size = 15 }: {open?:boolean;size?:number} = $props();
 </script>
 
 <svg

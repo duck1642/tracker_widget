@@ -1,14 +1,17 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+import type { ActivityFields, Objective, ObjectiveFields } from "$lib/shared/parsers/types.ts";
+import type { ActualEntry, PlanEntry } from "../types.ts";
+import type { MenuItem, MenuPosition } from "$lib/shared/components/types.ts";
+
   import { ChevronDown, ChevronUp, Plus, Trash2, X } from "@lucide/svelte";
-  import { appStore } from "$lib/app/appStore.svelte.js";
+  import { appStore } from "$lib/app/appStore.svelte.ts";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
-  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.js";
-  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
+  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.ts";
+  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.ts";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
   import TimeInput from "$lib/shared/components/TimeInput.svelte";
-  import { planSummary } from "../weeklyIndexParser.js";
-  import { formatDurationSummary } from "$lib/shared/utils/durationSummary.js";
+  import { planSummary } from "../weeklyIndexParser.ts";
+  import { formatDurationSummary } from "$lib/shared/utils/durationSummary.ts";
 
   let {
     entry,
@@ -17,14 +20,21 @@
     onUpdateActivity,
     onDeleteActivity,
     onMoveActivity
+  }: {
+      entry: PlanEntry;
+      onClose(): void;
+      onAddActivity(): unknown;
+      onUpdateActivity(id: string, patch: Partial<ActivityFields>): unknown;
+      onDeleteActivity(id: string): unknown;
+      onMoveActivity(id: string, direction: "up" | "down"): unknown;
   } = $props();
 
-  let editingActivityId = $state(null);
-  let contextMenu = $state(null);
+  let editingActivityId = $state<string|null>(null);
+  let contextMenu = $state<(MenuPosition & {activityId:string})|null>(null);
   let summary = $derived(planSummary(entry));
   let durationLabel = $derived(formatDurationSummary({ knownMinutes: summary.targetMinutes, unknownCount: summary.unknownDurationCount }));
-  let contextActivityIndex = $derived(contextMenu ? (entry.activities || []).findIndex((activity) => activity.id === contextMenu.activityId) : -1);
-  let contextMenuItems = $derived.by(() => {
+  let contextActivityIndex = $derived(contextMenu ? (entry.activities || []).findIndex((activity) => activity.id === contextMenu?.activityId) : -1);
+  let contextMenuItems = $derived.by((): MenuItem[] => {
     if (!contextMenu) return [];
     const activityId = contextMenu.activityId;
     const editable = contextMenu.editable;
@@ -40,11 +50,11 @@
     ];
   });
 
-  function focus(node) {
+  function focus(node: HTMLElement) {
     node.focus();
   }
 
-  function openContextMenu(event, activityId) {
+  function openContextMenu(event:MouseEvent, activityId:string) {
     event.preventDefault();
     contextMenu = { activityId, x: event.clientX, y: event.clientY, editable: captureEditableText(event.target) };
   }
@@ -53,7 +63,7 @@
     contextMenu = null;
   }
 
-  function runEntityAction(action, ...args) {
+  function runEntityAction<Args extends unknown[]>(action:(...args:Args)=>unknown, ...args:Args) {
     closeContextMenu();
     action(...args);
   }

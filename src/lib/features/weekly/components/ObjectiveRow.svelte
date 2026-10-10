@@ -1,16 +1,33 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+import type { ActivityFields, Objective, ObjectiveFields } from "$lib/shared/parsers/types.ts";
+import type { ActualEntry, PlanEntry } from "../types.ts";
+import type { MenuItem, MenuPosition } from "$lib/shared/components/types.ts";
+
   import { ChevronDown, ChevronRight, ChevronUp, Trash2 } from "@lucide/svelte";
   import SubjectInput from "$lib/shared/components/SubjectInput.svelte";
-  let { objective, hasChildren = false, isFolded = false, canMoveUp = true, canMoveDown = true, onToggleFold, onUpdate, onDelete, onMoveUp, onMoveDown, onIndent, onOutdent, onOpenContextMenu } = $props();
+  let { objective, hasChildren = false, isFolded = false, canMoveUp = true, canMoveDown = true, onToggleFold, onUpdate, onDelete, onMoveUp, onMoveDown, onIndent, onOutdent, onOpenContextMenu }: {
+      objective: Objective;
+      hasChildren?: boolean;
+      isFolded?: boolean;
+      canMoveUp?: boolean;
+      canMoveDown?: boolean;
+      onToggleFold(): unknown;
+      onUpdate(patch: Partial<ObjectiveFields>): unknown;
+      onDelete(): unknown;
+      onMoveUp(): unknown;
+      onMoveDown(): unknown;
+      onIndent?(): unknown;
+      onOutdent?(): unknown;
+      onOpenContextMenu(event: MouseEvent): void;
+  } = $props();
 
   let isEditingDesc = $state(false);
   let showStatusDropdown = $state(false);
-  /** @type {HTMLDivElement | undefined} */
-  let dropdownEl = $state();
 
-  function handleOutsideClick(event) {
-    if (showStatusDropdown && dropdownEl && !dropdownEl.contains(event.target)) {
+  let dropdownEl: HTMLDivElement | undefined = $state();
+
+  function handleOutsideClick(event: PointerEvent) {
+    if (showStatusDropdown && dropdownEl && event.target instanceof Node && !dropdownEl.contains(event.target)) {
       showStatusDropdown = false;
     }
   }
@@ -26,15 +43,15 @@
     };
   });
 
-  function focus(node) {
+  function focus(node: HTMLElement) {
     node.focus();
   }
 
-  function capitalize(str) {
+  function capitalize(str: string) {
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
-  function handleDescriptionKeydown(event) {
+  function handleDescriptionKeydown(event: KeyboardEvent) {
     if (event.key === "Enter") {
       isEditingDesc = false;
     } else if (event.key === "Tab") {
@@ -106,7 +123,7 @@
 
         {#if showStatusDropdown}
           <div class="dropdown-menu" role="menu">
-            {#each ["open", "done", "partial", "cancelled"] as opt}
+            {#each (["open", "done", "partial", "cancelled"] as const) as opt}
               <button
                 type="button"
                 class={`menu-item ${opt} ${objective.status === opt ? "active" : ""}`}

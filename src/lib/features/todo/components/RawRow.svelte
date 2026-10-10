@@ -1,7 +1,18 @@
-<script>
+<script lang="ts">
+import type { RawLine } from "../types.ts";
   import { Trash2 } from "@lucide/svelte";
 
-  let { rawLine, index, onDeleteTodo, onRawContextMenu } = $props();
+  let { rawLine, index, onDeleteTodo, onRawContextMenu }: {
+
+      rawLine: RawLine;
+
+      index: number;
+
+      onDeleteTodo(index: number): unknown;
+
+      onRawContextMenu(event: MouseEvent): void;
+
+  } = $props();
 </script>
 
 <div class="raw-row" oncontextmenu={onRawContextMenu} role="listitem">

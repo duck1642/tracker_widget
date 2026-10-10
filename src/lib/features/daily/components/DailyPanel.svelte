@@ -1,30 +1,38 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
   import DailyHeader from "./DailyHeader.svelte";
   import SessionCard from "./SessionCard.svelte";
   import AddSessionForm from "./AddSessionForm.svelte";
   import NotesEditor from "$lib/shared/components/NotesEditor.svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
   import { ChevronDown, ChevronUp, Trash2 } from "@lucide/svelte";
-  import { appStore } from "$lib/app/appStore.svelte.js";
-  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.js";
-  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.js";
-  import { dailyStore as defaultDailyStore } from "$lib/features/daily/dailyStore.svelte.js";
-  import { weekStore as defaultWeekStore } from "$lib/features/weekly/weekStore.svelte.js";
-  import { sessionHistoryStore } from "$lib/app/sessionHistoryStore.svelte.js";
-  import { buildSessionSuggestions } from "$lib/shared/services/sessionSuggestions.js";
-  import { dayLabel } from "$lib/shared/services/logWorkspaceService.js";
-  let { dailyStore = defaultDailyStore, weekStore = defaultWeekStore } = $props();
+  import { appStore } from "$lib/app/appStore.svelte.ts";
+  import { captureEditableText } from "$lib/shared/services/editableTextClipboard.ts";
+  import { buildEditableTextMenuItems } from "$lib/shared/services/editableTextMenuItems.ts";
+  import { dailyStore as defaultDailyStore } from "$lib/features/daily/dailyStore.svelte.ts";
+  import { weekStore as defaultWeekStore } from "$lib/features/weekly/weekStore.svelte.ts";
+  import { sessionHistoryStore } from "$lib/app/sessionHistoryStore.svelte.ts";
+  import { buildSessionSuggestions } from "$lib/shared/services/sessionSuggestions.ts";
+  import { dayLabel } from "$lib/shared/services/logWorkspaceService.ts";
+  import type { DailyStore } from "../dailyStore.svelte.ts";
+  import type { DragEvent, DragOverEvent, DropEvent, DropPosition } from "$lib/shared/actions/sortableDrag.ts";
+  import type { MenuPosition } from "$lib/shared/components/types.ts";
+  import type { EditableTextContext } from "$lib/shared/services/editableTextClipboard.ts";
+  type DayMenu = MenuPosition & ({ kind: "session"; sessionId: string } | {
+      kind: "activity";
+      sessionId: string;
+      activityId: string;
+  });
+  let { dailyStore = defaultDailyStore, weekStore = defaultWeekStore }: { dailyStore?: DailyStore; weekStore?: Pick<typeof defaultWeekStore, "currentWeekSessionNames"> } = $props();
   let day = $derived(dailyStore.date ? dayLabel(new Date(`${dailyStore.date}T12:00:00`)) : "");
   let suggestions = $derived(buildSessionSuggestions({
     currentWeekSessions: weekStore.currentWeekSessionNames(),
     historicalSessions: sessionHistoryStore.suggestions
   }));
   let existingSessions = $derived(dailyStore.sessions.map((session) => session.name));
-  let draggedSessionId = $state(null);
-  let dragOverSessionId = $state(null);
-  let dropPosition = $state("before");
-  let contextMenu = $state(null);
+  let draggedSessionId = $state<string | null>(null);
+  let dragOverSessionId = $state<string | null>(null);
+  let dropPosition = $state<DropPosition>("before");
+  let contextMenu = $state<DayMenu | null>(null);
   let contextMenuItems = $derived.by(() => {
     if (!contextMenu) return [];
     const items = editableMenuItems(contextMenu.editable);
@@ -53,19 +61,19 @@
     return items;
   });
 
-  function editableMenuItems(editable) {
+  function editableMenuItems(editable: EditableTextContext | null | undefined) {
     return buildEditableTextMenuItems(editable, {
       beforeAction: closeContextMenu,
       onError: (error) => appStore.showStatus(`Clipboard failed: ${error}`)
     });
   }
 
-  function openSessionContextMenu(event, sessionId) {
+  function openSessionContextMenu(event: MouseEvent, sessionId: string) {
     event.preventDefault();
     contextMenu = { kind: "session", sessionId, x: event.clientX, y: event.clientY, editable: captureEditableText(event.target) };
   }
 
-  function openActivityContextMenu(event, sessionId, activityId) {
+  function openActivityContextMenu(event: MouseEvent, sessionId: string, activityId: string) {
     event.preventDefault();
     contextMenu = { kind: "activity", sessionId, activityId, x: event.clientX, y: event.clientY, editable: captureEditableText(event.target) };
   }
@@ -74,12 +82,12 @@
     contextMenu = null;
   }
 
-  function runEntityAction(action, ...args) {
+  function runEntityAction<Args extends unknown[]>(action: (...args: Args) => unknown, ...args: Args) {
     closeContextMenu();
     action(...args);
   }
 
-  function moveSession(sessionId, direction) {
+  function moveSession(sessionId: string, direction: "up" | "down") {
     const index = dailyStore.sessions.findIndex((session) => session.id === sessionId);
     const target = dailyStore.sessions[index + (direction === "up" ? -1 : 1)];
     if (target) dailyStore.moveSessionTo(sessionId, target.id, direction === "up" ? "before" : "after");
@@ -91,7 +99,7 @@
     dropPosition = "before";
   }
 
-  function sessionDragState(sessionId) {
+  function sessionDragState(sessionId: string) {
     return {
       dragging: draggedSessionId === sessionId,
       over: dragOverSessionId === sessionId && draggedSessionId !== sessionId,
@@ -99,24 +107,24 @@
     };
   }
 
-  function handleSessionDragStart({ id }) {
+  function handleSessionDragStart({ id }: DragEvent) {
     draggedSessionId = id;
   }
 
-  function handleSessionDragOver({ id, position }) {
+  function handleSessionDragOver({ id, position }: DragOverEvent) {
     if (!draggedSessionId || draggedSessionId === id) return;
     dragOverSessionId = id;
     dropPosition = position;
   }
 
-  function handleSessionDragLeave({ id }) {
+  function handleSessionDragLeave({ id }: DragEvent) {
     if (dragOverSessionId === id) {
       dragOverSessionId = null;
       dropPosition = "before";
     }
   }
 
-  function handleSessionDrop({ sourceId, targetId, position }) {
+  function handleSessionDrop({ sourceId, targetId, position }: DropEvent) {
     dailyStore.moveSessionTo(sourceId, targetId, position);
     clearSessionDrag();
   }
@@ -151,7 +159,7 @@
       {/each}
       <AddSessionForm {suggestions} {existingSessions} onAdd={(name) => dailyStore.addSession(name)} />
     </section>
-    <NotesEditor value={dailyStore.notesRaw} onChange={(value) => dailyStore.updateNotes(value)} />
+    <NotesEditor value={dailyStore.notesRaw} onChange={(value: string) => dailyStore.updateNotes(value)} />
     {#if contextMenu}
       <ContextMenu
         x={contextMenu.x}

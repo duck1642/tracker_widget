@@ -3,6 +3,9 @@
   "version": "1.4.0",
   "description": "",
   "type": "module",
+  "engines": {
+    "node": ">=24.12.0"
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
@@ -10,8 +13,8 @@
     "migrate:notes": "node scripts/migrate-notes.mjs",
     "migrate:objectives": "node scripts/migrate-objectives.mjs",
     "preview": "vite preview",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
-    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "tauri": "tauri",
     "package:portable": "npm run tauri build && node scripts/package-portable.mjs"
   },

@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { unwrapNoteContent, wrapNoteContent } from "../src/lib/shared/parsers/noteSection.js";
+import { unwrapNoteContent, wrapNoteContent } from "../src/lib/shared/parsers/noteSection.ts";
 
 const WEEK_PATTERN = /^\d{4}w\d{2}$/;
 const DAILY_LOG_PATTERN = /^\d{8}_log\.md$/;

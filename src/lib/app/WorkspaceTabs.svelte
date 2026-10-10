@@ -1,13 +1,34 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+import type { WorkspaceTab, PaneSide } from "./types.ts";
+import type { MenuPosition } from "$lib/shared/components/types.ts";
   import { ArrowLeft, ArrowRight, Columns2, X } from "@lucide/svelte";
   import CollapseSplitIcon from "./CollapseSplitIcon.svelte";
   import ContextMenu from "$lib/shared/components/ContextMenu.svelte";
 
-  let { tabs = [], activeId = "", focused = true, onActivate = () => {}, onClose = () => {}, onSplit = null, onMoveToLeft = null, onMoveToRight = null, onSeparate = null } = $props();
-  let tabContextMenu = $state(null);
+  let { tabs = [], activeId = "", focused = true, onActivate = () => {}, onClose = () => {}, onSplit = null, onMoveToLeft = null, onMoveToRight = null, onSeparate = null }: {
 
-  function openTabContextMenu(event, tab) {
+      tabs?: WorkspaceTab[];
+
+      activeId?: string;
+
+      focused?: boolean;
+
+      onActivate?(tab: WorkspaceTab): unknown;
+
+      onClose?(tab: WorkspaceTab): unknown;
+
+      onSplit?: ((tab: WorkspaceTab) => unknown) | null;
+
+      onMoveToLeft?: ((tab: WorkspaceTab) => unknown) | null;
+
+      onMoveToRight?: ((tab: WorkspaceTab) => unknown) | null;
+
+      onSeparate?: (() => unknown) | null;
+
+  } = $props();
+  let tabContextMenu = $state<(MenuPosition & {tab:WorkspaceTab})|null>(null);
+
+  function openTabContextMenu(event:MouseEvent, tab:WorkspaceTab) {
     event.preventDefault();
     tabContextMenu = { tab, x: event.clientX, y: event.clientY };
   }
@@ -29,7 +50,7 @@
     onSeparate?.();
   }
 
-  function moveFromContextMenu(targetPane) {
+  function moveFromContextMenu(targetPane:PaneSide) {
     const tab = tabContextMenu?.tab;
     tabContextMenu = null;
     if (!tab) return;

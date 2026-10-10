@@ -1,9 +1,9 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
   import { Clock3 } from "@lucide/svelte";
-  import { formatDurationSummary } from "$lib/shared/utils/durationSummary.js";
+  import { formatDurationSummary } from "$lib/shared/utils/durationSummary.ts";
 
-  let { label, summary } = $props();
+  import type { DurationSummary } from "$lib/shared/utils/durationSummary.ts";
+  let { label, summary }: { label: string; summary: DurationSummary } = $props();
   let value = $derived(formatDurationSummary(summary, { hours: true }));
 </script>
 

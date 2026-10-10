@@ -1,18 +1,18 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+
   import ObjectivesSection from "./ObjectivesSection.svelte";
   import PlanSection from "./PlanSection.svelte";
   import ActualSection from "./ActualSection.svelte";
   import NotesEditor from "$lib/shared/components/NotesEditor.svelte";
-  import { weekStore as defaultWeekStore } from "$lib/features/weekly/weekStore.svelte.js";
-  import { sessionHistoryStore } from "$lib/app/sessionHistoryStore.svelte.js";
-  import { buildSessionSuggestions } from "$lib/shared/services/sessionSuggestions.js";
-  let { weekStore = defaultWeekStore } = $props();
+  import { weekStore as defaultWeekStore } from "$lib/features/weekly/weekStore.svelte.ts";
+  import { sessionHistoryStore } from "$lib/app/sessionHistoryStore.svelte.ts";
+  import { buildSessionSuggestions } from "$lib/shared/services/sessionSuggestions.ts";
+  let { weekStore = defaultWeekStore }: {weekStore?:typeof defaultWeekStore} = $props();
 
   let historicalSessionSuggestions = $derived(buildSessionSuggestions({ historicalSessions: sessionHistoryStore.suggestions }));
-  let collapsedDays = $state([]);
+  let collapsedDays = $state<string[]>([]);
 
-  function toggleDay(day) {
+  function toggleDay(day:string) {
     if (collapsedDays.includes(day)) {
       collapsedDays = collapsedDays.filter((item) => item !== day);
     } else if (collapsedDays.length < 6) {
@@ -20,7 +20,7 @@
     }
   }
 
-  function scrollToSection(event, id) {
+  function scrollToSection(event: MouseEvent, id:string) {
     event.preventDefault();
     const el = document.getElementById(id);
     if (el) {
@@ -31,7 +31,7 @@
 </script>
 
 <main class="week-panel">
-  {#if !weekStore.loaded}
+  {#if !weekStore.loaded || !weekStore.descriptor}
     <div class="empty"><strong>No weekly index selected</strong><span>Choose a week from the file tree.</span></div>
   {:else}
     <header class="week-hero">
@@ -65,7 +65,7 @@
     />
     <ActualSection actual={weekStore.actual} onRefresh={() => weekStore.refreshActual()} {collapsedDays} {toggleDay} />
     <div id="week-notes" class="week-notes">
-      <NotesEditor value={weekStore.notesRaw} onChange={(value) => weekStore.updateNotes(value)} />
+      <NotesEditor value={weekStore.notesRaw} onChange={(value: string) => weekStore.updateNotes(value)} />
     </div>
   {/if}
 </main>

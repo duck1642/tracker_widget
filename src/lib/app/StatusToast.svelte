@@ -1,6 +1,7 @@
-<script>
+<script lang="ts">
+
   import { CircleAlert, CircleCheck, Info } from "@lucide/svelte";
-  let { message = "" } = $props();
+  let { message = "" }: {message?:string} = $props();
   let tone = $derived(/failed|error|err |conflict|invalid|missing/i.test(message) ? "error" : /created|rebuilt|repaired|converted|moved|complete$|on$|off$/i.test(message) ? "success" : "info");
   let Icon = $derived(tone === "error" ? CircleAlert : tone === "success" ? CircleCheck : Info);
 </script>

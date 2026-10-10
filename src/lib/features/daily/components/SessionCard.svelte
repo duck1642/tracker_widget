@@ -1,10 +1,21 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
   import { GripVertical, Plus, Trash2 } from "@lucide/svelte";
-  import { sortableDragHandle, sortableDropTarget } from "$lib/shared/actions/sortableDrag.js";
+  import { sortableDragHandle, sortableDropTarget } from "$lib/shared/actions/sortableDrag.ts";
   import SuggestionDropdown from "$lib/shared/components/SuggestionDropdown.svelte";
   import ActivityRow from "./ActivityRow.svelte";
-  import { formatDurationSummary, summarizeDurations } from "$lib/shared/utils/durationSummary.js";
+  import { formatDurationSummary, summarizeDurations } from "$lib/shared/utils/durationSummary.ts";
+  import type { DailySession } from "../types.ts";
+  import type { ActivityFields } from "$lib/shared/parsers/types.ts";
+  import type { SessionSuggestion } from "$lib/shared/services/types.ts";
+  import type { DragEvent, DragOverEvent, DropEvent, DragState } from "$lib/shared/actions/sortableDrag.ts";
+  interface Props {
+    session: DailySession; dragState?: DragState | null; suggestions?: SessionSuggestion[]; existingSessions?: string[];
+    onAddActivity: () => void; onUpdateActivity: (id: string, patch: Partial<ActivityFields>) => void;
+    onDeleteActivity: (id: string) => void; onMoveActivity: (id: string, direction: "up" | "down") => void;
+    onDeleteSession: () => void; onRenameSession: (name: string) => boolean;
+    onOpenSessionContextMenu?: (event: MouseEvent) => void; onOpenActivityContextMenu?: (event: MouseEvent, id: string) => void;
+    onDragStart?: (event: DragEvent) => void; onDragOver?: (event: DragOverEvent) => void; onDragLeave?: (event: DragEvent) => void; onDrop?: (event: DropEvent) => void; onDragEnd?: () => void;
+  }
   let {
     session,
     dragState = null,
@@ -23,7 +34,7 @@
     onDragLeave,
     onDrop,
     onDragEnd
-  } = $props();
+  }: Props = $props();
   let isEditingName = $state(false);
   let editNameInput = $state("");
   let nameEdited = $state(false);
@@ -31,7 +42,7 @@
   let highlightedIndex = $state(-1);
   let subtotal = $derived(formatDurationSummary(summarizeDurations(session.activities.map((activity) => activity.minutes))));
 
-  const normalize = (value) => value.trim().toLowerCase();
+  const normalize = (value: string) => value.trim().toLowerCase();
   let filteredSuggestions = $derived(
     suggestions.filter((suggestion) => {
       const trimmed = suggestion.name.trim();
@@ -43,7 +54,7 @@
     })
   );
 
-  function focus(node) {
+  function focus(node: HTMLInputElement) {
     node.focus();
   }
 
@@ -79,12 +90,12 @@
     highlightedIndex = -1;
   }
 
-  function selectSuggestion(suggestion) {
+  function selectSuggestion(suggestion: string) {
     editNameInput = suggestion;
     saveName(suggestion);
   }
 
-  function handleNameKeyDown(event) {
+  function handleNameKeyDown(event: KeyboardEvent) {
     if (event.key === "Enter") {
       if (showSuggestions && highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length) {
         event.preventDefault();

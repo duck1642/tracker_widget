@@ -1,5 +1,5 @@
-<script>
-  let { onReloadExternal, onKeepLocal } = $props();
+<script lang="ts">
+  let { onReloadExternal, onKeepLocal }: { onReloadExternal: () => unknown | Promise<unknown>; onKeepLocal: () => unknown | Promise<unknown> } = $props();
 </script>
 
 <div class="conflict-banner" role="alert">

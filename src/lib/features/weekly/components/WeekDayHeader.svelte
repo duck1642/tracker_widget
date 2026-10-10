@@ -1,11 +1,17 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+
   let {
     day,
     count = 0,
     collapsed = false,
     collapseDisabled = false,
     onToggle
+  }: {
+      day: string;
+      count?: number;
+      collapsed?: boolean;
+      collapseDisabled?: boolean;
+      onToggle?(day: string): unknown;
   } = $props();
 </script>
 

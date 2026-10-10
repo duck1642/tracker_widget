@@ -1,12 +1,12 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+import type { WeekDescriptor } from "$lib/features/weekly/types.ts";
   import { CalendarDays, ChevronLeft, ChevronRight, Minus, Plus, X } from "@lucide/svelte";
   import {
     getConsecutiveWeekDescriptors,
     getWeekDescriptor
-  } from "$lib/shared/services/logWorkspaceService.js";
+  } from "$lib/shared/services/logWorkspaceService.ts";
 
-  let { onClose, onSubmit } = $props();
+  let { onClose, onSubmit }: {onClose():unknown;onSubmit(year:number,week:number,count:number):Promise<boolean>} = $props();
   let selectedDate = $state(new Date());
   let calendarMonth = $state(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   let weekCount = $state(1);
@@ -34,18 +34,18 @@
     });
   });
 
-  function moveStartWeek(offset) {
+  function moveStartWeek(offset:number) {
     const next = new Date(selectedWeek.start);
     next.setDate(next.getDate() + offset * 7);
     selectedDate = next;
     calendarMonth = new Date(next.getFullYear(), next.getMonth(), 1);
   }
 
-  function moveCalendarMonth(offset) {
+  function moveCalendarMonth(offset:number) {
     calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + offset, 1);
   }
 
-  function selectWeek(descriptor) {
+  function selectWeek(descriptor:WeekDescriptor) {
     selectedDate = new Date(descriptor.start);
     calendarMonth = new Date(descriptor.start.getFullYear(), descriptor.start.getMonth(), 1);
     calendarOpen = false;
@@ -55,11 +55,11 @@
     selectWeek(getWeekDescriptor(new Date()));
   }
 
-  function changeWeekCount(offset) {
+  function changeWeekCount(offset:number) {
     weekCount = Math.min(12, Math.max(1, weekCount + offset));
   }
 
-  async function submit(event) {
+  async function submit(event:SubmitEvent) {
     event.preventDefault();
     if (submitting) return;
     submitting = true;
@@ -68,7 +68,7 @@
     if (completed) onClose();
   }
 
-  function handleKeydown(event) {
+  function handleKeydown(event:KeyboardEvent) {
     if (event.key !== "Escape") return;
     if (calendarOpen) {
       calendarOpen = false;

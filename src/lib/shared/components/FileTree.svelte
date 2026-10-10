@@ -1,14 +1,26 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+import type { LogDayEntry, LogWeekEntry } from "$lib/shared/services/types.ts";
+import type { ExpansionCommand } from "$lib/app/types.ts";
   import { ChevronDown, ChevronRight, FileText, CalendarDays } from "@lucide/svelte";
-  let { weeks = [], selectedPath = "", onSelectWeek, onSelectDay, onOpenWeekInBackground = null, onOpenDayInBackground = null, onOpenWeekItemContextMenu = null, onOpenDayContextMenu = null, onOpenWeekContextMenu = null, expansionCommand = null } = $props();
-  let expanded = $state({});
-  let handledExpansionCommandId = $state(null);
+  let { weeks = [], selectedPath = "", onSelectWeek, onSelectDay, onOpenWeekInBackground = null, onOpenDayInBackground = null, onOpenWeekItemContextMenu = null, onOpenDayContextMenu = null, onOpenWeekContextMenu = null, expansionCommand = null }: {
+      weeks?: LogWeekEntry[];
+      selectedPath?: string;
+      onSelectWeek(week: LogWeekEntry): unknown;
+      onSelectDay(day: LogDayEntry, week: LogWeekEntry): unknown;
+      onOpenWeekInBackground?: ((week: LogWeekEntry) => unknown) | null;
+      onOpenDayInBackground?: ((day: LogDayEntry, week: LogWeekEntry) => unknown) | null;
+      onOpenWeekItemContextMenu?: ((event: MouseEvent, week: LogWeekEntry) => unknown) | null;
+      onOpenDayContextMenu?: ((event: MouseEvent, day: LogDayEntry, week: LogWeekEntry) => unknown) | null;
+      onOpenWeekContextMenu?: ((event: MouseEvent, week: LogWeekEntry) => unknown) | null;
+      expansionCommand?: ExpansionCommand | null;
+  } = $props();
+  let expanded = $state<Record<string,boolean>>({});
+  let handledExpansionCommandId = $state<number|null>(null);
 
   $effect(() => {
     if (!expansionCommand || expansionCommand.id === handledExpansionCommandId) return;
     handledExpansionCommandId = expansionCommand.id;
-    expanded = Object.fromEntries(weeks.map((week) => [week.path, expansionCommand.expanded]));
+    expanded = Object.fromEntries(weeks.map((week) => [week.path, expansionCommand?.expanded ?? true]));
   });
 </script>
 
