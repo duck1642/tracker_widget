@@ -41,8 +41,22 @@ todo.jsonl
 config.json
 subject-history.json
 session-history.json
+scratchpad.md
+/20??w??/
+*.bak
 graphify-out/
 .graphifyignore
+
+# Local agent settings and credentials
+.agents/
+.codex/
+.aws/
+.ssh/
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
 
 # Local planning documents
 /docs/CURRENT_WORK.md

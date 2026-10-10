@@ -4,9 +4,11 @@ Tracker Widget is a local-first desktop app for planning weeks, tracking daily a
 
 Your workspace is stored in portable Markdown files, but Tracker is not a general-purpose Markdown editor. Markdown is the storage format; the product focus is structured planning, activity tracking, and lightweight note-taking.
 
-Built with Tauri, SvelteKit, and Rust.
+Built with Tauri, SvelteKit, TypeScript, and Rust.
 
-Current version: `1.4.0`
+Current version: `1.4.1`
+
+Feature development is currently paused. Tracker remains a local desktop tool; this release does not add mobile access or cloud synchronization.
 
 ![Tracker Widget walkthrough: Todo, Scratchpad, Week, and Day views](docs/media/tracker-widget-demo.gif)
 
@@ -33,7 +35,15 @@ workspace/
     20260702_log.md
 ```
 
-Unknown files are ignored. Missing week files can be checked or created for explicit week ranges from the sidebar. Missing `todo.md` can be created or imported from the Todo view. `scratchpad.md` is created lazily when Scratchpad is first opened.
+Unknown files are ignored. Missing week files can be checked or created for explicit week ranges from the sidebar. Missing `todo.md` can be created or imported from the Todo view. Opening a missing Scratchpad shows a placeholder; the file is created only when you choose **Create scratchpad**.
+
+## Saving and External Changes
+
+Edits are automatically saved after a 250 ms delay. Todo, Scratchpad, daily logs, and weekly indexes share the same document lifecycle, including safe navigation and save-error recovery.
+
+If an external edit is detected while the document has no unsaved changes, Tracker reloads it automatically. If local changes are pending, a notification at the bottom of the owning pane offers **Reload External** or **Keep Local**. Keep Local saves the latest local text; Reload External reads the current file again.
+
+A failed read or write preserves local edits and prevents affected file switches, tab closing, and pane transfers from discarding them. Resolve the error or conflict and retry the operation. Markdown formats are unchanged in v1.4.1; existing workspaces require no migration.
 
 ## File Format
 
@@ -105,8 +115,8 @@ Daily, weekly, and Scratchpad notes are edited as Markdown-based notes with live
 
 Settings control the workspace folder, frontmatter mode, history rebuilding, and Developer Mode. Todo and Scratchpad paths are derived from the selected workspace.
 
-- `Off` keeps newly created daily logs and weekly indexes as clean Markdown without YAML frontmatter.
-- `Personal` is an optional personal-workflow mode that adds YAML frontmatter to newly created daily logs and weekly indexes.
+- `Off` is the normal mode. It keeps newly created daily logs and weekly indexes as clean Markdown without YAML frontmatter.
+- `Personal` adds YAML frontmatter for the author's own workflow. It is intended for the author, not for general use; other users should leave this setting at `Off`.
 
 Subject and session history are app-local files and are ignored by Git:
 
@@ -117,7 +127,7 @@ Subject and session history are app-local files and are ignored by Git:
 
 **Development note:** This project was human-directed and developed with substantial AI coding assistance. Product direction, design decisions, code review, and release preparation were led by me.
 
-Install Node.js and Rust, then start the development app:
+Install Node.js **24.12.0 or newer**, Rust, and the [Tauri development prerequisites](https://v2.tauri.app/start/prerequisites/), then start the development app:
 
 ```bash
 npm install
@@ -141,4 +151,4 @@ npm run tauri build
 npm run package:portable
 ```
 
-The portable zip is written to `build-artifacts/tracker-widget-portable-v1.4.0.zip`.
+Application modules, frontend tests, and Svelte scripts use strict TypeScript. `npm run check` checks the tests as well as application code. Maintenance scripts remain `.mjs` and use Node's native TypeScript support for parser imports.
