@@ -44,8 +44,6 @@ session-history.json
 scratchpad.md
 /20??w??/
 *.bak
-graphify-out/
-.graphifyignore
 
 # Local agent settings and credentials
 .agents/
@@ -62,5 +60,6 @@ graphify-out/
 /docs/CURRENT_WORK.md
 /docs/archive/
 /CURRENT_WORK.md
-/WALKTHROUGH.md
+/CONTEXT.md
+/CONTEXT_ARCHIVE.md
 
